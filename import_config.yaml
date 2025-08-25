@@ -1,0 +1,25 @@
+import_directories:
+  - "D:\\SierraChart_Simulated_Feed\\SierraChartInstance_5\\SavedTradeActivity"
+  - "D:\\SierraChart_Simulated_Feed\\SavedTradeActivity"
+  - "D:\\SierraChart_Delayed_Simulated\\SavedTradeActivity"
+  - "D:\\SierraChart_Simulated_Feed\\SierraChartInstance_4\\SavedTradeActivity"
+
+expected_assets:
+  - "NQ"    # NASDAQ futures
+  - "FDAX"  # DAX futures
+  - "ES"    # S&P 500 futures
+  - "CL"    # Crude Oil futures
+
+expected_accounts: 43
+
+logging:
+  detailed_import_log: true
+  removed_trades_log: true
+  summary_report: true
+  log_directory: "import_logs"
+
+validation:
+  min_trade_duration_seconds: 1
+  max_trade_duration_hours: 24
+  remove_short_duration_trades: false  # Don't remove, just flag
+  log_all_removals: true

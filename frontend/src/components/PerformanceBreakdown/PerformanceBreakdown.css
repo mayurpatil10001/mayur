@@ -1,0 +1,268 @@
+/* Performance Breakdown Styles */
+.performance-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-height: min-content;
+}
+
+/* Header Styles */
+.breakdown-header {
+  margin-bottom: 8px;
+}
+
+.breakdown-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.breakdown-icon {
+  font-size: 18px;
+}
+
+.breakdown-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Performance Section */
+.performance-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.metrics-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.metrics-category {
+  background: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-icon {
+  font-size: 16px;
+}
+
+.category-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.category-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.performance-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Monte Carlo Section */
+.monte-carlo-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.monte-carlo-header {
+  margin-bottom: 16px;
+}
+
+.monte-carlo-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.monte-carlo-icon {
+  font-size: 18px;
+}
+
+.monte-carlo-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.monte-carlo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.additional-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.monte-carlo-card {
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.monte-carlo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.monte-carlo-card.good {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #bbf7d0;
+}
+
+.monte-carlo-card.warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fde68a;
+}
+
+.monte-carlo-card.poor {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fecaca;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.card-icon {
+  font-size: 16px;
+}
+
+.card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.card-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 3px;
+}
+
+.monte-carlo-card.good .card-value {
+  color: #059669;
+}
+
+.monte-carlo-card.poor .card-value {
+  color: #dc2626;
+}
+
+.monte-carlo-card.warning .card-value {
+  color: #d97706;
+}
+
+.card-description {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .metrics-categories {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .monte-carlo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .additional-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .monte-carlo-card {
+    padding: 12px;
+  }
+  
+  .card-value {
+    font-size: 16px;
+  }
+  
+  .performance-metric {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .metric-value {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .monte-carlo-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metrics-categories {
+    gap: 12px;
+  }
+  
+  .metrics-category {
+    padding: 12px;
+  }
+  
+  .monte-carlo-section {
+    padding: 16px;
+  }
+}

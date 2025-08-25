@@ -1,0 +1,11 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.*
+
+*.db
+*.log

@@ -1,0 +1,236 @@
+.interactive-chart {
+  width: 100%;
+  background: white;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 20px 0 0 0;
+}
+
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.zoom-btn, .reset-btn {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.zoom-btn:hover, .reset-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.zoom-btn:active, .reset-btn:active {
+  transform: translateY(0);
+  background: #f3f4f6;
+}
+
+.reset-btn {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.reset-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.chart-info {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.chart-info span {
+  padding: 4px 8px;
+  background: #f9fafb;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.chart-container {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  min-height: 600px;
+}
+
+.chart-container svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-point {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.chart-point:hover {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.chart-instructions {
+  margin: 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .interactive-chart {
+    padding: 15px;
+  }
+  
+  .chart-controls {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .zoom-controls {
+    justify-content: center;
+  }
+  
+  .chart-info {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .zoom-btn, .reset-btn {
+    padding: 10px 15px;
+    font-size: 16px;
+  }
+  
+  .chart-container {
+    min-height: 400px;
+  }
+  
+  .chart-container svg {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Animation for smooth transitions */
+.chart-container svg path {
+  transition: d 0.3s ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-container svg circle {
+  transition: all 0.2s ease;
+}
+
+/* Ensure SVG paths are rendered properly */
+.chart-container svg {
+  shape-rendering: geometricPrecision;
+}
+
+.chart-container svg path {
+  stroke-dasharray: none !important;
+  stroke-opacity: 1 !important;
+  fill: none !important;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-container svg line {
+  stroke-opacity: 1 !important;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Make sure the line is rendered cleanly */
+.interactive-chart svg g[clip-path] path {
+  stroke-width: 3px !important;
+  opacity: 0.9 !important;
+  display: block !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  fill: none !important;
+}
+
+/* Smooth line rendering */
+.interactive-chart svg {
+  shape-rendering: geometricPrecision !important;
+}
+
+.interactive-chart svg path {
+  shape-rendering: geometricPrecision !important;
+}
+
+/* Loading state */
+.interactive-chart.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.interactive-chart.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Tooltip styling */
+.chart-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.chart-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+}

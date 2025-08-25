@@ -1,0 +1,143 @@
+.metric-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+  border: 1px solid #e1e5e9;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.metric-card.clickable {
+  cursor: pointer;
+}
+
+.metric-card.clickable:hover {
+  transform: translateY(-2px);
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-card-icon {
+  margin-right: 8px;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.metric-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.metric-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.metric-card-subtitle {
+  font-size: 13px;
+  color: #95a5a6;
+  margin-bottom: 8px;
+}
+
+.metric-card-trend {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.trend-icon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.trend-up {
+  color: #27ae60;
+}
+
+.trend-down {
+  color: #e74c3c;
+}
+
+.trend-neutral {
+  color: #95a5a6;
+}
+
+.metric-card-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .metric-card {
+    padding: 16px;
+    min-height: 120px;
+  }
+  
+  .metric-card-value {
+    font-size: 28px;
+  }
+  
+  .metric-card-title {
+    font-size: 13px;
+  }
+}
+
+/* Variants */
+.metric-card.positive {
+  border-left: 4px solid #27ae60;
+}
+
+.metric-card.negative {
+  border-left: 4px solid #e74c3c;
+}
+
+.metric-card.neutral {
+  border-left: 4px solid #3498db;
+}
+
+.metric-card.warning {
+  border-left: 4px solid #f39c12;
+}

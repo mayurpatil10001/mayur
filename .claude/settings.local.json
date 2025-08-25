@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/monitoring/test_health_monitor.py -v)",
+      "Bash(python:*)",
+      "Bash(Get-Content \"C:\\SierraChart\\SC results WF\\trading_platform\\services\\free_market_data.py\")",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(findstr:*)"
+    ],
+    "deny": []
+  }
+}

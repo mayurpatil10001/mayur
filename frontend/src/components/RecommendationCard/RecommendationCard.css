@@ -1,0 +1,536 @@
+.recommendation-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.recommendation-card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.recommendation-card.compact {
+  margin-bottom: 12px;
+}
+
+/* Action-based border colors */
+.recommendation-card.trade {
+  border-color: #27ae60;
+}
+
+.recommendation-card.avoid {
+  border-color: #e74c3c;
+}
+
+.recommendation-card.wait {
+  border-color: #f39c12;
+}
+
+.recommendation-card.loading,
+.recommendation-card.error,
+.recommendation-card.no-data {
+  border-color: #95a5a6;
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #e9ecef;
+}
+
+.recommendation-card.compact .recommendation-header {
+  padding: 16px;
+}
+
+.action-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.action-icon {
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.recommendation-card.compact .action-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+}
+
+.action-details h2 {
+  margin: 0 0 4px 0;
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recommendation-card.compact .action-details h2 {
+  font-size: 16px;
+}
+
+.account-symbol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.symbol-badge {
+  background: #3498db;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.confidence-section {
+  text-align: center;
+}
+
+.confidence-score {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.confidence-score.high {
+  color: #27ae60;
+}
+
+.confidence-score.medium {
+  color: #f39c12;
+}
+
+.confidence-score.low {
+  color: #e74c3c;
+}
+
+.confidence-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controls-section {
+  display: flex;
+  gap: 8px;
+}
+
+.control-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #e9ecef;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.control-button:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+}
+
+.control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-button.auto-refresh.active,
+.control-button.auto-refresh.active:hover {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.recommendation-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.metric-value.positive {
+  color: #27ae60;
+}
+
+.metric-value.negative {
+  color: #e74c3c;
+}
+
+.metric-value.neutral {
+  color: #3498db;
+}
+
+.recommendation-reasoning {
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.recommendation-reasoning h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.recommendation-reasoning p {
+  margin: 0;
+  color: #495057;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.recommendation-details {
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.strategy-badge {
+  background: #e9ecef;
+  color: #495057;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.risk-metrics {
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.risk-metrics h4 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.risk-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fff5f5;
+  border-radius: 4px;
+  border-left: 3px solid #e74c3c;
+}
+
+.risk-label {
+  font-size: 11px;
+  color: #721c24;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.risk-value {
+  font-size: 12px;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.recommendation-actions {
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.action-button {
+  padding: 12px 24px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-button.primary {
+  background: #27ae60;
+  color: white;
+}
+
+.action-button.primary:hover {
+  background: #219a52;
+  transform: translateY(-1px);
+}
+
+.recommendation-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.recommendation-card.compact .recommendation-footer {
+  padding: 8px 16px;
+}
+
+.auto-refresh-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #3498db;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: #3498db;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* Loading state */
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.loading-content p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+/* Error state */
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.error-icon {
+  font-size: 32px;
+}
+
+.error-text h3 {
+  margin: 0 0 4px 0;
+  color: #e74c3c;
+  font-size: 16px;
+}
+
+.error-text p {
+  margin: 0;
+  color: #e74c3c;
+  font-size: 14px;
+}
+
+.retry-button,
+.refresh-button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.retry-button:hover,
+.refresh-button:hover {
+  background: #c53030;
+}
+
+/* No data state */
+.no-data-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.no-data-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.no-data-content h3 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 18px;
+}
+
+.no-data-content p {
+  margin: 0 0 20px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.refresh-button {
+  background: #3498db;
+}
+
+.refresh-button:hover {
+  background: #2980b9;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .recommendation-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .recommendation-metrics {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  
+  .recommendation-reasoning,
+  .recommendation-details,
+  .risk-metrics,
+  .recommendation-actions {
+    padding: 16px;
+  }
+  
+  .controls-section {
+    align-self: flex-end;
+  }
+  
+  .risk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-section {
+    gap: 12px;
+  }
+  
+  .action-icon {
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .action-details h2 {
+    font-size: 18px;
+  }
+  
+  .confidence-score {
+    font-size: 20px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

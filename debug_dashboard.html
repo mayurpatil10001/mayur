@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        select { padding: 8px; margin: 10px; min-width: 300px; }
+        button { padding: 8px 16px; margin: 5px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Dashboard</h1>
+        <div id="status" class="status info">Starting debug...</div>
+        
+        <div>
+            <button onclick="testAPI()">Test API</button>
+            <button onclick="loadAccounts()">Load Accounts</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div>
+            <label>Select Account:</label><br>
+            <select id="accountSelect" onchange="onAccountChange()">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let accounts = [];
+        
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${time}] ${msg}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function updateStatus(msg, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = msg;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        async function testAPI() {
+            log('🔍 Testing API connection...');
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                log(`✅ API Health: ${data.status}`);
+                updateStatus('API is working', 'success');
+                return true;
+            } catch (error) {
+                log(`❌ API Error: ${error.message}`);
+                updateStatus('API connection failed', 'error');
+                return false;
+            }
+        }
+        
+        async function loadAccounts() {
+            log('📊 Loading accounts...');
+            updateStatus('Loading accounts...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/accounts/?size=50');
+                log(`Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                log(`Raw response: ${JSON.stringify(data).substring(0, 200)}...`);
+                
+                if (data.status === 'success' && data.data && data.data.items) {
+                    accounts = data.data.items;
+                    log(`✅ Loaded ${accounts.length} accounts`);
+                    
+                    // Update dropdown
+                    const select = document.getElementById('accountSelect');
+                    select.innerHTML = '<option value="">Select an account...</option>';
+                    
+                    accounts.forEach((account, index) => {
+                        const option = document.createElement('option');
+                        option.value = account.name;
+                        option.textContent = `${account.name} (${account.symbol}) - ${account.total_trades} trades`;
+                        select.appendChild(option);
+                        
+                        if (index < 3) {
+                            log(`Account ${index + 1}: ${account.name} (${account.symbol}) - ${account.total_trades} trades`);
+                        }
+                    });
+                    
+                    updateStatus(`✅ Loaded ${accounts.length} accounts`, 'success');
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                log(`❌ Load error: ${error.message}`);
+                updateStatus('Failed to load accounts', 'error');
+            }
+        }
+        
+        function onAccountChange() {
+            const select = document.getElementById('accountSelect');
+            const selectedName = select.value;
+            if (selectedName) {
+                const account = accounts.find(a => a.name === selectedName);
+                if (account) {
+                    log(`🎯 Selected: ${account.name} (${account.symbol}) with ${account.total_trades} trades`);
+                }
+            }
+        }
+        
+        // Auto-start
+        window.onload = async function() {
+            log('🚀 Debug dashboard started');
+            const apiWorking = await testAPI();
+            if (apiWorking) {
+                setTimeout(loadAccounts, 500);
+            }
+        };
+    </script>
+</body>
+</html></parameter>
+</invoke>

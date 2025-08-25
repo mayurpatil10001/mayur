@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "./trading_platform.db"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "read_query",
+        "write_query",
+        "list_tables",
+        "describe_table"
+      ]
+    }
+  }
+}

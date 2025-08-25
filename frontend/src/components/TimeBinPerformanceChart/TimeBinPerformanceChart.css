@@ -1,0 +1,338 @@
+.time-bin-performance-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Chart Controls */
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-group label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.control-group select {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.control-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3b82f6;
+}
+
+/* Performance Summary */
+.performance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.25rem;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.metric-value.positive {
+  color: #10b981;
+}
+
+.metric-value.negative {
+  color: #ef4444;
+}
+
+/* VIX Legend */
+.vix-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.legend-title {
+  font-weight: 500;
+  color: #0369a1;
+}
+
+.regime-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.regime-indicator::before {
+  content: '';
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.regime-indicator.low {
+  background: rgba(16, 185, 129, 0.1);
+  color: #065f46;
+}
+
+.regime-indicator.low::before {
+  background: #10b981;
+}
+
+.regime-indicator.medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400e;
+}
+
+.regime-indicator.medium::before {
+  background: #f59e0b;
+}
+
+.regime-indicator.high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #991b1b;
+}
+
+.regime-indicator.high::before {
+  background: #ef4444;
+}
+
+/* Chart Container */
+.chart-container {
+  width: 100%;
+  min-height: 400px;
+  position: relative;
+}
+
+/* Loading and Error States */
+.time-bin-chart-loading,
+.time-bin-chart-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.time-bin-chart-loading p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.error-message {
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-message h3 {
+  color: #dc2626;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.error-message p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.retry-button {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background: #2563eb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .chart-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .toggle-group {
+    justify-content: space-between;
+  }
+  
+  .performance-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .vix-legend {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .vix-legend .regime-indicator {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .time-bin-performance-chart {
+    padding: 0.75rem;
+  }
+  
+  .performance-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .toggle-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .chart-controls {
+    padding: 0.5rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .time-bin-performance-chart {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .chart-controls {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .control-group label,
+  .toggle {
+    color: #f9fafb;
+  }
+  
+  .control-group select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .performance-summary {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .metric-card {
+    background: #1f2937;
+  }
+  
+  .metric-value {
+    color: #f9fafb;
+  }
+  
+  .vix-legend {
+    background: #1e3a8a;
+    border-color: #3b82f6;
+  }
+  
+  .legend-title {
+    color: #93c5fd;
+  }
+}

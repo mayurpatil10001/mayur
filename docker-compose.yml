@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  trading-platform:
+    build: .
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+    volumes:
+      # Mount data directories if you have SierraChart data
+      # - ./your-sierra-chart-data:/app/sierra_data
+      - ./demo_data:/app/demo_data
+      - ./trading_platform.db:/app/trading_platform.db
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=sqlite:///./trading_platform.db
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+      - SECRET_KEY=docker-secret-key-change-in-production
+      # Update these if you have actual SierraChart data mounted
+      - SIERRA_CHART_SIMULATED_PATH=/app/demo_data/simulated
+      - SIERRA_CHART_DELAYED_PATH=/app/demo_data/delayed
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - trading-platform
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  trading_data:
+  logs:
