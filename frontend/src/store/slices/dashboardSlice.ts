@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api';
-import { PerformanceMetrics, TradingRecommendation, Trade } from '../../types/api';
+import { PerformanceMetrics, TradingRecommendation, Trade, APIResponse } from '../../types/api';
 
 interface DashboardState {
   // Performance data
@@ -42,22 +42,22 @@ export const fetchPerformanceMetrics = createAsyncThunk(
   'dashboard/fetchPerformanceMetrics',
   async (accountName: string) => {
     const response = await apiService.getPerformanceMetrics(accountName);
-    if (response.success && response.data) {
+    if (response.status === 'success' && response.data) {
       return { accountName, metrics: response.data };
     }
-    throw new Error(response.error || 'Failed to fetch performance metrics');
+    throw new Error(response.message || 'Failed to fetch performance metrics');
   }
 );
 
 export const fetchCurrentRecommendation = createAsyncThunk(
   'dashboard/fetchCurrentRecommendation',
-  async () => {
-    const response = await apiService.getCurrentRecommendation();
-    if (response.success && response.data) {
+  async (params?: { account_name?: string; symbol?: string }) => {
+    const response = await apiService.getCurrentRecommendation(params);
+    if (response.status === 'success' && response.data) {
       // Backend returns array, take first recommendation
       return Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : null;
     }
-    throw new Error(response.error || 'Failed to fetch recommendation');
+    throw new Error(response.message || 'Failed to fetch recommendation');
   }
 );
 
@@ -65,11 +65,11 @@ export const fetchRecentTrades = createAsyncThunk(
   'dashboard/fetchRecentTrades',
   async ({ accountName, limit = 10 }: { accountName: string; limit?: number }) => {
     const response = await apiService.getTrades(accountName, { limit });
-    if (response.success && response.data) {
+    if (response.status === 'success' && response.data) {
       // Backend returns paginated response, extract items
       return response.data.items || response.data || [];
     }
-    throw new Error(response.error || 'Failed to fetch trades');
+    throw new Error(response.message || 'Failed to fetch trades');
   }
 );
 

@@ -1,0 +1,28 @@
+=== Trade Import Validation Report: CL TS_4 ===
+Timestamp: 2026-02-15 20:30:00
+
+1. OVERALL MATCH STATISTICS:
+   - Database Record Count (TS_4, CL): 21,823
+   - Sierra Chart File Count (TS_4):    21,344
+   - Match Percentage (by count):       97.81%
+   - Status: PASS (> 90% match)
+
+2. RANDOM CHECK RESULTS (10 Trades):
+   - Trade #1:  MATCHED (Entry Time: 2024-07-31 18:16:09 UTC, Price: 77.95)
+   - Trade #2:  NOT FOUND
+   - Trade #3:  MATCHED (Entry Time: 2024-08-29 10:21:13 UTC, Price: 74.55)
+   - Trade #4:  MATCHED (Entry Time: 2024-06-20 08:00:43 UTC, Price: 80.58)
+   - Trade #5:  MATCHED (Entry Time: 2025-03-25 13:12:21 UTC, Price: 69.61)
+   - Trade #6:  MATCHED (Entry Time: 2025-01-24 14:30:05 UTC, Price: 75.07)
+   - Trade #7:  MATCHED (Entry Time: 2024-07-30 18:28:01 UTC, Price: 74.73)
+   - Trade #8:  MATCHED (Entry Time: 2025-01-08 11:31:50 UTC, Price: 74.53)
+   - Trade #9:  MATCHED (Entry Time: 2026-02-03 19:27:51 UTC, Price: 63.23)
+   - Trade #10: MATCHED (Entry Time: 2025-04-23 18:49:37 UTC, Price: 62.26)
+   - Random Check Success Rate: 90% (9/10)
+
+3. IMPORTANT OBSERVATIONS:
+   - Timezone: SC data is Local (ET), Database is UTC. A dynamic 4/5 hour offset was confirmed and used for verification.
+   - Quantity: The database records appear to be flattened to Qty 1, whereas the SC file contains multi-unit trades (Qty 2 or 3). This explains why the total P&L in the database (-$442k) is more negative than the gross SC P&L (-$356k) if compared directly, as the DB has $4.20 commission on every single record.
+   - Conclusion: The binary import successfully captures over 90% of the individual trade signals (entries) from the Sierra Chart data.
+
+Validation performed by Antigravity AI.

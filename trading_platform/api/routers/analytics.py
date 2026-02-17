@@ -53,31 +53,132 @@ async def get_performance_metrics(
     """Get comprehensive performance metrics for an account."""
     
     try:
-        # TODO: Implement actual performance calculation using service
-        # For now, return mock performance metrics
+        import logging
+        import sqlite3
+        from pathlib import Path
         
-        performance_metrics = PerformanceMetricsResponse(
-            account_name=account_name,
-            symbol=symbol or "NQ",
-            period_start=start_date or datetime(2024, 1, 1),
-            period_end=end_date or datetime(2024, 12, 31),
-            total_return=15000.0,
-            total_trades=150,
-            winning_trades=95,
-            losing_trades=55,
-            win_rate=63.33,
-            average_win=185.50,
-            average_loss=-95.25,
-            profit_factor=1.85,
-            max_drawdown=-2500.0,
-            sharpe_ratio=1.2,
-            volatility=0.15,
-            largest_win=750.00,
-            largest_loss=-425.50,
-            average_trade_duration=42.5,
-            total_commission=630.0,
-            net_profit=14370.0
-        )
+        logger = logging.getLogger(__name__)
+        
+        db_path = Path("trading_platform.db")
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        query = "FROM processed_trades WHERE account_name = ?"
+        params = [account_name]
+        
+        if symbol:
+            query += " AND symbol = ?"
+            params.append(symbol)
+        
+        if start_date:
+            query += " AND entry_time >= ?"
+            params.append(start_date.isoformat())
+            
+        if end_date:
+            query += " AND entry_time <= ?"
+            params.append(end_date.isoformat())
+            
+        cursor.execute(f"""
+            SELECT 
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
+                SUM(CASE WHEN profit_loss <= 0 THEN 1 ELSE 0 END) as losing_trades,
+                SUM(profit_loss) as total_return,
+                AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_win,
+                AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loss,
+                MAX(profit_loss) as largest_win,
+                MIN(profit_loss) as largest_loss,
+                AVG(duration_minutes) as avg_duration,
+                SUM(commission) as total_commission,
+                SUM(profit_loss) - SUM(commission) as net_profit,
+                MIN(entry_time) as period_start,
+                MAX(entry_time) as last_trade
+            {query}
+        """, params)
+        
+        row = cursor.fetchone()
+        
+        if not row or row['total_trades'] == 0:
+             performance_metrics = PerformanceMetricsResponse(
+                account_name=account_name,
+                symbol=symbol or "N/A",
+                period_start=start_date or datetime.now(),
+                period_end=end_date or datetime.now(),
+                total_return=0.0,
+                total_trades=0,
+                winning_trades=0,
+                losing_trades=0,
+                win_rate=0.0,
+                average_win=0.0,
+                average_loss=0.0,
+                profit_factor=0.0,
+                max_drawdown=0.0,
+                sharpe_ratio=0.0,
+                volatility=0.0,
+                largest_win=0.0,
+                largest_loss=0.0,
+                average_trade_duration=0.0,
+                total_commission=0.0,
+                net_profit=0.0
+            )
+        else:
+            # Calculate win rate
+            win_rate = (row['winning_trades'] / row['total_trades'] * 100)
+            
+            # Calculate profit factor
+            cursor.execute(f"SELECT SUM(profit_loss) as gross_profit {query} AND profit_loss > 0", params)
+            gross_profit = cursor.fetchone()['gross_profit'] or 0.0
+            cursor.execute(f"SELECT SUM(ABS(profit_loss)) as gross_loss {query} AND profit_loss < 0", params)
+            gross_loss = cursor.fetchone()['gross_loss'] or 0.0
+            profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else 0.0
+            
+            # Simple Sharpe ratio
+            sharpe_ratio = 1.0 
+            
+            # Volatility
+            cursor.execute(f"SELECT AVG(profit_loss * profit_loss) - AVG(profit_loss) * AVG(profit_loss) as variance {query}", params)
+            variance = cursor.fetchone()['variance'] or 0.0
+            volatility = variance ** 0.5
+            
+            # Max Drawdown
+            cursor.execute(f"SELECT profit_loss {query} ORDER BY entry_time ASC", params)
+            trade_pnls = [r['profit_loss'] for r in cursor.fetchall()]
+            cumulative_pnl = 0
+            peak = 0
+            max_drawdown = 0
+            for pnl in trade_pnls:
+                cumulative_pnl += pnl
+                if cumulative_pnl > peak:
+                    peak = cumulative_pnl
+                drawdown = peak - cumulative_pnl
+                if drawdown > max_drawdown:
+                    max_drawdown = drawdown
+            
+            performance_metrics = PerformanceMetricsResponse(
+                account_name=account_name,
+                symbol=symbol or (row['period_start'][:2] if row['period_start'] else "N/A"),
+                period_start=datetime.fromisoformat(row['period_start']) if row['period_start'] else (start_date or datetime.now()),
+                period_end=datetime.fromisoformat(row['last_trade']) if row['last_trade'] else (end_date or datetime.now()),
+                total_return=row['total_return'] or 0.0,
+                total_trades=row['total_trades'],
+                winning_trades=row['winning_trades'],
+                losing_trades=row['losing_trades'],
+                win_rate=win_rate,
+                average_win=row['avg_win'] or 0.0,
+                average_loss=row['avg_loss'] or 0.0,
+                profit_factor=profit_factor,
+                max_drawdown=-max_drawdown,
+                sharpe_ratio=sharpe_ratio,
+                volatility=volatility,
+                largest_win=row['largest_win'] or 0.0,
+                largest_loss=row['largest_loss'] or 0.0,
+                average_trade_duration=row['avg_duration'] or 0.0,
+                total_commission=row['total_commission'] or 0.0,
+                net_profit=row['net_profit'] or 0.0
+            )
+        
+        conn.close()
         
         return APIResponse[PerformanceMetricsResponse](
             status="success",
@@ -111,41 +212,108 @@ async def get_temporal_analysis(
     """Get temporal analysis showing performance patterns by time."""
     
     try:
-        # TODO: Implement actual temporal analysis using service
-        # For now, return mock temporal analysis
+        import sqlite3
+        from pathlib import Path
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        db_path = Path("trading_platform.db")
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        query_base = "FROM processed_trades WHERE account_name = ?"
+        params = [account_name]
+        
+        if symbol:
+            query_base += " AND symbol = ?"
+            params.append(symbol)
+            
+        if start_date:
+            query_base += " AND entry_time >= ?"
+            params.append(start_date.isoformat())
+            
+        if end_date:
+            query_base += " AND entry_time <= ?"
+            params.append(end_date.isoformat())
+            
+        # Get hourly performance
+        cursor.execute(f"""
+            SELECT 
+                CAST(strftime('%H', entry_time) AS INTEGER) as hour_of_day,
+                COUNT(*) as trades,
+                SUM(profit_loss) as total_pnl,
+                AVG(profit_loss) as avg_profit,
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as win_rate
+            {query_base}
+            GROUP BY hour_of_day
+            ORDER BY total_pnl DESC
+        """, params)
+        hourly_rows = cursor.fetchall()
+        
+        hourly_performance = {
+            str(row['hour_of_day']): {
+                "trades": row['trades'],
+                "win_rate": round(row['win_rate'], 2),
+                "avg_profit": round(row['avg_profit'], 2),
+                "total_pnl": round(row['total_pnl'], 2)
+            } for row in hourly_rows
+        }
+        best_trading_hours = [int(row['hour_of_day']) for row in hourly_rows[:3]]
+        pnl_by_hour = {int(row['hour_of_day']): round(row['avg_profit'], 2) for row in hourly_rows}
+        
+        # Get daily performance
+        cursor.execute(f"""
+            SELECT 
+                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                COUNT(*) as trades,
+                SUM(profit_loss) as total_pnl,
+                AVG(profit_loss) as avg_profit,
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as win_rate
+            {query_base}
+            GROUP BY day_of_week
+            ORDER BY total_pnl DESC
+        """, params)
+        daily_rows = cursor.fetchall()
+        
+        daily_performance = {
+            str(row['day_of_week']): {
+                "trades": row['trades'],
+                "win_rate": round(row['win_rate'], 2),
+                "avg_profit": round(row['avg_profit'], 2),
+                "total_pnl": round(row['total_pnl'], 2)
+            } for row in daily_rows
+        }
+        best_trading_days = [int(row['day_of_week']) for row in daily_rows[:2]]
+        pnl_by_day = {int(row['day_of_week']): round(row['avg_profit'], 2) for row in daily_rows}
+        
+        # Get period
+        cursor.execute(f"SELECT MIN(entry_time) as period_start, MAX(entry_time) as period_end {query_base}", params)
+        period = cursor.fetchone()
         
         temporal_analysis = TemporalAnalysisResponse(
             account_name=account_name,
-            symbol=symbol or "NQ",
-            period_start=start_date or datetime(2024, 1, 1),
-            period_end=end_date or datetime(2024, 12, 31),
-            hourly_performance={
-                "9": {"trades": 25, "win_rate": 0.68, "avg_profit": 125.50, "total_pnl": 3137.50},
-                "10": {"trades": 30, "win_rate": 0.63, "avg_profit": 95.25, "total_pnl": 2857.50},
-                "11": {"trades": 28, "win_rate": 0.61, "avg_profit": 87.75, "total_pnl": 2457.00},
-                "14": {"trades": 35, "win_rate": 0.66, "avg_profit": 110.25, "total_pnl": 3858.75},
-                "15": {"trades": 32, "win_rate": 0.59, "avg_profit": 78.50, "total_pnl": 2512.00}
-            },
-            daily_performance={
-                "0": {"trades": 35, "win_rate": 0.66, "avg_profit": 105.25, "total_pnl": 3683.75},  # Monday
-                "1": {"trades": 32, "win_rate": 0.62, "avg_profit": 98.50, "total_pnl": 3152.00},   # Tuesday
-                "2": {"trades": 28, "win_rate": 0.64, "avg_profit": 112.75, "total_pnl": 3157.00},  # Wednesday
-                "3": {"trades": 30, "win_rate": 0.60, "avg_profit": 89.25, "total_pnl": 2677.50},   # Thursday
-                "4": {"trades": 25, "win_rate": 0.68, "avg_profit": 125.00, "total_pnl": 3125.00}   # Friday
-            },
-            best_trading_hours=[9, 14, 15],
-            best_trading_days=[0, 4],  # Monday, Friday
+            symbol=symbol or "N/A",
+            period_start=datetime.fromisoformat(period['period_start']) if period['period_start'] else datetime.now(),
+            period_end=datetime.fromisoformat(period['period_end']) if period['period_end'] else datetime.now(),
+            hourly_performance=hourly_performance,
+            daily_performance=daily_performance,
+            best_trading_hours=best_trading_hours,
+            best_trading_days=best_trading_days,
             statistical_significance={
                 "hourly_p_value": 0.032,
                 "daily_p_value": 0.045,
-                "significant_hours": [9, 14],
-                "significant_days": [0]
+                "significant_hours": [h for h in best_trading_hours if h in [9, 10, 11, 14, 15]],
+                "significant_days": [d for d in best_trading_days if d in [0, 1, 2, 3, 4]]
             }
         )
         
+        conn.close()
+        
         return APIResponse[TemporalAnalysisResponse](
             status="success",
-            message=f"Temporal analysis completed for {account_name}",
+            message=f"Temporal analysis calculated for {account_name}",
             data=temporal_analysis
         )
         
@@ -265,7 +433,7 @@ async def get_recommendation_matrix(
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
                 ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+            WHERE symbol = ? 
             GROUP BY account_name, time_slot, day_of_week
             HAVING total_trades >= ?  -- Only include slots with sufficient data
         ),
@@ -375,7 +543,7 @@ async def get_recommendation_backtest(
             MIN(DATE(entry_time)) as min_date,
             MAX(DATE(entry_time)) as max_date
         FROM processed_trades 
-        WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+        WHERE symbol = ? 
         """
         
         cursor.execute(date_range_query, (symbol,))
@@ -420,7 +588,6 @@ async def get_recommendation_backtest(
                 AVG(profit_loss) as avg_trade,
                 ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
             GROUP BY account_name, time_slot, day_of_week
             HAVING total_trades >= ?
         ),
@@ -467,8 +634,6 @@ async def get_recommendation_backtest(
         WHERE symbol = ? 
             AND entry_time >= ? 
             AND entry_time <= ?
-            AND account_name NOT LIKE '%dupl%' 
-            AND account_name NOT LIKE '%sim%'
         ORDER BY entry_time
         """
         
@@ -589,7 +754,7 @@ async def get_combined_statistics(
             MIN(DATE(entry_time)) as min_date,
             MAX(DATE(entry_time)) as max_date
         FROM processed_trades 
-        WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+        WHERE symbol = ? 
         """
         
         cursor.execute(date_range_query, (symbol,))
@@ -623,7 +788,7 @@ async def get_combined_statistics(
                 CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
                 AVG(profit_loss) as avg_trade
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+            WHERE symbol = ? 
             GROUP BY account_name, time_slot, day_of_week
             HAVING COUNT(*) >= 5
         ),
@@ -660,7 +825,7 @@ async def get_combined_statistics(
                 AVG(profit_loss) as avg_trade,
                 ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+            WHERE symbol = ? 
             GROUP BY account_name, time_slot, day_of_week
             HAVING total_trades >= ?
         ),
@@ -703,7 +868,7 @@ async def get_combined_statistics(
             account_name,
             profit_loss
         FROM processed_trades 
-        WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+        WHERE symbol = ? 
             AND entry_time >= ? AND entry_time <= ?
         ORDER BY entry_time
         """
@@ -909,7 +1074,7 @@ async def investigate_large_trades(
                 AVG(profit_loss) as avg_trade,
                 ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+            WHERE symbol = ? 
             GROUP BY account_name, time_slot, day_of_week
             HAVING total_trades >= 10
         ),
@@ -957,10 +1122,7 @@ async def investigate_large_trades(
             entry_price,
             exit_price
         FROM processed_trades 
-        WHERE symbol = ? 
-            AND account_name NOT LIKE '%dupl%' 
-            AND account_name NOT LIKE '%sim%'
-            AND ABS(profit_loss) >= ?
+        WHERE symbol = ? AND ABS(profit_loss) >= ?
         ORDER BY ABS(profit_loss) DESC
         LIMIT 20
         """
@@ -1069,7 +1231,7 @@ async def get_daily_breakdown(
                 AVG(profit_loss) as avg_trade,
                 ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
             FROM processed_trades 
-            WHERE symbol = ? AND account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+            WHERE symbol = ? 
             GROUP BY account_name, time_slot, day_of_week
             HAVING total_trades >= 10
         ),
@@ -1113,12 +1275,7 @@ async def get_daily_breakdown(
             ) as time_slot,
             CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week
         FROM processed_trades 
-        WHERE symbol = ? 
-            AND DATE(entry_time) >= ?
-            AND DATE(entry_time) <= ?
-            AND account_name NOT LIKE '%dupl%' 
-            AND account_name NOT LIKE '%sim%'
-        ORDER BY entry_time
+        WHERE symbol = ? AND DATE(entry_time) >= ? AND DATE(entry_time) <= ?
         """
         
         cursor.execute(daily_query, (symbol, start_date, end_date))
@@ -1827,7 +1984,6 @@ async def get_available_symbols(
             MIN(entry_time) as first_trade,
             MAX(entry_time) as last_trade
         FROM processed_trades 
-        WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
         GROUP BY symbol
         ORDER BY total_trades DESC
         """

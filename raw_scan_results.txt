@@ -1,0 +1,34 @@
+
+Scanning D:\SierraChart_Simulated_Feed\TradeActivityLogs\TradeActivityLog_2026-01-20_UTC.3Q_sim14.data for 60.53...
+
+[MATCH #1] Found 60.52999864704907 at offset 20287
+  Context String: ...Q...Order from DTC client #3. Sierra Chart. 127.0.0.1 | Client text: Tag: AutoTrader_i.......A.9.....k.......Limitl..............?m........n............CN@p........s...............t...............v.......3Q_sim14x........z........}..............@....................Tag: AutoTrader_........shimish
+
+[MATCH #2] Found 60.52999864704907 at offset 22640
+  Context String: 51.169 | Client text: Tag: Tag: AutoTrader_. Text: Tag: Tag: AutoTrader_i.......A.9.....j.......37615694k.......Limitl..............?m........n............CN@p........s...............t...............v.......3Q_sim14x........z........}..............@....................Tag: AutoTrader_........shimish
+
+[MATCH #3] Found 60.52999864704907 at offset 23099
+  Context String: der update). Info: Simulated order accepted. Text: Tag: Tag: AutoTrader_i.......A.9.....j.......37615694k.......Limitl..............?m........n............CN@p........s...............t...............v.......3Q_sim14x........z........}..............@....................Tag: AutoTrader_........shimish
+
+[MATCH #4] Found 60.52999864704907 at offset 25590
+  Context String: ion fill. Bid: 60.53 Ask: 60.54 Last: 60.51. Text: Tag: Tag: AutoTrader_i.......A.9.....j.......37615694k.......Limitl..............?m........n............CN@p........q............CN@r..............?s...............t...............v.......3Q_sim14x........z........|.......37615694.1}..............@.
+
+[MATCH #5] Found 60.52999864704907 at offset 25615
+  Context String:  60.54 Last: 60.51. Text: Tag: Tag: AutoTrader_i.......A.9.....j.......37615694k.......Limitl..............?m........n............CN@p........q............CN@r..............?s...............t...............v.......3Q_sim14x........z........|.......37615694.1}..............@....................Tag: A
+
+Scanning D:\SierraChart_Simulated_Feed\TradeActivityLogs\TradeActivityLog_2025-12-03_UTC.IPS_TM_5dupli.data for string 'CLF26'...
+
+[MATCH #1] Found 'CLF26' at offset 83416
+  Context String: h...$...Removing Position with quantity of 0v.......IPS_TM_5dupli.................................d...............e...........f.......@.1@:...g.......CLF26h...Q...Order from DTC client #5. Sierra Chart. 127.0.0.1 | Client text: Tag: AutoTrader_i.......8.......k.......Marketl..............@m........p
+
+[MATCH #2] Found 'CLF26' at offset 83799
+  Context String: ................Tag: AutoTrader_........shimishon.................................2.1@:...........d...............e...........f.........5@:...g.......CLF26h.......Trading Evaluator (New). Info: Order from DTC client #23494. Sierra Chart. 93.173.42.126 | Client text: Tag: Tag: AutoTrader_. Text: Tag:
+
+[MATCH #3] Found 'CLF26' at offset 84293
+  Context String: utoTrader_........shimishon.................19826232.45311..........................5@:...........d...............e...........f.......4.5@:...g.......CLF26h...]...Trading Evaluator (Order update). Info: Simulated order accepted. Text: Tag: Tag: AutoTrader_i.......8.......j.......36307706k.......Mark
+
+[MATCH #4] Found 'CLF26' at offset 84742
+  Context String: ..shimishon.................36307706........19826232.45311........................3.5@:...........d...............e...........f.......B.5@:...g.......CLF26h...w...Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 58.69 Ask: 58.70 Last: 58.70. Text: Tag: Tag: AutoTrader_i.......8.......j.
+
+[MATCH #5] Found 'CLF26' at offset 85267
+  Context String: ..shimishon.................36307706........19826232.45311........................A.5@:...........d...............e...........f.......L.5@:...g.......CLF26h...W...Updated Internal Position Quantity to 3. Previous: 0. Fill of InternalOrderID: 19826232l..............@v.......IPS_TM_5dupli}............

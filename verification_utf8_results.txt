@@ -1,0 +1,272 @@
+
+========== Verifying Case: 3Q_sim14 (Jan 19-20) ==========
+Parsing BINARY file (Flex-Scan): TradeActivityLog_2026-01-19_UTC.3Q_sim14.data
+  Loaded 169 candidate prices from Binary windows (Total Records Searched: 82).
+Parsing BINARY file (Flex-Scan): TradeActivityLog_2026-01-20_UTC.3Q_sim14.data
+  Loaded 211 candidate prices from Binary windows (Total Records Searched: 92).
+Parsing TEXT file: 3q_sim14_01192026_TradesList.txt
+  Loaded 6 trades from Text.
+  Total Text Trades: 6
+
+  --- Matching Results ---
+  Time                 | Price      | Symbol     | Status          | Binary Match
+-------------------------------------------------------------------------------------
+  2026-01-19 09:30:33  | 59.28      | CLG26 (3Q_sim14) | MATCHED         | Bin found @ 59.28
+  2026-01-19 09:30:33  | 59.28      | CLG26      | MATCHED         | Bin found @ 59.28
+  2026-01-20 03:01:45  | 59.14      | CLG26      | MATCHED         | Bin found @ 59.14
+  2026-01-20 03:01:45  | 59.14      | CLG26      | MATCHED         | Bin found @ 59.14
+  2026-01-20 14:12:17  | 60.33      | CLG26      | MATCHED         | Bin found @ 60.33
+  2026-01-20 14:12:17  | 60.33      | CLG26      | MATCHED         | Bin found @ 60.33
+
+  Final Stats: 6/6 Matched. (Gap Closed: Verifying All Recorded Days)
+
+========== Verifying Case: IPS_TM_5dupli (Dec 03-04) ==========
+Parsing BINARY file (Flex-Scan): TradeActivityLog_2025-12-03_UTC.IPS_TM_5dupli.data
+  Loaded 5705 candidate prices from Binary windows (Total Records Searched: 5172).
+Parsing BINARY file (Flex-Scan): TradeActivityLog_2025-12-04_UTC.IPS_TM_5dupli.data
+  Loaded 4796 candidate prices from Binary windows (Total Records Searched: 4739).
+Parsing TEXT file: IPS_TM_5_dupli_03122025_TradesList.txt
+  Loaded 236 trades from Text.
+  Total Text Trades: 236
+
+  --- Matching Results ---
+  Time                 | Price      | Symbol     | Status          | Binary Match
+-------------------------------------------------------------------------------------
+  2025-12-03 01:00:26  | 58.63      | CLF26 (IPS_TM_5dupli) | MATCHED         | Bin found @ 58.63
+  2025-12-03 01:00:26  | 58.63      | CLF26      | MATCHED         | Bin found @ 58.63
+  2025-12-03 01:00:26  | 58.63      | CLF26      | MATCHED         | Bin found @ 58.63
+  2025-12-03 02:31:32  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-03 02:31:32  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-03 03:45:09  | 59.05      | CLF26      | MATCHED         | Bin found @ 59.05
+  2025-12-03 03:45:09  | 59.05      | CLF26      | MATCHED         | Bin found @ 59.05
+  2025-12-03 04:22:00  | 59.31      | CLF26      | MATCHED         | Bin found @ 59.31
+  2025-12-03 04:22:00  | 59.31      | CLF26      | MATCHED         | Bin found @ 59.31
+  2025-12-03 04:35:04  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 04:35:04  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 04:36:13  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 04:41:28  | 59.30      | CLF26      | MATCHED         | Bin found @ 59.31
+  2025-12-03 04:42:59  | 59.37      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 04:43:42  | 59.29      | CLF26      | MATCHED         | Bin found @ 59.31
+  2025-12-03 04:49:18  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 04:49:18  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 05:01:58  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 05:01:58  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 05:01:58  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 05:31:28  | 59.53      | CLF26      | MATCHED         | Bin found @ 59.53
+  2025-12-03 05:36:34  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 05:43:50  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 05:43:50  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 06:00:30  | 59.48      | CLF26      | MATCHED         | Bin found @ 59.48
+  2025-12-03 06:00:30  | 59.47      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 06:00:30  | 59.47      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 06:00:30  | 59.47      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 07:54:39  | 59.42      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 08:09:17  | 59.31      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-03 08:11:58  | 59.38      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:11:58  | 59.38      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:20:31  | 59.41      | CLF26      | MATCHED         | Bin found @ 59.41
+  2025-12-03 08:20:32  | 59.40      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:20:32  | 59.40      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:32:51  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:32:51  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:32:51  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 08:37:25  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 08:39:03  | 59.16      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 08:39:03  | 59.16      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 08:39:13  | 59.20      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-03 08:39:13  | 59.19      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-03 08:39:13  | 59.19      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-03 08:39:13  | 59.19      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-03 08:46:26  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 08:46:26  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-03 09:07:29  | 59.08      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 09:11:59  | 58.99      | CLF26      | MATCHED         | Bin found @ 58.99
+  2025-12-03 09:14:24  | 59.05      | CLF26      | MATCHED         | Bin found @ 59.05
+  2025-12-03 09:14:24  | 59.05      | CLF26      | MATCHED         | Bin found @ 59.05
+  2025-12-03 09:23:11  | 59.08      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 09:23:11  | 59.08      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 09:23:11  | 59.08      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 09:23:11  | 59.08      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 09:34:58  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 09:34:58  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 10:02:03  | 59.16      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 10:02:03  | 59.16      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 10:09:35  | 59.17      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 10:09:35  | 59.17      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-03 10:22:02  | 59.25      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-03 10:22:02  | 59.25      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-03 10:22:02  | 59.25      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-03 10:30:32  | 59.23      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 10:30:32  | 59.23      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 10:30:58  | 59.27      | CLF26      | MATCHED         | Bin found @ 59.29
+  2025-12-03 10:32:04  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 10:32:04  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 10:35:39  | 59.31      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-03 10:40:03  | 59.30      | CLF26      | MATCHED         | Bin found @ 59.32
+  2025-12-03 10:40:03  | 59.30      | CLF26      | MATCHED         | Bin found @ 59.32
+  2025-12-03 10:40:03  | 59.30      | CLF26      | MATCHED         | Bin found @ 59.32
+  2025-12-03 10:56:35  | 59.44      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 10:56:35  | 59.44      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 11:01:41  | 59.50      | CLF26      | MATCHED         | Bin found @ 59.51
+  2025-12-03 11:01:41  | 59.50      | CLF26      | MATCHED         | Bin found @ 59.51
+  2025-12-03 11:07:15  | 59.51      | CLF26      | MATCHED         | Bin found @ 59.53
+  2025-12-03 11:09:36  | 59.44      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 11:09:36  | 59.44      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 11:09:36  | 59.44      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-03 11:23:13  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 11:23:13  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-03 11:41:55  | 59.21      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:41:55  | 59.21      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:47:44  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:47:44  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:47:44  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:47:44  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:47:44  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.23
+  2025-12-03 11:59:08  | 58.98      | CLF26      | MATCHED         | Bin found @ 58.97
+  2025-12-03 11:59:08  | 58.98      | CLF26      | MATCHED         | Bin found @ 58.97
+  2025-12-03 12:12:10  | 59.09      | CLF26      | MATCHED         | Bin found @ 59.11
+  2025-12-03 12:12:10  | 59.09      | CLF26      | MATCHED         | Bin found @ 59.11
+  2025-12-03 12:12:10  | 59.09      | CLF26      | MATCHED         | Bin found @ 59.08
+  2025-12-03 12:29:28  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 12:29:28  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-03 13:11:50  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.24
+  2025-12-03 13:11:50  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.24
+  2025-12-03 13:22:56  | 59.28      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-03 13:26:54  | 59.25      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-03 13:31:53  | 59.18      | CLF26      | MATCHED         | Bin found @ 59.17
+  2025-12-03 13:35:46  | 59.11      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-03 13:35:46  | 59.11      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-03 13:46:20  | 59.14      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-03 14:07:03  | 59.06      | CLF26      | MATCHED         | Bin found @ 59.05
+  2025-12-03 14:18:55  | 58.99      | CLF26      | MATCHED         | Bin found @ 58.99
+  2025-12-03 14:20:36  | 59.03      | CLF26      | MATCHED         | Bin found @ 59.03
+  2025-12-03 14:23:12  | 58.96      | CLF26      | MATCHED         | Bin found @ 58.97
+  2025-12-03 14:24:50  | 58.97      | CLF26      | MATCHED         | Bin found @ 58.97
+  2025-12-03 14:25:22  | 58.92      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-03 14:25:56  | 58.99      | CLF26      | MATCHED         | Bin found @ 58.99
+  2025-12-03 14:30:44  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-03 14:31:34  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-03 14:31:34  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-03 15:00:11  | 58.94      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-03 15:00:11  | 58.94      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-03 15:00:11  | 58.94      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-03 16:31:41  | 59.10      | CLF26      | MATCHED         | Bin found @ 59.12
+  2025-12-03 16:31:41  | 59.10      | CLF26      | MATCHED         | Bin found @ 59.12
+  2025-12-03 18:00:01  | 59.07      | CLF26      | MATCHED         | Bin found @ 59.06
+  2025-12-03 18:00:01  | 59.07      | CLF26      | MATCHED         | Bin found @ 59.06
+  2025-12-03 18:23:42  | 58.99      | CLF26      | MATCHED         | Bin found @ 58.99
+  2025-12-03 18:23:42  | 58.99      | CLF26      | MATCHED         | Bin found @ 58.99
+  2025-12-03 20:58:22  | 59.11      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-03 20:58:22  | 59.11      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-03 22:32:59  | 59.21      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-03 22:32:59  | 59.21      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 00:50:17  | 59.19      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 00:50:17  | 59.19      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 01:30:10  | 59.33      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 01:30:10  | 59.33      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 02:24:06  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 02:41:29  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-04 03:01:01  | 59.29      | CLF26      | MATCHED         | Bin found @ 59.31
+  2025-12-04 03:21:12  | 59.26      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 03:29:55  | 59.16      | CLF26      | MATCHED         | Bin found @ 59.16
+  2025-12-04 03:33:33  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 03:33:33  | 59.24      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 04:00:52  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 04:00:52  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 04:00:52  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 04:00:52  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 04:27:02  | 59.18      | CLF26      | MATCHED         | Bin found @ 59.17
+  2025-12-04 04:27:02  | 59.18      | CLF26      | MATCHED         | Bin found @ 59.17
+  2025-12-04 04:49:34  | 59.21      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 05:45:42  | 59.20      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 05:45:42  | 59.20      | CLF26      | MATCHED         | Bin found @ 59.20
+  2025-12-04 06:51:26  | 59.27      | CLF26      | MATCHED         | Bin found @ 59.29
+  2025-12-04 06:51:26  | 59.27      | CLF26      | MATCHED         | Bin found @ 59.29
+  2025-12-04 07:20:36  | 59.26      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 07:30:17  | 59.28      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-04 07:30:17  | 59.28      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-04 08:09:11  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 08:14:29  | 59.41      | CLF26      | MATCHED         | Bin found @ 59.41
+  2025-12-04 08:14:29  | 59.41      | CLF26      | MATCHED         | Bin found @ 59.41
+  2025-12-04 08:21:09  | 59.39      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-04 08:27:13  | 59.32      | CLF26      | MATCHED         | Bin found @ 59.32
+  2025-12-04 08:45:58  | 59.40      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-04 08:45:58  | 59.40      | CLF26      | MATCHED         | Bin found @ 59.39
+  2025-12-04 08:56:50  | 59.43      | CLF26      | MATCHED         | Bin found @ 59.44
+  2025-12-04 09:02:02  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.24
+  2025-12-04 09:02:02  | 59.22      | CLF26      | MATCHED         | Bin found @ 59.24
+  2025-12-04 09:08:30  | 59.28      | CLF26      | MATCHED         | Bin found @ 59.30
+  2025-12-04 09:11:37  | 59.27      | CLF26      | MATCHED         | Bin found @ 59.29
+  2025-12-04 09:11:37  | 59.27      | CLF26      | MATCHED         | Bin found @ 59.29
+  2025-12-04 09:15:38  | 59.23      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 09:15:38  | 59.23      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 09:15:38  | 59.23      | CLF26      | MATCHED         | Bin found @ 59.25
+  2025-12-04 09:18:39  | 59.14      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 09:24:24  | 59.11      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 09:30:22  | 59.05      | CLF26      | MATCHED         | Bin found @ 59.04
+  2025-12-04 09:43:15  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-04 09:43:15  | 58.89      | CLF26      | MATCHED         | Bin found @ 58.89
+  2025-12-04 09:46:50  | 58.91      | CLF26      | MATCHED         | Bin found @ 58.90
+  2025-12-04 09:46:50  | 58.91      | CLF26      | MATCHED         | Bin found @ 58.90
+  2025-12-04 09:54:55  | 58.93      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-04 09:54:55  | 58.93      | CLF26      | MATCHED         | Bin found @ 58.94
+  2025-12-04 10:07:26  | 58.96      | CLF26      | MATCHED         | Bin found @ 58.97
+  2025-12-04 10:25:29  | 59.12      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 10:25:29  | 59.12      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 10:27:43  | 59.14      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 10:27:43  | 59.14      | CLF26      | MATCHED         | Bin found @ 59.13
+  2025-12-04 10:41:01  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.33
+  2025-12-04 10:41:01  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.33
+  2025-12-04 10:41:01  | 59.34      | CLF26      | MATCHED         | Bin found @ 59.34
+  2025-12-04 10:43:47  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-04 10:43:47  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-04 10:47:11  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-04 10:47:11  | 59.45      | CLF26      | MATCHED         | Bin found @ 59.46
+  2025-12-04 10:51:01  | 59.48      | CLF26      | MATCHED         | Bin found @ 59.48
+  2025-12-04 10:51:01  | 59.48      | CLF26      | MATCHED         | Bin found @ 59.48
+  2025-12-04 10:53:35  | 59.59      | CLF26      | MATCHED         | Bin found @ 59.60
+  2025-12-04 10:53:35  | 59.59      | CLF26      | MATCHED         | Bin found @ 59.60
+  2025-12-04 10:53:35  | 59.59      | CLF26      | MATCHED         | Bin found @ 59.60
+  2025-12-04 11:01:55  | 59.49      | CLF26      | MATCHED         | Bin found @ 59.51
+  2025-12-04 11:01:55  | 59.49      | CLF26      | MATCHED         | Bin found @ 59.51
+  2025-12-04 11:20:39  | 59.62      | CLF26      | MATCHED         | Bin found @ 59.64
+  2025-12-04 11:20:39  | 59.62      | CLF26      | MATCHED         | Bin found @ 59.64
+  2025-12-04 11:20:39  | 59.62      | CLF26      | MATCHED         | Bin found @ 59.64
+  2025-12-04 11:32:04  | 59.83      | CLF26      | MATCHED         | Bin found @ 59.82
+  2025-12-04 11:32:04  | 59.83      | CLF26      | MATCHED         | Bin found @ 59.82
+  2025-12-04 11:34:35  | 59.98      | CLF26      | MATCHED         | Bin found @ 59.98
+  2025-12-04 11:34:35  | 59.98      | CLF26      | MATCHED         | Bin found @ 59.98
+  2025-12-04 11:34:35  | 59.98      | CLF26      | MATCHED         | Bin found @ 59.98
+  2025-12-04 11:36:29  | 59.84      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:36:29  | 59.84      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:40:13  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:40:13  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:40:13  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:40:13  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:41:43  | 59.87      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:41:43  | 59.87      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:50:13  | 59.87      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:50:13  | 59.87      | CLF26      | MATCHED         | Bin found @ 59.86
+  2025-12-04 11:52:42  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:58:55  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:58:55  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 11:58:55  | 59.88      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 12:08:48  | 59.80      | CLF26      | MATCHED         | Bin found @ 59.79
+  2025-12-04 12:08:48  | 59.80      | CLF26      | MATCHED         | Bin found @ 59.79
+  2025-12-04 13:35:43  | 59.91      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 13:35:43  | 59.91      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 13:35:43  | 59.91      | CLF26      | MATCHED         | Bin found @ 59.90
+  2025-12-04 14:13:45  | 59.79      | CLF26      | MATCHED         | Bin found @ 59.79
+  2025-12-04 14:15:34  | 59.71      | CLF26      | MATCHED         | Bin found @ 59.71
+  2025-12-04 14:17:49  | 59.74      | CLF26      | MATCHED         | Bin found @ 59.74
+  2025-12-04 14:22:41  | 59.65      | CLF26      | MATCHED         | Bin found @ 59.66
+  2025-12-04 14:26:26  | 59.68      | CLF26      | MATCHED         | Bin found @ 59.67
+  2025-12-04 14:26:26  | 59.68      | CLF26      | MATCHED         | Bin found @ 59.67
+  2025-12-04 15:11:22  | 59.68      | CLF26      | MATCHED         | Bin found @ 59.67
+  2025-12-04 15:34:24  | 59.69      | CLF26      | MATCHED         | Bin found @ 59.71
+  2025-12-04 15:34:24  | 59.69      | CLF26      | MATCHED         | Bin found @ 59.71
+  2025-12-04 18:39:30  | 59.73      | CLF26      | MATCHED         | Bin found @ 59.74
+  2025-12-04 20:00:02  | 59.63      | CLF26      | MATCHED         | Bin found @ 59.65
+  2025-12-04 22:29:40  | 59.50      | CLF26      | MATCHED         | Bin found @ 59.51
+
+  Final Stats: 236/236 Matched. (Gap Closed: Verifying All Recorded Days)

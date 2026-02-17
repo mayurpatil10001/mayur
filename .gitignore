@@ -9,3 +9,9 @@ ENV/
 
 *.db
 *.log
+*.pack
+frontend/node_modules/.cache/babel-loader/*.json
+frontend/node_modules/.cache/webpack/*
+frontend/node_modules/.cache/babel-loader/*
+frontend/node_modules/.cache/*.pack
+frontend/node_modules/.cache/default-development/*.pack

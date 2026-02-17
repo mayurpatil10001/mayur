@@ -414,7 +414,7 @@ class VIXDataIntegration:
                     'entry_price': trade.entry_price,
                     'exit_price': trade.exit_price,
                     'quantity': trade.quantity,
-                    'pnl': trade.pnl
+                    'pnl': trade.profit_loss
                 })
             
             return trade_details

@@ -124,11 +124,11 @@ const StrategyValidationAnalytics: React.FC<StrategyValidationAnalyticsProps> = 
         <div className="overall-score">
           <div className="score-label">Trading Readiness Score</div>
           <div className="score-value">
-            <span className="score-number">{overallScore}%</span>
+            <span className="score-number">{Math.round(overallScore)}%</span>
             <div className="score-bar">
-              <div 
+              <div
                 className="score-fill"
-                style={{ 
+                style={{
                   width: `${overallScore}%`,
                   backgroundColor: overallScore >= 80 ? '#10b981' : overallScore >= 60 ? '#f59e0b' : '#ef4444'
                 }}
@@ -143,6 +143,9 @@ const StrategyValidationAnalytics: React.FC<StrategyValidationAnalyticsProps> = 
             ) : (
               <span className="status-not-ready">❌ NOT READY FOR LIVE TRADING</span>
             )}
+          </div>
+          <div className="score-explanation" style={{ fontSize: '0.75rem', color: '#666', marginTop: '10px', textAlign: 'center', fontStyle: 'italic' }}>
+            Score is a weighted average of Win Rate (30%), Sharpe Ratio (30%), and Sample Size (40%).
           </div>
         </div>
       )}

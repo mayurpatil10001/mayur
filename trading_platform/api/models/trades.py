@@ -26,6 +26,11 @@ class TradeResponse(BaseModel):
         example="TRADE_001_20240101_001"
     )
     
+    time_slot: str = Field(
+        description="30-minute time slot (HH:mm)",
+        example="09:30"
+    )
+    
     account_name: str = Field(
         description="Account name",
         example="IPS_TM_10"

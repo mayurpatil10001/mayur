@@ -48,104 +48,121 @@ async def list_trades(
 ) -> APIResponse[PaginatedResponse[TradeResponse]]:
     """List trades with pagination and filtering."""
     
+    import logging
+    import sqlite3
+    from pathlib import Path
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"[TRADES API] Listing trades - account={account_name}, symbol={symbol}, page={pagination.page}")
+    
     try:
-        # TODO: Implement actual database query using MCP
-        # For now, return mock data with filtering applied
+        # Connect to SQLite database
+        db_path = Path("trading_platform.db")
+        if not db_path.exists():
+            raise HTTPException(status_code=500, detail="Database file not found")
         
-        mock_trades = [
-            TradeResponse(
-                trade_id="TRADE_001_20240101_001",
-                account_name="IPS_TM_10",
-                symbol="NQ",
-                entry_time=datetime(2024, 1, 1, 9, 30),
-                exit_time=datetime(2024, 1, 1, 10, 15),
-                entry_price=15250.50,
-                exit_price=15275.25,
-                quantity=2,
-                side=TradeSide.LONG,
-                profit_loss=49.50,
-                commission=4.20,
-                duration_minutes=45,
-                hour_of_day=9,
-                day_of_week=0
-            ),
-            TradeResponse(
-                trade_id="TRADE_002_20240101_002",
-                account_name="IPS_TM_13",
-                symbol="FDAX",
-                entry_time=datetime(2024, 1, 1, 14, 20),
-                exit_time=datetime(2024, 1, 1, 14, 35),
-                entry_price=17850.00,
-                exit_price=17825.50,
-                quantity=1,
-                side=TradeSide.SHORT,
-                profit_loss=24.50,
-                commission=3.50,
-                duration_minutes=15,
-                hour_of_day=14,
-                day_of_week=0
-            ),
-            TradeResponse(
-                trade_id="TRADE_003_20240102_001",
-                account_name="IPS_TM_10",
-                symbol="NQ",
-                entry_time=datetime(2024, 1, 2, 10, 45),
-                exit_time=datetime(2024, 1, 2, 11, 30),
-                entry_price=15280.75,
-                exit_price=15260.25,
-                quantity=1,
-                side=TradeSide.LONG,
-                profit_loss=-20.50,
-                commission=4.20,
-                duration_minutes=45,
-                hour_of_day=10,
-                day_of_week=1
-            )
-        ]
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        # Apply filters
-        filtered_trades = mock_trades
+        # Build query
+        query = """
+        SELECT 
+            trade_id,
+            account_name,
+            symbol,
+            entry_time,
+            exit_time,
+            entry_price,
+            exit_price,
+            quantity,
+            side,
+            profit_loss,
+            commission,
+            duration_minutes,
+            hour_of_day,
+            day_of_week
+        FROM processed_trades
+        WHERE 1=1
+        """
+        params = []
         
         if account_name:
-            filtered_trades = [t for t in filtered_trades if t.account_name == account_name]
+            query += " AND account_name = ?"
+            params.append(account_name)
         
         if symbol:
-            filtered_trades = [t for t in filtered_trades if t.symbol == symbol]
-        
+            query += " AND symbol = ?"
+            params.append(symbol)
+            
         if start_date:
-            filtered_trades = [t for t in filtered_trades if t.entry_time >= start_date]
-        
+            query += " AND entry_time >= ?"
+            params.append(start_date.isoformat())
+            
         if end_date:
-            filtered_trades = [t for t in filtered_trades if t.entry_time <= end_date]
-        
-        if min_profit is not None:
-            filtered_trades = [t for t in filtered_trades if t.profit_loss >= min_profit]
-        
-        if max_profit is not None:
-            filtered_trades = [t for t in filtered_trades if t.profit_loss <= max_profit]
-        
+            query += " AND entry_time <= ?"
+            params.append(end_date.isoformat())
+            
         if side:
-            filtered_trades = [t for t in filtered_trades if t.side == side]
+            query += " AND side = ?"
+            params.append(side.value if hasattr(side, 'value') else side)
+            
+        # Get total count for pagination
+        count_query = f"SELECT COUNT(*) FROM ({query})"
+        cursor.execute(count_query, params)
+        total_count = cursor.fetchone()[0]
         
-        # Apply pagination
-        total = len(filtered_trades)
-        start_idx = pagination.offset
-        end_idx = start_idx + pagination.size
-        page_trades = filtered_trades[start_idx:end_idx]
+        # Apply sorting and pagination
+        query += " ORDER BY entry_time DESC LIMIT ? OFFSET ?"
+        params.extend([pagination.size, pagination.offset])
+        
+        logger.info(f"[TRADES API] Executing query: {query}")
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        
+        trades = []
+        for row in rows:
+            # Calculate time slot matching the hourly breakdown logic
+            dt = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
+            # We use the raw hour/minute as stored in DB (string-based strftime behavior)
+            # Since fromisoformat preserves the numbers, we can just extract them
+            slot_hour = dt.hour
+            slot_minute = 0 if dt.minute < 30 else 30
+            time_slot = f"{slot_hour:02d}:{slot_minute:02d}"
+
+            trades.append(TradeResponse(
+                trade_id=row['trade_id'],
+                time_slot=time_slot,
+                account_name=row['account_name'],
+                symbol=row['symbol'],
+                entry_time=dt,
+                exit_time=datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time'],
+                entry_price=row['entry_price'],
+                exit_price=row['exit_price'],
+                quantity=row['quantity'],
+                side=TradeSide.LONG if row['side'] == 'LONG' else TradeSide.SHORT,
+                profit_loss=row['profit_loss'],
+                commission=row['commission'],
+                duration_minutes=row['duration_minutes'],
+                hour_of_day=row['hour_of_day'],
+                day_of_week=row['day_of_week']
+            ))
+            
+        conn.close()
         
         paginated_response = PaginatedResponse[TradeResponse](
-            items=page_trades,
-            total=total,
+            items=trades,
+            total=total_count,
             page=pagination.page,
             size=pagination.size,
-            pages=(total + pagination.size - 1) // pagination.size,
-            has_next=end_idx < total,
+            pages=(total_count + pagination.size - 1) // pagination.size,
+            has_next=pagination.offset + pagination.size < total_count,
             has_prev=pagination.page > 1
         )
         
         return APIResponse[PaginatedResponse[TradeResponse]](
             status="success",
-            message=f"Retrieved {len(page_trades)} trades",
+            message=f"Retrieved {len(trades)} trades",
             data=paginated_response
         )
         
@@ -166,29 +183,48 @@ async def get_trade(
 ) -> APIResponse[TradeResponse]:
     """Get detailed information for a specific trade."""
     
+    import logging
+    import sqlite3
+    from pathlib import Path
+    
+    logger = logging.getLogger(__name__)
+    
     try:
-        # TODO: Implement actual database query using MCP
-        # For now, return mock data
+        db_path = Path("trading_platform.db")
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        if trade_id == "TRADE_001_20240101_001":
-            trade = TradeResponse(
-                trade_id="TRADE_001_20240101_001",
-                account_name="IPS_TM_10",
-                symbol="NQ",
-                entry_time=datetime(2024, 1, 1, 9, 30),
-                exit_time=datetime(2024, 1, 1, 10, 15),
-                entry_price=15250.50,
-                exit_price=15275.25,
-                quantity=2,
-                side=TradeSide.LONG,
-                profit_loss=49.50,
-                commission=4.20,
-                duration_minutes=45,
-                hour_of_day=9,
-                day_of_week=0
-            )
-        else:
+        cursor.execute("SELECT * FROM processed_trades WHERE trade_id = ?", (trade_id,))
+        row = cursor.fetchone()
+        
+        if not row:
             raise DataNotFoundException("Trade", trade_id)
+            
+        dt = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
+        slot_hour = dt.hour
+        slot_minute = 0 if dt.minute < 30 else 30
+        time_slot = f"{slot_hour:02d}:{slot_minute:02d}"
+
+        trade = TradeResponse(
+            trade_id=row['trade_id'],
+            time_slot=time_slot,
+            account_name=row['account_name'],
+            symbol=row['symbol'],
+            entry_time=dt,
+            exit_time=datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time'],
+            entry_price=row['entry_price'],
+            exit_price=row['exit_price'],
+            quantity=row['quantity'],
+            side=TradeSide.LONG if row['side'] == 'LONG' else TradeSide.SHORT,
+            profit_loss=row['profit_loss'],
+            commission=row['commission'],
+            duration_minutes=row['duration_minutes'],
+            hour_of_day=row['hour_of_day'],
+            day_of_week=row['day_of_week']
+        )
+        
+        conn.close()
         
         return APIResponse[TradeResponse](
             status="success",
@@ -218,23 +254,84 @@ async def get_trade_stats(
 ) -> APIResponse[TradeStatsResponse]:
     """Get trade statistics for an account."""
     
+    import logging
+    import sqlite3
+    from pathlib import Path
+    
+    logger = logging.getLogger(__name__)
+    
     try:
-        # TODO: Implement actual statistics calculation using database
-        # For now, return mock statistics
+        db_path = Path("trading_platform.db")
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
         
-        stats = TradeStatsResponse(
-            total_trades=150,
-            winning_trades=95,
-            losing_trades=55,
-            win_rate=63.33,
-            total_profit_loss=12500.75,
-            average_win=185.50,
-            average_loss=-95.25,
-            largest_win=750.00,
-            largest_loss=-425.50,
-            profit_factor=1.85,
-            average_duration_minutes=42.5
-        )
+        query = "FROM processed_trades WHERE account_name = ?"
+        params = [account_name]
+        
+        if symbol:
+            query += " AND symbol = ?"
+            params.append(symbol)
+        
+        if start_date:
+            query += " AND entry_time >= ?"
+            params.append(start_date.isoformat())
+            
+        if end_date:
+            query += " AND entry_time <= ?"
+            params.append(end_date.isoformat())
+            
+        cursor.execute(f"""
+            SELECT 
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
+                SUM(CASE WHEN profit_loss <= 0 THEN 1 ELSE 0 END) as losing_trades,
+                SUM(profit_loss) as total_pnl,
+                AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_win,
+                AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loss,
+                MAX(profit_loss) as largest_win,
+                MIN(profit_loss) as largest_loss,
+                AVG(duration_minutes) as avg_duration,
+                SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as gross_profit,
+                ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)) as gross_loss
+            {query}
+        """, params)
+        
+        row = cursor.fetchone()
+        
+        if not row or row['total_trades'] == 0:
+            stats = TradeStatsResponse(
+                total_trades=0,
+                winning_trades=0,
+                losing_trades=0,
+                win_rate=0.0,
+                total_profit_loss=0.0,
+                average_win=0.0,
+                average_loss=0.0,
+                largest_win=0.0,
+                largest_loss=0.0,
+                profit_factor=0.0,
+                average_duration_minutes=0.0
+            )
+        else:
+            win_rate = (row['winning_trades'] / row['total_trades'] * 100)
+            profit_factor = (row['gross_profit'] / row['gross_loss']) if row['gross_loss'] > 0 else 0.0
+            
+            stats = TradeStatsResponse(
+                total_trades=row['total_trades'],
+                winning_trades=row['winning_trades'],
+                losing_trades=row['losing_trades'],
+                win_rate=win_rate,
+                total_profit_loss=row['total_pnl'] or 0.0,
+                average_win=row['avg_win'] or 0.0,
+                average_loss=row['avg_loss'] or 0.0,
+                largest_win=row['largest_win'] or 0.0,
+                largest_loss=row['largest_loss'] or 0.0,
+                profit_factor=profit_factor,
+                average_duration_minutes=row['avg_duration'] or 0.0
+            )
+            
+        conn.close()
         
         return APIResponse[TradeStatsResponse](
             status="success",

@@ -86,7 +86,7 @@ async def debug_accounts():
             SELECT COUNT(*) as count FROM (
                 SELECT DISTINCT account_name, symbol 
                 FROM processed_trades 
-                WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
+                FROM processed_trades 
             )
         """)
         debug_info["account_symbol_combinations"] = cursor.fetchone()["count"]
@@ -95,7 +95,6 @@ async def debug_accounts():
         cursor.execute("""
             SELECT COUNT(DISTINCT account_name) as count
             FROM processed_trades 
-            WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
         """)
         debug_info["unique_accounts"] = cursor.fetchone()["count"]
         
@@ -108,7 +107,6 @@ async def debug_accounts():
                 MIN(entry_time) as first_trade,
                 MAX(entry_time) as last_trade
             FROM processed_trades 
-            WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
             GROUP BY account_name, symbol 
             ORDER BY account_name, symbol
             LIMIT 10
@@ -171,11 +169,10 @@ async def list_accounts(
             symbol,
             COUNT(*) as total_trades,
             MIN(entry_time) as first_trade_date,
-            MAX(entry_time) as last_trade_date,
+            MAX(exit_time) as last_trade_date,
             SUM(profit_loss) as total_pnl,
             1 as is_active
         FROM processed_trades 
-        WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
         """
         
         params = []
@@ -480,37 +477,6 @@ async def update_account(
         raise HTTPException(status_code=500, detail=f"Failed to update account: {str(e)}")
 
 
-@router.delete(
-    "/{account_name}",
-    response_model=APIResponse[None],
-    summary="Delete account",
-    description="Delete a trading account and all associated data."
-)
-async def delete_account(
-    account_name: str = Path(..., description="Account name to delete"),
-    db: Session = Depends(get_database_session),
-    current_user: dict = Depends(require_write_permission)
-) -> APIResponse[None]:
-    """Delete a trading account."""
-    
-    try:
-        # TODO: Implement actual database deletion using MCP
-        # For now, return mock response
-        
-        # Check if account exists
-        if account_name not in ["IPS_TM_10", "IPS_TM_13"]:
-            raise DataNotFoundException("Account", account_name)
-        
-        return APIResponse[None](
-            status="success",
-            message=f"Account {account_name} deleted successfully"
-        )
-        
-    except DataNotFoundException:
-        raise HTTPException(status_code=404, detail=f"Account {account_name} not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")
-
 
 @router.get(
     "/{account_name}/hourly-breakdown",
@@ -521,6 +487,9 @@ async def delete_account(
 async def get_hourly_breakdown(
     account_name: str = Path(..., description="Account name"),
     symbol: str = Query(..., description="Trading symbol (e.g., NQ, CL)"),
+    days_back: Optional[int] = Query(None, description="Filter trades from last N days"),
+    timezone_offset: int = Query(0, description="Timezone offset in hours (e.g., -5 for ET)"),
+    time_basis: str = Query("entry", description="Time basis for grouping (entry or exit)"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ) -> APIResponse[List[Dict[str, Any]]]:
@@ -529,9 +498,10 @@ async def get_hourly_breakdown(
     import logging
     import sqlite3
     from pathlib import Path
+    from datetime import datetime, timedelta
     
     logger = logging.getLogger(__name__)
-    logger.info(f"[HOURLY BREAKDOWN] Getting data for {account_name} ({symbol})")
+    logger.info(f"[HOURLY BREAKDOWN] Getting data for {account_name} ({symbol}) - days_back={days_back}, offset={timezone_offset}, basis={time_basis}")
     
     try:
         # Connect to SQLite database
@@ -545,12 +515,35 @@ async def get_hourly_breakdown(
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
+        # Build date filter if days_back is provided
+        date_filter = ""
+        params = [account_name, symbol]
+        
+        # Select time column based on basis
+        time_col = "exit_time" if time_basis == "exit" else "entry_time"
+        
+        # Handle timezone offset in the query
+        # We use DATETIME(time_col, 'N hours') to shift the grouping
+        offset_str = f"{timezone_offset} hours" if timezone_offset >= 0 else f"{timezone_offset} hours"
+        time_expr = f"DATETIME({time_col}, '{offset_str}')"
+
+        if days_back:
+            # Get the maximum date in the database for this account/symbol
+            cursor.execute("SELECT MAX(entry_time) FROM processed_trades WHERE account_name = ? AND symbol = ?", (account_name, symbol))
+            max_date_str = cursor.fetchone()[0]
+            if max_date_str:
+                max_date = datetime.fromisoformat(max_date_str.replace('Z', '+00:00'))
+                start_date = max_date - timedelta(days=days_back)
+                # Filter is always applied to the chosen time basis
+                date_filter = f" AND {time_col} >= ?"
+                params.append(start_date.isoformat())
+
         # Query to get 30-minute interval breakdown with comprehensive trading metrics
-        query = """
+        query = f"""
         SELECT 
             printf('%02d:%02d', 
-                CAST(strftime('%H', entry_time) AS INTEGER),
-                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                CAST(strftime('%H', {time_expr}) AS INTEGER),
+                CASE WHEN CAST(strftime('%M', {time_expr}) AS INTEGER) < 30 THEN 0 ELSE 30 END
             ) as time_slot,
             SUM(profit_loss) as net_pnl,
             COUNT(*) as total_trades,
@@ -564,15 +557,12 @@ async def get_hourly_breakdown(
             CASE WHEN SUM(profit_loss) > 0 THEN SUM(profit_loss) ELSE 0 END as runup,
             SUM(profit_loss) as equity_peak
         FROM processed_trades 
-        WHERE account_name = ? AND symbol = ?
-        GROUP BY printf('%02d:%02d', 
-            CAST(strftime('%H', entry_time) AS INTEGER),
-            CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-        )
+        WHERE account_name = ? AND symbol = ? {date_filter}
+        GROUP BY 1
         ORDER BY time_slot
         """
         
-        cursor.execute(query, (account_name, symbol))
+        cursor.execute(query, tuple(params))
         rows = cursor.fetchall()
         
         # Convert to list of dictionaries

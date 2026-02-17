@@ -248,8 +248,37 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.cleanup-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  text-transform: uppercase;
+}
+
+.cleanup-btn:hover:not(:disabled) {
+  background-color: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.cleanup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive design */
@@ -264,38 +293,38 @@
   .dashboard {
     padding: 16px;
   }
-  
+
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
-  
+
   .dashboard-header h1 {
     font-size: 2rem;
   }
-  
+
   .account-selector {
     align-self: stretch;
   }
-  
+
   .tab-navigation {
     flex-direction: column;
   }
-  
+
   .tab-button {
     border-bottom: 1px solid #e9ecef;
   }
-  
+
   .tab-button.active {
     border-bottom: 1px solid #e9ecef;
     border-left: 3px solid #3498db;
   }
-  
+
   .tab-content {
     padding: 16px;
   }
-  
+
   .trade-details {
     flex-direction: column;
     gap: 8px;
@@ -306,23 +335,23 @@
   .dashboard {
     padding: 12px;
   }
-  
+
   .dashboard-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .trade-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .tab-content {
     padding: 12px;
   }
 }
-/
-* Validation Analytics Styles */
+
+/* Validation Analytics Styles */
 .validation-tab {
   max-height: 600px;
   overflow-y: auto;
@@ -645,18 +674,18 @@
   .validation-metrics {
     grid-template-columns: 1fr;
   }
-  
+
   .trust-indicators {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .regime-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .performance-bar {
     width: 100%;
   }
@@ -667,24 +696,26 @@
     font-size: 16px;
     padding: 12px;
   }
-  
+
   .trust-score {
     font-size: 24px;
     padding: 12px 24px;
   }
-  
+
   .validation-section {
     padding: 16px;
   }
-  
+
   .metric-card {
     padding: 12px;
   }
-  
+
   .metric-value {
     font-size: 18px;
   }
-}/* Quick 
+}
+
+/* Quick 
 Validation in Recommendations */
 .quick-validation {
   margin: 16px 0;

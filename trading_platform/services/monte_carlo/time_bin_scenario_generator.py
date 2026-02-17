@@ -11,7 +11,7 @@ Requirements: 2.1, 2.2, 2.3
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple, Union
+from typing import List, Dict, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 from enum import Enum
 from scipy import stats

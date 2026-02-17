@@ -109,8 +109,8 @@ class SierraChartProcessedTradeParser:
                 self.logger.debug(f"Found {len(headers)} columns in header")
                 
                 # Validate header count
-                if len(headers) != 27:
-                    raise ProcessedTradeParseError(f"Expected 27 columns, found {len(headers)}")
+                if len(headers) < 27:
+                    raise ProcessedTradeParseError(f"Expected at least 27 columns, found {len(headers)}")
                 
                 # Parse data rows
                 for line_num, line in enumerate(lines[1:], start=2):
@@ -146,8 +146,8 @@ class SierraChartProcessedTradeParser:
             # Split by tab
             fields = line.split('\t')
             
-            if len(fields) != 27:
-                self.logger.warning(f"Line {line_num}: Expected 27 fields, found {len(fields)}")
+            if len(fields) < 27:
+                self.logger.warning(f"Line {line_num}: Expected at least 27 fields, found {len(fields)}")
                 return None
             
             # Parse each field

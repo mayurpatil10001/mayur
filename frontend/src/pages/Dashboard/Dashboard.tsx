@@ -6,18 +6,19 @@ import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { 
-    selectedAccount, 
-    performanceMetrics, 
-    currentRecommendation, 
+  const {
+    selectedAccount,
+    performanceMetrics,
+    currentRecommendation,
     recentTrades,
     isLoadingMetrics,
     isLoadingRecommendation,
-    isLoadingTrades 
+    isLoadingTrades
   } = useSelector((state: RootState) => state.dashboard);
 
   // Fetch accounts from API
-  const [availableAccounts, setAvailableAccounts] = useState<string[]>([]);
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('CL');
+  const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'validation' | 'temporal' | 'monte-carlo'>('overview');
   const [isCleaningTrades, setIsCleaningTrades] = useState(false);
   const [cleanupResult, setCleanupResult] = useState<any>(null);
@@ -30,44 +31,38 @@ const Dashboard: React.FC = () => {
       try {
         console.log('[DASHBOARD] Fetching accounts...');
         const response = await fetch('http://localhost:8000/api/v1/accounts/?size=100');
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('[DASHBOARD] API Response:', data);
-        
+
         if (data.status === 'success' && data.data?.items) {
           const items = data.data.items;
-          const displayNames = items.map((item: any) => 
-            `${item.name} (${item.symbol}) - ${item.total_trades.toLocaleString()} trades`
-          );
-          
-          console.log('[DASHBOARD] Setting', displayNames.length, 'accounts');
-          setAvailableAccounts(displayNames);
-          
-        } else {
-          console.error('[DASHBOARD] Invalid response:', data);
-          setAvailableAccounts(['ERROR: Invalid API response']);
+          setAvailableAccounts(items);
+
+          if (!selectedAccount && items.length > 0) {
+            // Default to CL if available
+            const clAcc = items.find((a: any) => a.symbol === 'CL');
+            if (clAcc) {
+              dispatch(setSelectedAccount(clAcc.name));
+              setSelectedSymbol('CL');
+            } else {
+              dispatch(setSelectedAccount(items[0].name));
+              setSelectedSymbol(items[0].symbol);
+            }
+          }
         }
       } catch (error) {
         console.error('[DASHBOARD] Fetch error:', error);
-        setAvailableAccounts(['ERROR: Failed to load accounts']);
       }
     };
-    
+
     fetchAccounts();
   }, []);
 
-  // Set default account if none selected
-  useEffect(() => {
-    if (!selectedAccount && availableAccounts.length > 0 && !availableAccounts[0].includes('ERROR')) {
-      const firstAccountName = availableAccounts[0].split(' (')[0];
-      console.log('[DASHBOARD] Auto-selecting first account:', firstAccountName);
-      dispatch(setSelectedAccount(firstAccountName));
-    }
-  }, [availableAccounts, selectedAccount, dispatch]);
 
   // Fetch validation analytics data
   const fetchValidationData = async (accountName: string) => {
@@ -92,18 +87,26 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (selectedAccount) {
       dispatch(fetchPerformanceMetrics(selectedAccount));
-      dispatch(fetchCurrentRecommendation());
+      dispatch(fetchCurrentRecommendation({ account_name: selectedAccount, symbol: selectedSymbol }));
       dispatch(fetchRecentTrades({ accountName: selectedAccount, limit: 5 }));
       fetchValidationData(selectedAccount);
     }
   }, [dispatch, selectedAccount]);
 
-  const handleAccountChange = (displayName: string) => {
-    // Extract just the account name from the display format "AccountName (Symbol) - X trades"
-    const accountName = displayName.split(' (')[0];
-    console.log('[DASHBOARD] Selected account:', accountName, 'from display:', displayName);
+  const handleAccountChange = (accountName: string) => {
     dispatch(setSelectedAccount(accountName));
   };
+
+  const handleSymbolChange = (sym: string) => {
+    setSelectedSymbol(sym);
+    const firstAcc = availableAccounts.find(a => a.symbol === sym);
+    if (firstAcc) {
+      dispatch(setSelectedAccount(firstAcc.name));
+    }
+  };
+
+  const uniqueSymbols = Array.from(new Set(availableAccounts.map(a => a.symbol)));
+  const filteredAccounts = availableAccounts.filter(a => a.symbol === selectedSymbol);
 
   const handleRecommendationAction = (recommendation: any) => {
     // In a real app, this would integrate with trading system
@@ -132,11 +135,11 @@ const Dashboard: React.FC = () => {
       }
 
       const result = await response.json();
-      
+
       if (result.status === 'success') {
         setCleanupResult(result.data);
         alert(`Successfully removed ${result.data.trades_removed} multi-day trades!\n\nBefore: ${result.data.total_trades_before} trades\nAfter: ${result.data.total_trades_after} trades`);
-        
+
         // Refresh the page to update all data
         window.location.reload();
       } else {
@@ -171,11 +174,11 @@ const Dashboard: React.FC = () => {
       }
 
       const result = await response.json();
-      
+
       if (result.status === 'success') {
         setCleanupResult(result.data);
         alert(`Successfully cleaned duplicate trades!\n\nProcessed: ${result.data.total_items} items\nRemoved: ${result.data.successful_items} duplicates\nFailed: ${result.data.failed_items} items`);
-        
+
         // Refresh the page to update all data
         window.location.reload();
       } else {
@@ -195,41 +198,61 @@ const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>Trading Optimization Dashboard</h1>
-        <div className="account-selector">
-          <label htmlFor="account-select">Account: </label>
-          <select 
-            id="account-select"
-            value={availableAccounts.find(acc => acc.startsWith(selectedAccount || '')) || ''} 
-            onChange={(e) => handleAccountChange(e.target.value)}
-            className="account-select"
-          >
-            <option value="">Select Account ({availableAccounts.length} available)</option>
-            {availableAccounts.map(account => (
-              <option key={account} value={account}>{account}</option>
-            ))}
-          </select>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{marginLeft: '10px', padding: '5px 10px', fontSize: '12px'}}
-          >
-            Refresh
-          </button>
-          <button 
-            onClick={handleCleanMultidayTrades}
-            style={{marginLeft: '10px', padding: '5px 10px', fontSize: '12px', backgroundColor: '#dc2626', color: 'white'}}
-            disabled={isCleaningTrades}
-          >
-            {isCleaningTrades ? 'Cleaning...' : 'Clean Multi-Day Trades'}
-          </button>
-          <button 
-            onClick={handleCleanDuplicateTrades}
-            style={{marginLeft: '10px', padding: '5px 10px', fontSize: '12px', backgroundColor: '#dc2626', color: 'white'}}
-            disabled={isCleaningTrades}
-          >
-            {isCleaningTrades ? 'Cleaning...' : 'Clean Duplicate Trades'}
-          </button>
-          <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>
-            Debug: {availableAccounts.length} accounts loaded | API working: {availableAccounts.length > 0 ? 'YES' : 'NO'}
+        <div className="selection-header">
+          <div className="selection-group">
+            <span className="selector-label">1. Select Symbol:</span>
+            <div className="pill-selector">
+              {['CL', 'ES', 'FDAX', 'NQ'].map(s => {
+                const sym = s === 'FDAX' ? 'FD' : s;
+                const hasData = uniqueSymbols.includes(sym);
+                return (
+                  <button
+                    key={s}
+                    className={`filter-btn ${selectedSymbol === sym ? 'active' : ''}`}
+                    onClick={() => handleSymbolChange(sym)}
+                    disabled={!hasData}
+                    style={!hasData ? { opacity: 0.3, cursor: 'not-allowed' } : {}}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="selection-group">
+            <span className="selector-label">2. Select Account:</span>
+            <select
+              id="account-select"
+              value={selectedAccount || ''}
+              onChange={(e) => handleAccountChange(e.target.value)}
+              className="account-select-pill"
+              disabled={filteredAccounts.length === 0}
+            >
+              <option value="">Select Account ({filteredAccounts.length})</option>
+              {filteredAccounts.map(account => (
+                <option key={account.name} value={account.name}>
+                  {account.name} ({account.total_trades.toLocaleString()} trades)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="selection-group" style={{ flexDirection: 'row', gap: '10px', marginLeft: 'auto' }}>
+            <button
+              onClick={handleCleanMultidayTrades}
+              className="cleanup-btn"
+              disabled={isCleaningTrades}
+            >
+              {isCleaningTrades ? 'Cleaning...' : 'Clean Multi-Day'}
+            </button>
+            <button
+              onClick={handleCleanDuplicateTrades}
+              className="cleanup-btn"
+              disabled={isCleaningTrades}
+            >
+              {isCleaningTrades ? 'Cleaning...' : 'Clean Duplicates'}
+            </button>
           </div>
         </div>
       </div>
@@ -279,7 +302,7 @@ const Dashboard: React.FC = () => {
                           </span>
                         </div>
                         <div className="validation-link">
-                          <button 
+                          <button
                             className="validation-details-btn"
                             onClick={() => setActiveTab('validation')}
                           >
@@ -288,7 +311,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    <button 
+                    <button
                       className="action-button"
                       onClick={() => handleRecommendationAction(currentRecommendation)}
                     >
@@ -299,7 +322,7 @@ const Dashboard: React.FC = () => {
                   <div className="no-data">No current recommendation available</div>
                 )}
               </div>
-              
+
               {/* Performance Metrics */}
               <div className="performance-section">
                 <h3>Performance Metrics</h3>
@@ -340,25 +363,25 @@ const Dashboard: React.FC = () => {
 
             <div className="dashboard-right">
               <div className="tab-navigation">
-                <button 
+                <button
                   className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setActiveTab('overview')}
                 >
                   Overview
                 </button>
-                <button 
+                <button
                   className={`tab-button ${activeTab === 'validation' ? 'active' : ''}`}
                   onClick={() => setActiveTab('validation')}
                 >
                   🔬 Validation Analytics
                 </button>
-                <button 
+                <button
                   className={`tab-button ${activeTab === 'temporal' ? 'active' : ''}`}
                   onClick={() => setActiveTab('temporal')}
                 >
                   Temporal Analysis
                 </button>
-                <button 
+                <button
                   className={`tab-button ${activeTab === 'monte-carlo' ? 'active' : ''}`}
                   onClick={() => setActiveTab('monte-carlo')}
                 >
@@ -584,9 +607,9 @@ const Dashboard: React.FC = () => {
                                   <div key={regime} className="regime-bar">
                                     <span className="regime-name">{regime}</span>
                                     <div className="performance-bar">
-                                      <div 
+                                      <div
                                         className={`bar-fill ${performance > 0 ? 'positive' : 'negative'}`}
-                                        style={{width: `${Math.abs(performance) * 100}%`}}
+                                        style={{ width: `${Math.abs(performance) * 100}%` }}
                                       ></div>
                                     </div>
                                     <span className={`performance-value ${performance > 0 ? 'positive' : 'negative'}`}>
@@ -632,16 +655,16 @@ const Dashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className="no-data">
-                        <h4>No Validation Data Available</h4>
-                        <p>Advanced analytics validation requires:</p>
+                        <h4>No Validation Data for Current Window</h4>
+                        <p>The Advanced Validation engine protects you by only showing data when it's statistically reliable. If this is empty, it usually means:</p>
                         <ul>
-                          <li>Sufficient historical trade data (100+ trades recommended)</li>
-                          <li>Market data synchronization (SPY/QQQ/VIX)</li>
-                          <li>Statistical significance in performance</li>
+                          <li><strong>Low Sample Size:</strong> Your historical data for the <em>current time of day</em> is below the 30-trade minimum for this specific hour/minute bin.</li>
+                          <li><strong>Statistical Noise:</strong> The performance for this time slot isn't consistent enough to be considered "valid" (calculated via P-Value).</li>
+                          <li><strong>Market Data Tracking:</strong> Benchmark data (VIX/SPY) is still being calculated for this permutation.</li>
                         </ul>
-                        <button 
+                        <button
                           onClick={() => fetchValidationData(selectedAccount)}
-                          style={{marginTop: '10px', padding: '8px 16px'}}
+                          style={{ marginTop: '10px', padding: '8px 16px' }}
                         >
                           Retry Validation Analysis
                         </button>

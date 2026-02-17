@@ -18,7 +18,12 @@ code {
     monospace;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
   font-weight: 600;
 }
@@ -28,7 +33,8 @@ p {
   line-height: 1.6;
 }
 
-ul, ol {
+ul,
+ol {
   margin: 0;
   padding-left: 1.5rem;
 }
@@ -37,7 +43,9 @@ button {
   font-family: inherit;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -70,4 +78,95 @@ input, select, textarea {
   padding: 16px;
   border-radius: 4px;
   margin: 16px 0;
+
+}
+
+.pill-selector {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  width: fit-content;
+}
+
+.filter-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  color: #1e293b;
+  background: #e2e8f0;
+}
+
+.filter-btn.active {
+  background: white;
+  color: #2563eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.selector-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.selection-header {
+  display: flex;
+  gap: 25px;
+  align-items: flex-end;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.selection-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-select-pill {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 220px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.account-select-pill:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+
+.account-select-pill:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.account-select-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -149,13 +149,13 @@ class ApiService {
   ): Promise<APIResponse<any>> {
     const queryParams = new URLSearchParams();
     queryParams.append('account_name', accountName);
-    
+
     if (filters?.limit) queryParams.append('limit', filters.limit.toString());
     if (filters?.offset) queryParams.append('offset', filters.offset.toString());
     if (filters?.symbol) queryParams.append('symbol', filters.symbol);
     if (filters?.start_date) queryParams.append('start_date', filters.start_date);
     if (filters?.end_date) queryParams.append('end_date', filters.end_date);
-    
+
     const response = await fetch(`${API_BASE_URL}/trades?${queryParams}`, {
       headers: this.getHeaders(),
     });
@@ -181,9 +181,9 @@ class ApiService {
         password,
       }),
     });
-    
+
     const result = await this.handleResponse<{ access_token: string }>(response);
-    if (result.success && result.data?.access_token) {
+    if (result.status === 'success' && result.data?.access_token) {
       localStorage.setItem('authToken', result.data.access_token);
     }
     return result;

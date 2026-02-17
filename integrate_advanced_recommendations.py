@@ -24,15 +24,15 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Import all the advanced analytics components
-from trading_platform.services.time_bin_analytics.time_bin_analyzer import TimeBinAnalyzer, TimeBin
-from trading_platform.services.time_bin_analytics.statistical_testing_engine import StatisticalTestingEngine
+from trading_platform.services.time_bin_analyzer import TimeBinAnalyzer, TimeBin
+from trading_platform.services.statistical_testing_engine import StatisticalTestingEngine
 from trading_platform.services.monte_carlo.time_bin_scenario_generator import TimeBinScenarioGenerator
 from trading_platform.services.monte_carlo.risk_metrics_calculator import RiskMetricsCalculator
 from trading_platform.services.walk_forward.out_of_sample_validator import OutOfSampleValidator
 from trading_platform.services.walk_forward.performance_decay_tracker import PerformanceDecayTracker
-from trading_platform.services.market_correlation.market_data_ingestion import MarketDataIngestion
-from trading_platform.services.market_correlation.benchmark_comparison_analyzer import BenchmarkComparisonAnalyzer
-from trading_platform.services.vix_analysis.vix_regime_analyzer import VIXDataIntegration
+from trading_platform.services.market_data_ingestion import MarketDataIngestion
+from trading_platform.services.benchmark_comparison_analyzer import BenchmarkComparisonAnalyzer
+from trading_platform.services.vix_regime_analyzer import VIXDataIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -178,11 +178,8 @@ class AdvancedRecommendationEngine:
         Comprehensive analysis of a time-bin using all analytics components
         """
         
-        # 1. Time-bin performance analysis with statistical testing
         time_bin_metrics = self.time_bin_analyzer.calculate_time_bin_metrics(
-            self.time_bin_analyzer.get_time_bin_trades(
-                time_bin.account_name, time_bin.hour, time_bin.minute_bin
-            )
+            self.time_bin_analyzer.get_time_bin_trades(time_bin)
         )
         
         if not time_bin_metrics or time_bin_metrics.total_trades < 30:
@@ -467,18 +464,26 @@ class AdvancedRecommendationEngine:
             vix_data = self.vix_analyzer.fetch_vix_data(
                 current_time - timedelta(days=1), current_time
             )
-            current_vix = vix_data.iloc[-1]['Close'] if not vix_data.empty else 20.0
+            current_vix = vix_data.data.iloc[-1]['Close'] if not vix_data.data.empty else 20.0
             
             # Get SPY/QQQ levels
             spy_data = self.market_data_service.fetch_spy_data(
                 current_time - timedelta(days=1), current_time
             )
-            current_spy = spy_data.iloc[-1]['Close'] if not spy_data.empty else 400.0
+            current_spy = spy_data.data.iloc[-1]['Close'] if not spy_data.data.empty else 400.0
             
+            # Determine VIX regime
+            if current_vix < 15.0:
+                vix_regime = 'LOW'
+            elif current_vix <= 25.0:
+                vix_regime = 'MEDIUM'
+            else:
+                vix_regime = 'HIGH'
+                
             return {
                 'current_vix': current_vix,
                 'current_spy': current_spy,
-                'vix_regime': self.vix_analyzer.classify_volatility_regimes([current_vix])[0],
+                'vix_regime': vix_regime,
                 'timestamp': current_time
             }
         except Exception as e:
@@ -498,7 +503,8 @@ class AdvancedRecommendationEngine:
         
         if accounts is None:
             # Get all accounts from database
-            accounts = ['IPS_TM_10', 'IPS_TM_13', 'CL_3', 'CL_TM_2']  # Example accounts
+            from trading_platform.models.database import Account
+            accounts = [a.name for a in self.db_session.query(Account.name).all()]
         
         time_bins = []
         for account in accounts:
@@ -553,10 +559,10 @@ class AdvancedRecommendationEngine:
 
 async def main():
     """Test the advanced recommendation engine"""
-    from trading_platform.database.connection import get_database_session
+    from trading_platform.database.database import get_db_session
     
     # Get database session
-    db_session = next(get_database_session())
+    db_session = next(get_db_session()) if hasattr(get_db_session(), '__next__') else get_db_session()
     
     try:
         # Initialize the advanced recommendation engine

@@ -2,7 +2,7 @@
 
 // Common types
 export interface APIResponse<T> {
-  success: boolean;
+  status: 'success' | 'error' | 'partial';
   data?: T;
   error?: string;
   message?: string;
@@ -178,6 +178,8 @@ export interface DateRangeFilter {
 
 export interface RecommendationRequest {
   target_time?: string;
+  account_name?: string;
+  symbol?: string;
   account_filter?: string[];
   symbol_filter?: string[];
   strategy?: StrategyType;

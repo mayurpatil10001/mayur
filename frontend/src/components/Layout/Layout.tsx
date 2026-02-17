@@ -20,22 +20,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <h1 className="app-title">Trading Optimization Platform</h1>
           <nav className="nav">
             <Link to="/" className={isActive('/')}>
+              Home
+            </Link>
+            <Link to="/dashboard" className={isActive('/dashboard')}>
               Dashboard
             </Link>
-            <Link to="/analytics" className={isActive('/analytics')}>
-              Analytics
+            <Link to="/monitoring" className={isActive('/monitoring')}>
+              System Control
             </Link>
             <Link to="/recommendations" className={isActive('/recommendations')}>
               Recommendations
             </Link>
-            <Link to="/accounts" className={isActive('/accounts')}>
-              Accounts
+            <Link to="/analytics" className={isActive('/analytics')}>
+              Analytics
             </Link>
             <Link to="/accounts-by-hour" className={isActive('/accounts-by-hour')}>
               Accounts by Hour
-            </Link>
-            <Link to="/monitoring" className={isActive('/monitoring')}>
-              Monitoring
             </Link>
           </nav>
         </div>

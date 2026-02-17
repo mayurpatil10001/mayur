@@ -1,10 +1,9 @@
 .interactive-chart {
   width: 100%;
   background: white;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  margin: 20px 0 0 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 24px;
 }
 
 .chart-controls {
@@ -22,7 +21,8 @@
   align-items: center;
 }
 
-.zoom-btn, .reset-btn {
+.zoom-btn,
+.reset-btn {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -35,13 +35,15 @@
   gap: 5px;
 }
 
-.zoom-btn:hover, .reset-btn:hover {
+.zoom-btn:hover,
+.reset-btn:hover {
   background: #f9fafb;
   border-color: #9ca3af;
   transform: translateY(-1px);
 }
 
-.zoom-btn:active, .reset-btn:active {
+.zoom-btn:active,
+.reset-btn:active {
   transform: translateY(0);
   background: #f3f4f6;
 }
@@ -77,7 +79,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   background: white;
-  min-height: 600px;
+  min-height: unset;
 }
 
 .chart-container svg {
@@ -110,31 +112,32 @@
   .interactive-chart {
     padding: 15px;
   }
-  
+
   .chart-controls {
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
   }
-  
+
   .zoom-controls {
     justify-content: center;
   }
-  
+
   .chart-info {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
-  .zoom-btn, .reset-btn {
+
+  .zoom-btn,
+  .reset-btn {
     padding: 10px 15px;
     font-size: 16px;
   }
-  
+
   .chart-container {
     min-height: 400px;
   }
-  
+
   .chart-container svg {
     max-width: 100%;
     height: auto;
@@ -208,8 +211,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tooltip styling */

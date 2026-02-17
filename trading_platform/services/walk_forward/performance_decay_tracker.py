@@ -20,9 +20,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.linear_model import LinearRegression
 import warnings
 
-from .out_of_sample_validator import PerformanceMetrics
 from ..time_bin_analyzer import TimeBin
-from ...models.models import ProcessedTrade
+from ...models.trading import ProcessedTrade, PerformanceMetrics
 
 
 class DegradationSeverity(Enum):

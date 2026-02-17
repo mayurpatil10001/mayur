@@ -6,8 +6,8 @@ import './Analytics.css';
 
 const Analytics: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { 
-    temporalAnalysis, 
+  const {
+    temporalAnalysis,
     correlationData,
     isLoadingTemporal,
     isLoadingCorrelation,
@@ -16,8 +16,9 @@ const Analytics: React.FC = () => {
   } = useSelector((state: RootState) => state.analytics);
 
   // Add state for performance metrics and account selection
+  const [selectedSymbol, setSelectedSymbol] = React.useState<string>('CL');
   const [selectedAccount, setSelectedAccount] = React.useState<string>('');
-  const [availableAccounts, setAvailableAccounts] = React.useState<string[]>([]);
+  const [availableAccounts, setAvailableAccounts] = React.useState<any[]>([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(false);
   const [performanceMetrics, setPerformanceMetrics] = React.useState<any>(null);
   const [isLoadingPerformance, setIsLoadingPerformance] = React.useState(false);
@@ -28,35 +29,27 @@ const Analytics: React.FC = () => {
     setIsLoadingAccounts(true);
     try {
       const response = await fetch('http://localhost:8000/api/v1/accounts');
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
       if (result.status === 'success' && result.data && result.data.items) {
-        const accountNames = result.data.items.map((account: any) => account.name);
-        setAvailableAccounts(accountNames);
-        
-        // Set the first account as default if no account is selected
-        if (accountNames.length > 0 && !selectedAccount) {
-          setSelectedAccount(accountNames[0]);
+        const accountItems = result.data.items;
+        setAvailableAccounts(accountItems);
+
+        // Find first account for default symbol (CL)
+        const clAccounts = accountItems.filter((a: any) => a.symbol === 'CL');
+        if (clAccounts.length > 0 && !selectedAccount) {
+          setSelectedAccount(clAccounts[0].name);
+        } else if (accountItems.length > 0 && !selectedAccount) {
+          setSelectedAccount(accountItems[0].name);
+          setSelectedSymbol(accountItems[0].symbol);
         }
-        
-        console.log('[ANALYTICS] Available accounts loaded:', accountNames);
-        console.log('[ANALYTICS] Full API response:', result);
-      } else {
-        console.error('[ANALYTICS] Invalid API response structure:', result);
-        throw new Error(result.message || 'Failed to fetch accounts');
       }
     } catch (error) {
       console.error('[ANALYTICS] Error fetching accounts:', error);
-      // Fallback to hardcoded accounts if API fails
-      const fallbackAccounts = ['CL_3', 'CL_TM_2', 'IPS_TM_10', 'IPS_TM_13'];
-      setAvailableAccounts(fallbackAccounts);
-      if (!selectedAccount) {
-        setSelectedAccount(fallbackAccounts[0]);
-      }
     } finally {
       setIsLoadingAccounts(false);
     }
@@ -66,14 +59,14 @@ const Analytics: React.FC = () => {
   const fetchPerformanceMetrics = async (accountName: string) => {
     setIsLoadingPerformance(true);
     setPerformanceError(null);
-    
+
     try {
       const response = await fetch(`http://localhost:8000/api/v1/analytics/performance/${accountName}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
       if (result.status === 'success' && result.data) {
         setPerformanceMetrics(result.data);
@@ -93,20 +86,20 @@ const Analytics: React.FC = () => {
   // Function to load data for selected account
   const loadAccountData = React.useCallback((accountName: string) => {
     console.log('[ANALYTICS] Loading data for account:', accountName);
-    
+
     // Clear previous data first
     dispatch(clearAnalyticsData());
     setPerformanceMetrics(null);
     setPerformanceError(null);
-    
-    dispatch(fetchTemporalAnalysis({ 
+
+    dispatch(fetchTemporalAnalysis({
       accountName: accountName
     })).then((result) => {
       console.log('[ANALYTICS] Temporal analysis result:', result);
     }).catch((error) => {
       console.error('[ANALYTICS] Temporal analysis error:', error);
     });
-    
+
     dispatch(fetchAccountCorrelation([accountName, 'CL_TM_2'])).then((result) => {
       console.log('[ANALYTICS] Correlation result:', result);
     }).catch((error) => {
@@ -127,6 +120,19 @@ const Analytics: React.FC = () => {
       loadAccountData(selectedAccount);
     }
   }, [loadAccountData, selectedAccount]);
+
+  // Filter accounts by selected symbol
+  const uniqueSymbols = Array.from(new Set(availableAccounts.map((a: any) => a.symbol)));
+  const filteredAccounts = availableAccounts.filter((a: any) => a.symbol === selectedSymbol);
+
+  // Handle symbol change
+  const handleSymbolChange = (sym: string) => {
+    setSelectedSymbol(sym);
+    const firstAcc = availableAccounts.find((a: any) => a.symbol === sym);
+    if (firstAcc) {
+      setSelectedAccount(firstAcc.name);
+    }
+  };
 
   // Handle account selection change
   const handleAccountChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -169,32 +175,51 @@ const Analytics: React.FC = () => {
 
   return (
     <div className="analytics">
-      <div className="analytics-header">
-        <h1>Trading Analytics</h1>
-        <div className="account-selector">
-          <label htmlFor="account-select">Select Account: </label>
-          <select 
-            id="account-select" 
-            value={selectedAccount} 
+      <h1>Trading Analytics</h1>
+      <div className="selection-header">
+        <div className="selection-group">
+          <span className="selector-label">1. Select Symbol:</span>
+          <div className="pill-selector">
+            {['CL', 'ES', 'FDAX', 'NQ'].map(s => {
+              const sym = s === 'FDAX' ? 'FD' : s;
+              const hasData = uniqueSymbols.includes(sym);
+              return (
+                <button
+                  key={s}
+                  className={`filter-btn ${selectedSymbol === sym ? 'active' : ''}`}
+                  onClick={() => handleSymbolChange(sym)}
+                  disabled={!hasData}
+                  style={!hasData ? { opacity: 0.3, cursor: 'not-allowed' } : {}}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="selection-group">
+          <span className="selector-label">2. Select Account:</span>
+          <select
+            id="account-select"
+            value={selectedAccount}
             onChange={handleAccountChange}
-            className="account-dropdown"
-            disabled={isLoadingAccounts || availableAccounts.length === 0}
+            className="account-select-pill"
+            disabled={isLoadingAccounts || filteredAccounts.length === 0}
           >
-            {isLoadingAccounts ? (
-              <option value="">Loading accounts...</option>
-            ) : availableAccounts.length === 0 ? (
-              <option value="">No accounts available</option>
+            {filteredAccounts.length === 0 ? (
+              <option value="">No accounts for {selectedSymbol}</option>
             ) : (
-              availableAccounts.map(account => (
-                <option key={account} value={account}>
-                  {account}
+              filteredAccounts.map(account => (
+                <option key={account.name} value={account.name}>
+                  {account.name} ({account.total_trades} trades)
                 </option>
               ))
             )}
           </select>
         </div>
       </div>
-      
+
       <div className="analytics-grid">
         <div className="analytics-card">
           <h3>Temporal Patterns</h3>
@@ -282,7 +307,7 @@ const Analytics: React.FC = () => {
         <div className="analytics-card full-width">
           <h3>Performance Overview</h3>
           <div className="refresh-section">
-            <button 
+            <button
               onClick={() => {
                 console.log('[ANALYTICS] Refresh button clicked');
                 dispatch(fetchTemporalAnalysis({ accountName: 'CL_3' })).then((result) => {
@@ -298,7 +323,7 @@ const Analytics: React.FC = () => {
               Refresh Analytics
             </button>
           </div>
-          
+
           {performanceMetrics ? (
             <div className="performance-metrics">
               <div className="metrics-grid">
@@ -414,7 +439,7 @@ const Analytics: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

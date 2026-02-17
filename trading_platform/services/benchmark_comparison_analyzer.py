@@ -536,7 +536,7 @@ class BenchmarkComparisonAnalyzer:
                 trade_date = trade.entry_time.date()
                 if trade_date not in daily_trades:
                     daily_trades[trade_date] = []
-                daily_trades[trade_date].append(trade.pnl)
+                daily_trades[trade_date].append(trade.profit_loss)
             
             # Calculate daily trade returns (sum of P&L per day)
             trade_dates = sorted(daily_trades.keys())

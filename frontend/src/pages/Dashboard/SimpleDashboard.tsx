@@ -27,17 +27,17 @@ const SimpleDashboard: React.FC = () => {
         console.log('🚀 Fetching accounts...');
         setLoading(true);
         setError(null);
-        
-        const response = await fetch('http://localhost:3001/api/v1/accounts/?size=50');
+
+        const response = await fetch('http://localhost:8000/api/v1/accounts/?size=100');
         console.log('📡 Response status:', response.status);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         console.log('📊 Response data:', data);
-        
+
         if (data.status === 'success' && data.data?.items) {
           setAccounts(data.data.items);
           console.log('✅ Loaded', data.data.items.length, 'accounts');
@@ -58,7 +58,7 @@ const SimpleDashboard: React.FC = () => {
   const handleAccountChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedAccount(event.target.value);
     console.log('🎯 Selected account:', event.target.value);
-    
+
     // Fetch validation data when account is selected
     if (event.target.value) {
       fetchValidationData(event.target.value);
@@ -95,7 +95,7 @@ const SimpleDashboard: React.FC = () => {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>🚀 Simple Trading Dashboard</h1>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <h3>Status</h3>
         {loading && <p style={{ color: 'blue' }}>⏳ Loading accounts...</p>}
@@ -109,7 +109,7 @@ const SimpleDashboard: React.FC = () => {
         <label htmlFor="account-select" style={{ display: 'block', marginBottom: '10px' }}>
           <strong>Select Account:</strong>
         </label>
-        <select 
+        <select
           id="account-select"
           value={selectedAccount}
           onChange={handleAccountChange}
@@ -130,7 +130,7 @@ const SimpleDashboard: React.FC = () => {
           {(() => {
             const account = accounts.find(a => a.name === selectedAccount);
             if (!account) return <p>Account not found</p>;
-            
+
             return (
               <div>
                 <p><strong>Name:</strong> {account.name}</p>
@@ -147,15 +147,20 @@ const SimpleDashboard: React.FC = () => {
 
       {selectedAccount && (
         <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e8f4fd', borderRadius: '5px', border: '2px solid #3498db' }}>
+          <div style={{ marginBottom: '15px', color: '#444', fontSize: '14px', lineHeight: '1.4' }}>
+            <p><strong>What is this?</strong> This is an advanced AI-driven validation engine. It analyzes your historical performance for this specific account to determine if your trading strategy is <em>statistically significant</em> and <em>robust</em> enough to be trusted right now.</p>
+            <p>It performs Monte Carlo simulations, calculates P-values, and checks market correlation to ensure your wins aren't just luck.</p>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
             <h3 style={{ margin: 0, color: '#2c3e50' }}>🔬 Validation Analytics - Can You Trust This Strategy?</h3>
-            <button 
+            <button
               onClick={() => setShowValidation(!showValidation)}
-              style={{ 
-                padding: '8px 16px', 
-                backgroundColor: showValidation ? '#e74c3c' : '#3498db', 
-                color: 'white', 
-                border: 'none', 
+              style={{
+                padding: '8px 16px',
+                backgroundColor: showValidation ? '#e74c3c' : '#3498db',
+                color: 'white',
+                border: 'none',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 fontSize: '14px'
@@ -164,27 +169,30 @@ const SimpleDashboard: React.FC = () => {
               {showValidation ? 'Hide' : 'Show'} Validation Details
             </button>
           </div>
-          
+
           {isLoadingValidation && (
             <p style={{ color: '#3498db', fontStyle: 'italic' }}>⏳ Loading validation analytics...</p>
           )}
-          
+
           {!isLoadingValidation && !validationData && (
             <div style={{ padding: '20px', backgroundColor: '#fff3cd', borderRadius: '5px', border: '1px solid #ffeaa7' }}>
-              <h4 style={{ color: '#856404', margin: '0 0 10px 0' }}>⚠️ No Validation Data Available</h4>
-              <p style={{ margin: '0 0 10px 0', color: '#856404' }}>Advanced analytics validation requires:</p>
+              <h4 style={{ color: '#856404', margin: '0 0 10px 0' }}>⚠️ No Validation Found for Current Context</h4>
+              <p style={{ margin: '0 0 10px 0', color: '#856404' }}>
+                The AI engine only validates strategies that meet strict safety criteria. Validation may be missing if:
+              </p>
               <ul style={{ color: '#856404', margin: '0 0 15px 20px' }}>
-                <li>Sufficient historical trade data (100+ trades recommended)</li>
-                <li>Market data synchronization (SPY/QQQ/VIX)</li>
-                <li>Statistical significance in performance</li>
+                <li><strong>Current Time Window:</strong> There might not be enough historical trades for this specific hour/minute bin.</li>
+                <li><strong>Statistical Significance:</strong> The performance in this window doesn't pass the P-value test (i.e., it might be random luck).</li>
+                <li><strong>System Load:</strong> Market data (SPY/VIX) might still be indexing for this account.</li>
+                <li><strong>Off-Hours:</strong> If you are viewing this outside of active trading hours, the "Current Time" validation might return no results.</li>
               </ul>
-              <button 
+              <button
                 onClick={() => fetchValidationData(selectedAccount)}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: '#f39c12', 
-                  color: 'white', 
-                  border: 'none', 
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f39c12',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '5px',
                   cursor: 'pointer'
                 }}
@@ -193,50 +201,50 @@ const SimpleDashboard: React.FC = () => {
               </button>
             </div>
           )}
-          
+
           {!isLoadingValidation && validationData && (
             <div>
               {/* Quick Trust Indicators */}
               <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                <span style={{ 
-                  padding: '6px 12px', 
-                  borderRadius: '15px', 
-                  fontSize: '12px', 
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '15px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
                   backgroundColor: validationData.statistical_significance ? '#d4edda' : '#f8d7da',
                   color: validationData.statistical_significance ? '#155724' : '#721c24'
                 }}>
                   {validationData.statistical_significance ? '✅ Statistically Valid' : '❌ Not Significant'}
                 </span>
-                <span style={{ 
-                  padding: '6px 12px', 
-                  borderRadius: '15px', 
-                  fontSize: '12px', 
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '15px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
                   backgroundColor: validationData.robustness_score > 0.7 ? '#d4edda' : validationData.robustness_score > 0.5 ? '#fff3cd' : '#f8d7da',
                   color: validationData.robustness_score > 0.7 ? '#155724' : validationData.robustness_score > 0.5 ? '#856404' : '#721c24'
                 }}>
                   🏗️ Robustness: {(validationData.robustness_score * 100).toFixed(0)}%
                 </span>
-                <span style={{ 
-                  padding: '6px 12px', 
-                  borderRadius: '15px', 
-                  fontSize: '12px', 
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '15px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
                   backgroundColor: validationData.market_neutrality ? '#d4edda' : '#fff3cd',
                   color: validationData.market_neutrality ? '#155724' : '#856404'
                 }}>
                   {validationData.market_neutrality ? '✅ Market Neutral' : '⚠️ Market Dependent'}
                 </span>
-                <span style={{ 
-                  padding: '6px 12px', 
-                  borderRadius: '15px', 
-                  fontSize: '12px', 
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '15px',
+                  fontSize: '12px',
                   fontWeight: 'bold',
-                  backgroundColor: validationData.confidence === 'VERY_HIGH' ? '#27ae60' : 
-                                   validationData.confidence === 'HIGH' ? '#2ecc71' :
-                                   validationData.confidence === 'MEDIUM' ? '#f39c12' :
-                                   validationData.confidence === 'LOW' ? '#e67e22' : '#e74c3c',
+                  backgroundColor: validationData.confidence === 'VERY_HIGH' ? '#27ae60' :
+                    validationData.confidence === 'HIGH' ? '#2ecc71' :
+                      validationData.confidence === 'MEDIUM' ? '#f39c12' :
+                        validationData.confidence === 'LOW' ? '#e67e22' : '#e74c3c',
                   color: 'white'
                 }}>
                   🎯 Confidence: {validationData.confidence}
@@ -282,7 +290,7 @@ const SimpleDashboard: React.FC = () => {
               {showValidation && (
                 <div style={{ marginTop: '20px', padding: '15px', backgroundColor: 'white', borderRadius: '5px', border: '1px solid #ddd' }}>
                   <h4 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>📋 Detailed Validation Results</h4>
-                  
+
                   <div style={{ marginBottom: '15px' }}>
                     <h5 style={{ margin: '0 0 8px 0', color: '#34495e' }}>🎲 Monte Carlo Risk Analysis</h5>
                     <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
@@ -302,9 +310,9 @@ const SimpleDashboard: React.FC = () => {
                   <div style={{ marginBottom: '15px' }}>
                     <h5 style={{ margin: '0 0 8px 0', color: '#34495e' }}>📊 VIX Regime Analysis</h5>
                     <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
-                      <p><strong>Current VIX Regime:</strong> <span style={{ 
-                        color: validationData.current_vix_regime === 'Low' ? '#27ae60' : 
-                               validationData.current_vix_regime === 'Medium' ? '#f39c12' : '#e74c3c' 
+                      <p><strong>Current VIX Regime:</strong> <span style={{
+                        color: validationData.current_vix_regime === 'Low' ? '#27ae60' :
+                          validationData.current_vix_regime === 'Medium' ? '#f39c12' : '#e74c3c'
                       }}>{validationData.current_vix_regime}</span></p>
                       <p><strong>Best Regime:</strong> {validationData.regime_preference}</p>
                       <div style={{ marginTop: '8px' }}>
@@ -312,24 +320,24 @@ const SimpleDashboard: React.FC = () => {
                         {Object.entries(validationData.regime_performance).map(([regime, performance]: [string, any]) => (
                           <div key={regime} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
                             <span style={{ minWidth: '60px', fontSize: '12px' }}>{regime}:</span>
-                            <div style={{ 
-                              flex: 1, 
-                              height: '16px', 
-                              backgroundColor: '#e9ecef', 
-                              borderRadius: '8px', 
+                            <div style={{
+                              flex: 1,
+                              height: '16px',
+                              backgroundColor: '#e9ecef',
+                              borderRadius: '8px',
                               overflow: 'hidden',
                               position: 'relative'
                             }}>
-                              <div style={{ 
-                                height: '100%', 
+                              <div style={{
+                                height: '100%',
                                 width: `${Math.abs(performance) * 100}%`,
                                 backgroundColor: performance > 0 ? '#27ae60' : '#e74c3c',
                                 borderRadius: '8px'
                               }}></div>
                             </div>
-                            <span style={{ 
-                              minWidth: '50px', 
-                              fontSize: '12px', 
+                            <span style={{
+                              minWidth: '50px',
+                              fontSize: '12px',
                               fontWeight: 'bold',
                               color: performance > 0 ? '#27ae60' : '#e74c3c'
                             }}>
@@ -345,9 +353,9 @@ const SimpleDashboard: React.FC = () => {
                     <div style={{ marginBottom: '15px' }}>
                       <h5 style={{ margin: '0 0 8px 0', color: '#34495e' }}>⚠️ Alerts</h5>
                       {validationData.alerts.map((alert: string, index: number) => (
-                        <div key={index} style={{ 
-                          padding: '8px 12px', 
-                          backgroundColor: '#fff3cd', 
+                        <div key={index} style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#fff3cd',
                           border: '1px solid #ffeaa7',
                           borderRadius: '4px',
                           marginBottom: '5px',
@@ -364,9 +372,9 @@ const SimpleDashboard: React.FC = () => {
                     <div style={{ marginBottom: '15px' }}>
                       <h5 style={{ margin: '0 0 8px 0', color: '#34495e' }}>💡 Recommendations</h5>
                       {validationData.recommendations.map((rec: string, index: number) => (
-                        <div key={index} style={{ 
-                          padding: '8px 12px', 
-                          backgroundColor: '#d1ecf1', 
+                        <div key={index} style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#d1ecf1',
                           border: '1px solid #bee5eb',
                           borderRadius: '4px',
                           marginBottom: '5px',

@@ -31,7 +31,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
   // Calculate chart dimensions and data ranges
-  const margin = { top: 50, right: 80, bottom: 120, left: 100 };
+  const margin = { top: 50, right: 80, bottom: 80, left: 100 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
 
@@ -84,21 +84,21 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
   // Generate clean chart path
   const generatePath = useCallback(() => {
     if (data.length === 0) return '';
-    
+
     const pointSpacing = (chartWidth * zoom) / Math.max(data.length - 1, 1);
-    
+
     let pathData = '';
     data.forEach((point, index) => {
       const x = margin.left + index * pointSpacing + pan.x;
       const y = centerY - (point.cumulative_pnl / range) * (chartHeight / 2);
-      
+
       if (index === 0) {
         pathData += `M ${x} ${y}`;
       } else {
         pathData += ` L ${x} ${y}`;
       }
     });
-    
+
     return pathData;
   }, [data, chartWidth, chartHeight, centerY, range, zoom, pan, margin]);
 
@@ -107,7 +107,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
     const gridLines = [];
     const ySteps = 10;
     const xSteps = Math.min(20, data.length);
-    
+
     // Horizontal grid lines
     for (let i = 0; i <= ySteps; i++) {
       const y = margin.top + (i * chartHeight / ySteps);
@@ -144,12 +144,12 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
         const x = margin.left + (dataIndex * chartWidth * zoom / Math.max(data.length - 1, 1)) + pan.x;
         if (x >= margin.left && x <= margin.left + chartWidth) {
           const date = new Date(data[dataIndex].date);
-          const dateStr = date.toLocaleDateString('en-US', { 
-            month: 'short', 
+          const dateStr = date.toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             year: data.length > 365 ? '2-digit' : undefined // Show year only for long periods
           });
-          
+
           gridLines.push(
             <g key={`v-grid-${i}`}>
               <line
@@ -184,16 +184,16 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
   // Generate data points
   const generateDataPoints = useCallback(() => {
     const pointSpacing = (chartWidth * zoom) / Math.max(data.length - 1, 1);
-    
+
     return data.map((point, index) => {
       const x = margin.left + index * pointSpacing + pan.x;
       const y = centerY - (point.cumulative_pnl / range) * (chartHeight / 2);
-      
+
       // Only render points that are visible
       if (x < margin.left - 20 || x > margin.left + chartWidth + 20) {
         return null;
       }
-      
+
       return (
         <circle
           key={index}
@@ -213,7 +213,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
   }, [data, chartWidth, chartHeight, centerY, range, zoom, pan, margin, hoveredPoint]);
 
   return (
-    <div className="interactive-chart">
+    <div className="interactive-chart" style={{ margin: 0 }}>
       <div className="chart-controls">
         <div className="zoom-controls">
           <button onClick={zoomIn} className="zoom-btn">
@@ -229,7 +229,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
         <div className="chart-info">
           <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
           <span>Points: {data.length}</span>
-          <span>Range: {formatCurrency(range)}</span>
+          <span>P&L Scale: {formatCurrency(range)}</span>
         </div>
       </div>
 

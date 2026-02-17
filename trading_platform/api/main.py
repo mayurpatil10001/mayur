@@ -7,17 +7,17 @@ dependency injection, middleware, and documentation.
 Requirements: 10.1, 10.4
 """
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Body, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from ..config import config
-from .routers import accounts, trades, analytics, recommendations, data_ingestion, auth, health, time_bin_analytics, exports, advanced_recommendations
+from .routers import accounts, trades, analytics, recommendations, data_ingestion, auth, health, time_bin_analytics, exports, advanced_recommendations, system, analysis, trade_import, account_management
 from .dependencies import get_database_session, get_service_container
 from .middleware import LoggingMiddleware, ErrorHandlingMiddleware, SecurityHeadersMiddleware, RateLimitMiddleware, MonitoringMiddleware
 from .exceptions import TradingPlatformException
@@ -312,7 +312,6 @@ def setup_routers(app: FastAPI) -> None:
                 cursor.execute("""
                     SELECT COUNT(DISTINCT account_name) 
                     FROM processed_trades 
-                    WHERE account_name NOT LIKE '%dupl%' AND account_name NOT LIKE '%sim%'
                 """)
                 unique_accounts = cursor.fetchone()[0]
                 
@@ -355,6 +354,19 @@ def setup_routers(app: FastAPI) -> None:
     )
     
     # Include feature routers (auth required)
+    # Include configuration-heavy routers first to avoid shadowing by generic ID routes
+    app.include_router(
+        trade_import.router,
+        prefix="/api/v1/trades",
+        tags=["Trade Import"]
+    )
+    
+    app.include_router(
+        account_management.router,
+        prefix="/api/v1/accounts",
+        tags=["Account Management"]
+    )
+
     app.include_router(
         accounts.router,
         prefix="/api/v1/accounts",
@@ -408,11 +420,183 @@ def setup_routers(app: FastAPI) -> None:
         prefix="/api/v1/recommendations",
         tags=["Advanced Recommendations"]
     )
+    
+    app.include_router(
+        system.router,
+        tags=["System Monitoring"]
+    )
+    
+    app.include_router(
+        analysis.router,
+        tags=["Analysis Jobs"]
+    )
 
 
 # Create the application instance
 app = create_app()
 
+
+@app.post("/api/system/check-path")
+async def check_path(request: dict = Body(...)):
+    try:
+        import glob
+        import os
+        import re
+        
+        path = request.get("path", "")
+        target_symbol = request.get("symbol", "").upper()
+        
+        if not path:
+            return {"exists": False, "files": [], "message": "No path provided"}
+            
+        clean_path = os.path.normpath(path)
+        if not os.path.exists(clean_path):
+            return {"exists": False, "files": [], "message": f"Path not found: {clean_path}"}
+            
+        if not os.path.isdir(clean_path):
+            return {"exists": True, "files": [], "message": "Path is not a directory"}
+            
+        all_files = glob.glob(os.path.join(clean_path, "*.txt")) + \
+                    glob.glob(os.path.join(clean_path, "*.log")) + \
+                    glob.glob(os.path.join(clean_path, "*.data"))
+        
+        if not all_files:
+            return {"exists": True, "files": [], "count": 0, "accounts": [], "message": "No log files found"}
+
+        # Group files by account
+        account_files = {}
+        for f in all_files:
+            try:
+                fname = os.path.basename(f)
+                parts = fname.split('.')
+                if len(parts) > 1:
+                    account = parts[-2]
+                    account = re.sub(r'_UTC$', '', account)
+                    if account not in account_files:
+                        account_files[account] = []
+                    account_files[account].append(f)
+            except: pass
+
+        # Filter accounts by target_symbol
+        detected_accounts = []
+        
+        for account, files in account_files.items():
+            # If no symbol filter, include all
+            if not target_symbol:
+                detected_accounts.append(account)
+                continue
+                
+            match_found = False
+            # 1. Filename match
+            for f in files:
+                if target_symbol in os.path.basename(f).upper():
+                    match_found = True
+                    break
+            if match_found:
+                detected_accounts.append(account)
+                continue
+                
+            # 2. Account name match
+            if account.upper().startswith(target_symbol):
+                detected_accounts.append(account)
+                continue
+                
+            # 3. Content Peek (Last 10 files)
+            try:
+                files.sort(key=os.path.getmtime, reverse=True)
+                recent_files = files[:10]
+                
+                found_in_history = False
+                for recent_file in recent_files:
+                    try:
+                        file_size = os.path.getsize(recent_file)
+                        if file_size > 0:
+                            data = b""
+                            with open(recent_file, "rb") as bf:
+                                data += bf.read(50 * 1024)
+                                if file_size > 100 * 1024:
+                                    bf.seek(file_size - (100 * 1024))
+                                    data += bf.read()
+                                
+                                # Check patterns
+                                pattern_a = rb'\b' + target_symbol.encode() + rb'[FGHJKMNQUVXZ]\d{1,2}\b'
+                                pattern_b = rb'(?:Symbol|Contract|Simulated)[:\s]+' + target_symbol.encode() + rb'\b'
+                                
+                                if re.search(pattern_a, data, re.IGNORECASE) or \
+                                   re.search(pattern_b, data, re.IGNORECASE) or \
+                                   (recent_file.lower().endswith(('.txt', '.log')) and target_symbol.encode() in data.upper()):
+                                    found_in_history = True
+                                    break
+                    except: pass
+                
+                if found_in_history:
+                    detected_accounts.append(account)
+            except: pass
+
+        # Final Sort and Return
+        try:
+            all_logs = sorted(all_files, key=os.path.getmtime, reverse=True)
+            file_list = [os.path.basename(f) for f in all_logs[:5]]
+        except:
+            file_list = [os.path.basename(f) for f in all_files[:5]]
+        
+        return {
+            "exists": True, 
+            "files": file_list, 
+            "count": len(all_files),
+            "accounts": sorted(detected_accounts),
+            "message": f"Found {len(all_files)} files." + (f" Showing accounts with '{target_symbol}'." if target_symbol else "")
+        }
+        
+    except Exception as e:
+        print(f"Check Path Fatal Error: {e}")
+        return {"exists": False, "files": [], "message": f"Scan Failed: {str(e)}"}
+
+# --- Import Control Endpoints ---
+from trading_platform.services.binary_log_parser import importer, BinaryLogParser
+
+@app.post("/api/system/import-start")
+async def start_import(background_tasks: BackgroundTasks, request: dict = Body(...)):
+    if importer.running:
+        return {"message": "Import already running", "running": True}
+        
+    paths = request.get("paths", [])
+    symbol = request.get("symbol", None)
+    accounts = request.get("accounts", None) 
+    
+    if not paths:
+        return {"message": "No paths provided, checking defaults...", "running": False} # Or handle gracefully
+        
+    # Start background task with optional filters
+    background_tasks.add_task(importer.run_import, paths, symbol, accounts)
+    return {"message": f"Import started{' for ' + str(accounts) if accounts else ''}", "running": True}
+
+@app.post("/api/system/import-stop")
+async def stop_import():
+    importer.stop()
+    return {"message": "Stopping import...", "running": False}
+
+@app.get("/api/system/import-status")
+async def get_import_status():
+    return {
+        "running": importer.running,
+        "message": importer.message,
+        "progress": importer.progress,
+        "stats": f"Processed: {importer.stats.get('processed', 0)} | Found: {importer.stats.get('found', 0)}",
+        "details": importer.stats.get("summaries", {})
+    }
+
+
+@app.post("/api/system/purge-anomalies")
+async def purge_anomalies(request: dict = Body(...)):
+    account = request.get("account")
+    symbol = request.get("symbol")
+    if not account:
+        raise HTTPException(status_code=400, detail="Account required")
+    
+    # Enable purge_overnight to actually delete the identified overnight trades
+    res = importer.purge_anomalies(account, symbol, purge_overnight=True)
+    return {"message": "Data cleaned successfully", "removed": res}
 
 if __name__ == "__main__":
     import uvicorn
