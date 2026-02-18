@@ -46,6 +46,7 @@ class ImportResultResponse(BaseModel):
     duplicates: int = 0
     errors: list[str] = []
     trades: list[ParsedTradeResponse] = []
+    stats: dict = {}
 
 
 # ── Endpoints ───────────────────────────────────────────────
@@ -107,6 +108,7 @@ async def import_paste(
         new_trades=result.new_trades,
         duplicates=result.duplicates,
         errors=result.errors,
+        stats=result.stats,
         trades=[
             ParsedTradeResponse(
                 account_name=t.account_name,

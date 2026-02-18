@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Dict, Any, Optional
@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 
 from ..dependencies import get_database_session
+from ...services.settings import settings_service
+from ...services.market_data_service import market_data_service
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
@@ -157,7 +159,7 @@ async def get_all_accounts(db: Session = Depends(get_database_session)) -> List[
                 COALESCE(SUM(profit_loss), 0) as total_pnl,
                 COALESCE(AVG(profit_loss), 0) as avg_pnl,
                 MIN(entry_time) as first_trade,
-                MAX(entry_time) as last_trade
+                MAX(exit_time) as last_trade
             FROM processed_trades 
             GROUP BY account_name, symbol
         ),
@@ -200,10 +202,16 @@ async def get_all_accounts(db: Session = Depends(get_database_session)) -> List[
         if acc['last_trade_date']:
             try:
                 # Handle potential timezone Z or just ISO formatting
+                # Handle potential timezone Z or just ISO formatting
                 lt_str = acc['last_trade_date'].replace('Z', '')
                 if ' ' in lt_str: lt_str = lt_str.replace(' ', 'T')
-                last_dt = datetime.fromisoformat(lt_str.split('.')[0])
-                acc['days_since_last_trade'] = (now - last_dt).days
+                # Use split('T')[0] for date or just parse full
+                try:
+                    last_dt = datetime.fromisoformat(lt_str)
+                except:
+                    last_dt = datetime.fromisoformat(lt_str.split('.')[0])
+                
+                acc['days_since_last_trade'] = (now - last_dt.replace(tzinfo=None)).days
             except:
                 acc['days_since_last_trade'] = None
         else:
@@ -254,3 +262,58 @@ async def get_import_status():
         "stats": importer.stats,
         "progress": importer.progress
     }
+
+@router.get("/settings")
+async def get_settings():
+    return settings_service.get_settings()
+
+@router.post("/settings")
+async def save_settings(settings: Dict[str, Any] = Body(...)):
+    if settings_service.save_settings(settings):
+        return {"status": "success", "message": "Settings saved"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to save settings")
+
+@router.post("/import-vix")
+async def import_vix_data():
+    """Trigger VIX historical data import."""
+    try:
+        count = market_data_service.fetch_vix_data(period="2y", interval="1h")
+        return {"status": "success", "message": f"Successfully imported {count} VIX data points"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to import VIX data: {str(e)}")
+
+@router.get("/vix-data")
+async def get_vix_data(limit: int = Query(100, ge=1, le=5000)):
+    """Retrieve historical VIX data from database."""
+    import sqlite3
+    db_path = Path("trading_platform.db")
+    if not db_path.exists():
+        return {"data": []}
+    
+    conn = sqlite3.connect(str(db_path))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT date, open_price, high_price, low_price, close_price, volume 
+            FROM market_data 
+            WHERE symbol = 'VIX' 
+            ORDER BY date DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+        data = []
+        for r in rows:
+            data.append({
+                "timestamp": r[0],
+                "open": r[1],
+                "high": r[2],
+                "low": r[3],
+                "close": r[4],
+                "volume": r[5]
+            })
+        return {"status": "success", "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()

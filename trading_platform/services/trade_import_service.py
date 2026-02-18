@@ -64,6 +64,7 @@ class ImportResult:
     duplicates: int = 0
     errors: List[str] = field(default_factory=list)
     parsed_trades: List[ParsedTrade] = field(default_factory=list)
+    stats: Dict[str, Any] = field(default_factory=dict)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -132,6 +133,13 @@ class TradeImportService:
 
     def import_trades(self, raw_text: str) -> ImportResult:
         """Parse, deduplicate, and insert trades."""
+        # Detect Format
+        # Search first few lines for "Fills" keyword
+        lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        for line in lines[:5]:
+            if line.startswith("Fills"):
+                 return self._import_activity_log(raw_text)
+
         result = self.preview(raw_text)
         if not result.parsed_trades:
             return result
@@ -145,26 +153,43 @@ class TradeImportService:
         
         logger.info(f"Starting import of {len(result.parsed_trades)} trades...")
         
+        touched_accounts = set()
+        
         try:
             for i, trade in enumerate(result.parsed_trades):
+                touched_accounts.add(trade.account_name)
                 try:
                     if self._is_duplicate(conn, trade):
                         result.duplicates += 1
                     else:
                         self._insert_trade(conn, trade)
                         result.new_trades += 1
-                        # Commit every 100 trades to keep things moving
                         if result.new_trades % 100 == 0:
                             conn.commit()
                 except Exception as exc:
-                    # Individual trade failure
                     error_msg = f"DB error on trade {i+1} ({trade.symbol} {trade.entry_datetime}): {exc}"
                     result.errors.append(error_msg)
                     logger.error(error_msg)
-                    # If it's a constraint error, we just count it as an error and continue
-                    # But if it's a connection error, we might want to stop
             
-            conn.commit() # Final commit
+            conn.commit()
+            
+            # Run Purge Anomalies on affected accounts
+            from .binary_log_parser import BinaryLogParser
+            parser = BinaryLogParser(self.db_path)
+            # Purge creates stats
+            # We want to aggregate stats for touched accounts
+            # purge_anomalies returns breakdown dict
+            params_symbol = [trade.base_symbol] if result.parsed_trades else [] # Only if single symbol? user can paste mix. Best run global on account.
+            
+            # Create a breakdown aggregator
+            full_stats = {}
+            for acc in touched_accounts:
+                breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
+                full_stats.update(breakdown)
+                
+            # Attach to result (need to add stats field to ImportResult dataclass first)
+            result.stats = full_stats
+
         except Exception as exc:
             conn.rollback()
             result.errors.append(f"Fatal DB error: {exc}")
@@ -176,6 +201,147 @@ class TradeImportService:
             f"Import complete: {result.new_trades} new, "
             f"{result.duplicates} duplicates, {len(result.errors)} errors"
         )
+        return result
+
+    def _import_activity_log(self, text: str) -> ImportResult:
+        """Special handler for raw Activity Log (Fills) paste."""
+        # This uses BinaryLogParser logic
+        from .binary_log_parser import BinaryLogParser
+        parser = BinaryLogParser(self.db_path)
+        
+        fills = []
+        lines = text.split('\n')
+        current_fill_time = None
+        
+        # Regex for Fills line: Fills [TAB] Time [TAB] TransTime [TAB] ID [TAB] Type [TAB] Qty
+        # Regex for Filled line: Filled [TAB] Account [TAB] Side [TAB] Price [TAB] Qty [TAB] Info...
+        
+        for line in lines:
+            parts = re.split(r'\t|\s{2,}', line.strip())
+            if not parts: continue
+            
+            if parts[0] == 'Fills':
+                # Grab time
+                if len(parts) > 1:
+                    try:
+                        current_fill_time = parts[1] # Keep as string for now, parser expects string or datetime?
+                        # Binary parser expects 'timestamp' key as string usually
+                    except: pass
+                    
+            elif parts[0] == 'Filled' and len(parts) >= 5:
+                # Account, Side, Price, Qty
+                acc = parts[1]
+                side = parts[2]
+                try:
+                    price = float(parts[3])
+                    qty = int(parts[4])
+                except: continue
+                
+                # Try to extract symbol from the line
+                # Look for typical symbol patterns: CLH26, ESH26, MnQ...
+                # Heuristic: Uppercase letters followed by H/M/U/Z and a digit
+                sym_match = re.search(r'\b([A-Z]+[HMUZ]\d{1,2})\b', line)
+                symbol = sym_match.group(1) if sym_match else "UNKNOWN"
+                
+                if current_fill_time:
+                    ts_val = 0
+                    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+                        try:
+                            dt = datetime.strptime(current_fill_time, fmt)
+                            ts_val = dt.timestamp()
+                            break
+                        except: continue
+                    
+                    fills.append({
+                        "timestamp": current_fill_time,
+                        "ts_val": ts_val,
+                        "account_name": acc,
+                        "side": side.upper(),
+                        "price": price,
+                        "quantity": qty,
+                        "symbol": symbol,
+                        "order_id": "PASTE",
+                        "source": "PASTE",
+                        "offset": 0
+                    })
+
+        # Pair to trades
+        # We need to sort by time
+        fills.sort(key=lambda x: x['timestamp'])
+        
+        trades, unpaired_count = parser._pairs_to_trades(fills)
+        
+        # Convert to ParsedTrade objects
+        result = ImportResult()
+        
+        # Add Unpaired Stats
+        if unpaired_count > 0:
+            result.stats['unpaired'] = {
+                "count": unpaired_count,
+                # Estimate commission from unpaired: approx $2.10 per leg per side.
+                # Actually, best to just show count.
+                "commission_impact": round(unpaired_count * 2.10, 2)
+            }
+        
+        # Convert dict trades to ParsedTrade
+        parsed_objs = []
+        for t in trades:
+            # t has: account, symbol, side, entry_time, exit_time, entry_price, exit_price, quantity, profit_loss, commission
+            try:
+                pt = ParsedTrade(
+                    symbol=t['symbol'],
+                    trade_type=t['side'], # Long/Short/Buy/Sell? _pairs_to_trades returns LONG/SHORT
+                    entry_datetime=datetime.fromisoformat(t['entry_time']) if isinstance(t['entry_time'], str) else t['entry_time'],
+                    entry_price=t['entry_price'],
+                    exit_datetime=datetime.fromisoformat(t['exit_time']) if isinstance(t['exit_time'], str) else t['exit_time'],
+                    exit_price=t['exit_price'],
+                    quantity=t['quantity'],
+                    max_open_quantity=0, max_closed_quantity=0,
+                    profit_loss=t['profit_loss'],
+                    cumulative_pnl=0,
+                    commission=t['commission'],
+                    flat_to_flat_pnl=0,
+                    note=t['account'], # Store account in note
+                    flat_to_flat_max_profit=0, flat_to_flat_max_loss=0,
+                    max_open_profit=0, max_open_loss=0,
+                    entry_efficiency="", exit_efficiency="", total_efficiency="",
+                    high_while_open=0, low_while_open=0,
+                    open_position_quantity=0, close_position_quantity=0,
+                    duration="",
+                    account_name=t['account'],
+                    base_symbol=t['symbol']
+                )
+                parsed_objs.append(pt)
+            except Exception as e:
+                result.errors.append(f"Conversion error: {e}")
+
+        result.parsed_trades = parsed_objs
+        result.total_parsed = len(parsed_objs)
+        
+        # Insert them
+        conn = sqlite3.connect(self.db_path)
+        touched = set()
+        try:
+            for pt in parsed_objs:
+                touched.add(pt.account_name)
+                # Check dupes
+                if self._is_duplicate(conn, pt):
+                    result.duplicates += 1
+                else:
+                    self._insert_trade(conn, pt)
+                    result.new_trades += 1
+            conn.commit()
+            
+            # Run Purge
+            full_stats = {}
+            for acc in touched:
+                breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
+                full_stats.update(breakdown)
+            result.stats = full_stats
+            
+        finally:
+            conn.close()
+            
         return result
 
     # ── parsing helpers ─────────────────────────────────────
@@ -333,11 +499,14 @@ class TradeImportService:
         v = value.strip()
         if not v:
             return None
-        # Remove Sierra Chart markers
-        v = v.replace(" BP", "").replace(" EP", "").strip()
+        
+        # Remove Sierra Chart markers (BP/EP) robustly using regex
+        # Handles " EP", "  EP", "BP", etc. at end of string
+        v = re.sub(r'\s*[BE]P$', '', v, flags=re.IGNORECASE).strip()
+        
         # Collapse multiple spaces
-        while "  " in v:
-            v = v.replace("  ", " ")
+        v = re.sub(r'\s+', ' ', v)
+        
         for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
             try:
                 return datetime.strptime(v, fmt)
@@ -401,30 +570,24 @@ class TradeImportService:
     # ── dedup / DB helpers ──────────────────────────────────
 
     @staticmethod
+    def _generate_trade_id(trade: ParsedTrade) -> str:
+        """Generate a deterministic trade_id with microsecond precision."""
+        return (
+            f"{trade.account_name}_{trade.base_symbol}_"
+            f"{trade.entry_datetime.strftime('%Y%m%d_%H%M%S_%f')}_"
+            f"{trade.exit_datetime.strftime('%Y%m%d_%H%M%S_%f')}_"
+            f"{int(trade.entry_price * 100)}_{int(trade.exit_price * 100)}_"
+            f"{trade.quantity}_{int(trade.profit_loss * 100)}"
+        )
+
+    @staticmethod
     def _is_duplicate(conn: sqlite3.Connection, trade: ParsedTrade) -> bool:
-        """Check if a matching trade already exists in processed_trades."""
+        """Check if a matching trade already exists in processed_trades using trade_id."""
         cursor = conn.cursor()
+        trade_id = TradeImportService._generate_trade_id(trade)
         cursor.execute(
-            """
-            SELECT 1 FROM processed_trades
-            WHERE account_name = ?
-              AND symbol = ?
-              AND entry_time = ?
-              AND entry_price = ?
-              AND exit_time = ?
-              AND exit_price = ?
-              AND profit_loss = ?
-            LIMIT 1
-            """,
-            (
-                trade.account_name,
-                trade.base_symbol,
-                trade.entry_datetime.isoformat(),
-                trade.entry_price,
-                trade.exit_datetime.isoformat(),
-                trade.exit_price,
-                trade.profit_loss,
-            ),
+            "SELECT 1 FROM processed_trades WHERE trade_id = ? LIMIT 1",
+            (trade_id,)
         )
         return cursor.fetchone() is not None
 
@@ -436,19 +599,12 @@ class TradeImportService:
             (trade.exit_datetime - trade.entry_datetime).total_seconds() / 60
         )
         # Deterministic trade_id
-        # We use a string that unique identifies the trade context
-        trade_id = (
-            f"{trade.account_name}_{trade.base_symbol}_"
-            f"{trade.entry_datetime.strftime('%Y%m%d_%H%M%S')}_"
-            f"{trade.exit_datetime.strftime('%Y%m%d_%H%M%S')}_"
-            f"{int(trade.entry_price * 100)}_{int(trade.exit_price * 100)}_"
-            f"{trade.quantity}_{int(trade.profit_loss * 100)}"
-        )
+        trade_id = TradeImportService._generate_trade_id(trade)
 
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO processed_trades (
+            INSERT OR IGNORE INTO processed_trades (
                 trade_id, account_name, symbol,
                 entry_time, exit_time,
                 entry_price, exit_price,

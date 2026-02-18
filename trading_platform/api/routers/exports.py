@@ -370,9 +370,9 @@ async def create_export(
         )
         
         return APIResponse(
-            success=True,
-            data=response,
-            message="Export job created successfully"
+            status="success",
+            message="Export job created successfully",
+            data=response
         )
         
     except Exception as e:
@@ -414,9 +414,9 @@ async def get_export_status(
     )
     
     return APIResponse(
-        success=True,
-        data=progress_response,
-        message="Export status retrieved successfully"
+        status="success",
+        message="Export status retrieved successfully",
+        data=progress_response
     )
 
 
@@ -491,9 +491,9 @@ async def cancel_export(
     job["updated_at"] = datetime.utcnow()
     
     return APIResponse(
-        success=True,
-        data={"export_id": export_id, "status": "cancelled"},
-        message="Export cancelled successfully"
+        status="success",
+        message="Export cancelled successfully",
+        data={"export_id": export_id, "status": "cancelled"}
     )
 
 
@@ -558,9 +558,9 @@ async def get_export_history(
     )
     
     return APIResponse(
-        success=True,
-        data=history_response,
-        message="Export history retrieved successfully"
+        status="success",
+        message="Export history retrieved successfully",
+        data=history_response
     )
 
 
@@ -590,9 +590,9 @@ async def get_export_capacity(
     )
     
     return APIResponse(
-        success=True,
-        data=capacity_response,
-        message="Export capacity information retrieved successfully"
+        status="success",
+        message="Export capacity information retrieved successfully",
+        data=capacity_response
     )
 
 

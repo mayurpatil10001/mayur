@@ -54,7 +54,7 @@ const AccountsByHour: React.FC = () => {
   ];
 
   const handleAccountDropdownClick = () => {
-    if (accounts.length === 0 && !accountsLoading) {
+    if (!accountsLoading) {
       dispatch(fetchAccounts());
     }
   };
@@ -104,10 +104,8 @@ const AccountsByHour: React.FC = () => {
   };
 
   useEffect(() => {
-    if (accounts.length === 0) {
-      dispatch(fetchAccounts());
-    }
-  }, [dispatch, accounts.length]);
+    dispatch(fetchAccounts());
+  }, [dispatch]);
 
   useEffect(() => {
     if (accounts.length > 0 && !selectedSymbol) {
@@ -209,11 +207,6 @@ const AccountsByHour: React.FC = () => {
     }
   }, [dispatch, accountsLoading, accounts.length]);
 
-  useEffect(() => {
-    if (selectedAccount && selectedSymbol) {
-      fetchData();
-    }
-  }, [selectedAccount, selectedSymbol, timeHorizon]);
 
   const toggleSlotSelection = (slot: string) => {
     setSelectedSlots(prev =>
@@ -338,6 +331,7 @@ const AccountsByHour: React.FC = () => {
             }}
             disabled={!selectedSymbol}
             className="account-select-pill"
+            onMouseDown={handleAccountDropdownClick}
           >
             <option value="">Select Account...</option>
             {availableAccounts.map(acc => <option key={acc} value={acc}>{acc}</option>)}

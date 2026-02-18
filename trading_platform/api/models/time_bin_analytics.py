@@ -1082,6 +1082,7 @@ class ExpectedShortfallResultResponse(BaseModel):
 
 class TailRiskMetricsResponse(BaseModel):
     """Response model for tail risk metrics."""
+    model_config = {'protected_namespaces': ()}
     
     extreme_value_model: str = Field(
         description="Extreme value model used",

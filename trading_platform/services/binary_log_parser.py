@@ -86,12 +86,9 @@ def _parse_tag66_timestamp(value_bytes: bytes) -> Optional[datetime.datetime]:
     # Candidate 2: Unix epoch in microseconds - always UTC
     try:
         micros = struct.unpack('<q', value_bytes[:8])[0]
-        # Range check for Unix micros (2010..2035)
         if 1262304000000000 <= micros <= 2082758400000000:
-            return datetime.datetime.fromtimestamp(micros / 1_000_000.0, tz=timezone.utc).astimezone(NY_TZ).replace(tzinfo=None)
+            return datetime.datetime.fromtimestamp(micros / 1_000_000.0, tz=timezone.utc).replace(tzinfo=None)
         
-        # Candidate 2.5: Microseconds since 1899-12-30 (Sierra Chart internal)
-        # 2010..2035 range is roughly 3.4e15 to 4.3e15
         if 3400000000000000 <= micros <= 4500000000000000:
             base = datetime.datetime(1899, 12, 30)
             return base + datetime.timedelta(microseconds=micros)
@@ -101,11 +98,10 @@ def _parse_tag66_timestamp(value_bytes: bytes) -> Optional[datetime.datetime]:
     # Candidate 3: Unix epoch in milliseconds - always UTC
     try:
         millis = struct.unpack('<q', value_bytes[:8])[0]
-        if 1262304000000 <= millis <= 2082758400000:  # 2010..2035
-            return datetime.datetime.fromtimestamp(millis / 1000.0, tz=timezone.utc).astimezone(NY_TZ).replace(tzinfo=None)
+        if 1262304000000 <= millis <= 2082758400000:
+            return datetime.datetime.fromtimestamp(millis / 1000.0, tz=timezone.utc).replace(tzinfo=None)
     except Exception:
         pass
-
     return None
 
 
@@ -171,30 +167,29 @@ def _parse_file_nitro(fp: str, target_sym: Optional[str] = None) -> List[Dict]:
         file_date_match = re.search(r'(\d{4}-\d{2}-\d{2})', fn)
         min_valid_ts, max_valid_ts = 1600000000, 2000000000
         
-        f_dt = None
         if file_date_match:
             try:
-                # Create a 48-hour window around the file date (to handle UTC/Timezone shifts)
                 f_dt = datetime.datetime.strptime(file_date_match.group(1), "%Y-%m-%d")
-                min_valid_ts = (f_dt - datetime.timedelta(hours=24)).timestamp()
-                max_valid_ts = (f_dt + datetime.timedelta(hours=48)).timestamp()
             except: pass
 
         offset = 0
         file_len = len(d)
-        
-        current_ts_val = 0
-        current_ts_str = None
-        base_time = f_dt.timestamp() if f_dt is not None else min_valid_ts
+        seen_keys = set()
         
         # High-Performance TLV Nitro Loop
+        pending_fill = None
+        current_ts_val = 0
+        current_ts_str = None
+        # Default fallback is the date in the filename (start of UTC day)
+        base_time = f_dt.timestamp() if f_dt else datetime.datetime.now().replace(hour=0, minute=0, second=0).timestamp()
+        
         while offset < file_len - 8:
             try:
                 # Unpack Tag (4 bytes) and Length (4 bytes)
                 tag, length = struct.unpack('<II', d[offset : offset+8])
                 
                 # Sane check: Tag should be in known range, Length should be plausible
-                if tag > 300 or length > 20000000: # 20MB safety cap
+                if tag > 500 or length > 20000000: # 20MB safety cap
                     next_ptr = d.find(b'\x00\x00\x00', offset + 1)
                     if next_ptr == -1: break
                     offset = next_ptr - 1
@@ -203,91 +198,121 @@ def _parse_file_nitro(fp: str, target_sym: Optional[str] = None) -> List[Dict]:
                 val_start = offset + 8
                 val_end = val_start + length
                 if val_end > file_len: break
-                    
-                if tag == 0x68: # 104: Message String
-                    val_bytes = d[val_start : val_end]
-                    try:
-                        s = val_bytes.decode(errors='ignore')
-                        s_lower = s.lower()
-                        
-                        if any(x in s_lower for x in ["fill", "trade", "bought", "sold", "price", "at", "exec"]):
-                            # Improved price regex handles trailing Dots found in binary log
-                            pm = re.search(r"(?:lat|price|fillprice|at|last)[:\s]*([\d]+\.?[\d]*)", s_lower)
-                            if pm:
-                                try: p_val = float(pm.group(1).rstrip('.'))
-                                except: p_val = 0
-                                
-                                if p_val > 0:
-                                    side = None
-                                    if any(x in s_lower for x in ["buy", "bought", "long"]): side = "BUY"
-                                    elif any(x in s_lower for x in ["sell", "sold", "short"]): side = "SELL"
-                                    
-                                    if not side:
-                                        # Bid/Ask proximity side logic for simulation fills
-                                        bm = re.search(r"bid[:\s]*([\d]+\.?[\d]*)", s_lower)
-                                        am = re.search(r"ask[:\s]*([\d]+\.?[\d]*)", s_lower)
-                                        lm = re.search(r"last[:\s]*([\d]+\.?[\d]*)", s_lower)
-                                        if bm and am and lm:
-                                            try:
-                                                bid = float(bm.group(1).rstrip('.'))
-                                                ask = float(am.group(1).rstrip('.'))
-                                                last = float(lm.group(1).rstrip('.'))
-                                                side = "BUY" if abs(last - ask) < abs(last - bid) else "SELL"
-                                            except: pass
-                                    
-                                    if side:
-                                        qty = 1
-                                        qm = re.search(r"(?:qty|quantity|size|fill qty|q:|vol)\s*:?\s*(\d+)", s_lower)
-                                        if qm:
-                                            try: qty = int(qm.group(1))
-                                            except: qty = 1
-                                        
-                                        if not current_ts_str:
-                                            prog = offset / file_len
-                                            dt = datetime.datetime.fromtimestamp(base_time + (prog * 86400))
-                                            current_ts_str = dt.isoformat()
-                                            current_ts_val = base_time + (prog * 86400)
-
-                                        asym = "Unknown"
-                                        s_upper = s.upper()
-                                        tm = re.search(r'\b([A-Z]{1,8}[FGHJKMNQUVXZ]\d{1,2})\b', s_upper)
-                                        if tm: asym = tm.group(1)
-                                        elif sh != "Unknown" and filename_symbol_inferred: asym = sh
-                                        elif target_sym and re.search(rf"\b{re.escape(target_sym.upper())}\b", s_upper): 
-                                            asym = target_sym.upper()
-
-                                        if target_sym:
-                                            if _get_base_symbol_standalone(asym) != target_sym.upper():
-                                                offset = val_end
-                                                continue
-                                        
-                                        if asym != "Unknown" and _price_plausible(_get_base_symbol_standalone(asym), p_val):
-                                            fills.append({
-                                                "account_name": acc, "symbol": asym, "price": p_val, "side": side, 
-                                                "quantity": qty, "timestamp": current_ts_str, "ts_val": current_ts_val, "offset": offset
-                                            })
-                    except: pass
-                    
-                elif tag == 0x67: # 103: Symbol
-                    val_bytes = d[val_start : val_end]
-                    try:
-                        tsym = val_bytes.decode(errors='ignore').strip('\x00').strip()
-                        if tsym: sh, filename_symbol_inferred = tsym, True
-                    except: pass
                 
-                elif tag == 0x66: # 102: Time
-                    val_bytes = d[val_start : val_end]
-                    parsed_dt = _parse_tag66_timestamp(val_bytes)
+                if tag == 0x66: # 102: Time: Start of a new record/event
+                    if pending_fill:
+                        # Deduplicate before committing
+                        pf = pending_fill
+                        fill_key = f"{pf['account_name']}_{pf['symbol']}_{pf['order_id']}_{pf['price']}_{pf['side']}" if pf['order_id'] else f"{pf['account_name']}_{pf['symbol']}_{round(pf['ts_val'], 3)}_{pf['price']}_{pf['side']}_{pf['quantity']}"
+                        if fill_key not in seen_keys:
+                            fills.append(pf)
+                            seen_keys.add(fill_key)
+                        pending_fill = None
+                    
+                    parsed_dt = _parse_tag66_timestamp(d[val_start:val_end])
                     if parsed_dt is not None:
-                        ts_val = parsed_dt.timestamp()
-                        if min_valid_ts <= ts_val <= max_valid_ts:
-                            current_ts_val, current_ts_str = ts_val, parsed_dt.isoformat()
+                         current_ts_val, current_ts_str = parsed_dt.timestamp(), parsed_dt.isoformat()
                 
+                elif tag == 0x67: # 103: Symbol
+                    tsym = d[val_start:val_end].decode(errors='ignore').strip('\x00').strip()
+                    if tsym: sh, filename_symbol_inferred = tsym, True
+                
+                elif tag == 100 or tag == 124: # OrderID / ServiceOrderID
+                    try:
+                        oid = d[val_start:val_end].decode(errors='ignore').strip()
+                        if oid and pending_fill: pending_fill['order_id'] = oid
+                    except: pass
+                    
+                elif tag == 0x68: # 104: Message String
+                    val_bytes = d[val_start : val_end]
+                    s = val_bytes.decode(errors='ignore')
+                    s_lower = s.lower()
+                    
+                    if ("trade simulation fill" in s_lower or "fill: " in s_lower) and "updated internal position" not in s_lower:
+                        pm = re.search(r"(?:lat|price|fillprice|at|last)[:\s]*([\d]+\.?[\d]*)", s_lower)
+                        if pm:
+                            try: p_val = float(pm.group(1).rstrip('.'))
+                            except: p_val = 0
+                            
+                            if p_val > 0:
+                                side = None
+                                if any(x in s_lower for x in ["buy", "bought", "long"]): side = "BUY"
+                                elif any(x in s_lower for x in ["sell", "sold", "short"]): side = "SELL"
+                                
+                                if not side:
+                                    bm = re.search(r"bid[:\s]*([\d]+\.?[\d]*)", s_lower)
+                                    am = re.search(r"ask[:\s]*([\d]+\.?[\d]*)", s_lower)
+                                    lm = re.search(r"last[:\s]*([\d]+\.?[\d]*)", s_lower)
+                                    if bm and am and lm:
+                                        try:
+                                            bid = float(bm.group(1).rstrip('.'))
+                                            ask = float(am.group(1).rstrip('.'))
+                                            last = float(lm.group(1).rstrip('.'))
+                                            side = "BUY" if abs(last - ask) < abs(last - bid) else "SELL"
+                                        except: pass
+                                
+                                if side:
+                                    qty = 1
+                                    qm = re.search(r"(?:qty|quantity|size|fill qty|q:|vol)\s*:?\s*(\d+)", s_lower)
+                                    if qm:
+                                        try: qty = int(qm.group(1))
+                                        except: qty = 1
+                                    else:
+                                        qm2 = re.search(r"(?:buy|sell|bought|sold|long|short)\s+(\d+)", s_lower)
+                                        if qm2: 
+                                            try: qty = int(qm2.group(1))
+                                            except: qty = 1
+                                    
+                                    order_id = None
+                                    om = re.search(r"internalorderid[:\s]*(\d+)", s_lower)
+                                    if om: order_id = om.group(1)
+                                    
+                                    if not current_ts_str:
+                                        dt = datetime.datetime.fromtimestamp(base_time)
+                                        current_ts_str, current_ts_val = dt.isoformat(), base_time
+
+                                    asym = "Unknown"
+                                    s_upper = s.upper()
+                                    tm = re.search(r'\b([A-Z]{1,8}[FGHJKMNQUVXZ]\d{1,2})\b', s_upper)
+                                    if tm: asym = tm.group(1)
+                                    elif sh != "Unknown" and filename_symbol_inferred: asym = sh
+                                    elif target_sym and re.search(rf"\b{re.escape(target_sym.upper())}\b", s_upper): asym = target_sym.upper()
+
+                                    if target_sym and _get_base_symbol_standalone(asym) != target_sym.upper():
+                                        offset = val_end
+                                        continue
+                                    
+                                    if asym != "Unknown" and _price_plausible(_get_base_symbol_standalone(asym), p_val):
+                                        pending_fill = {
+                                            "account_name": acc, "symbol": asym, "price": p_val, "side": side, 
+                                            "quantity": qty, "timestamp": current_ts_str, "ts_val": current_ts_val, "offset": offset,
+                                            "order_id": order_id
+                                        }
+                    
+                elif tag == 126 and pending_fill:
+                    try:
+                        v = struct.unpack('<i', d[val_start:val_start+4])[0]
+                        if v > 0: pending_fill['quantity'] = v
+                    except: pass
+                elif tag in [108, 114] and pending_fill and pending_fill['quantity'] == 1:
+                    try:
+                        v = int(struct.unpack('<d', d[val_start:val_start+8])[0])
+                        if v > 0: pending_fill['quantity'] = v
+                    except: pass
+
                 # Advance strictly to next tag to ensure 100% traversal
                 offset = val_end
             except:
-                offset += 1
+                break # Exit loop on parsing error to prevent infinite loop
         
+        # Final flush of any pending fill after the loop finishes
+        if pending_fill:
+            pf = pending_fill
+            fill_key = f"{pf['account_name']}_{pf['symbol']}_{pf['order_id']}_{pf['price']}_{pf['side']}" if pf['order_id'] else f"{pf['account_name']}_{pf['symbol']}_{round(pf['ts_val'], 3)}_{pf['price']}_{pf['side']}_{pf['quantity']}"
+            if fill_key not in seen_keys:
+                fills.append(pf)
+                seen_keys.add(fill_key)
+
         if sh == "Unknown" and target_sym:
             sh = target_sym.upper()
             filename_symbol_inferred = True
@@ -344,7 +369,7 @@ class BinaryLogParser:
         self._stop_event = True
         self.message = "Stopping..."
 
-    async def run_import(self, paths: List[str], filter_symbol: Optional[str] = None, account_filter: Optional[List[str]] = None):
+    async def run_import(self, paths: List[str], filter_symbol: Optional[str] = None, account_filter: Optional[List[str]] = None, days_lookback: Optional[int] = None):
         self.running = True
         self._stop_event = False
         self.stats = {"processed": 0, "found": 0, "errors": 0, "summaries": {}}
@@ -352,19 +377,40 @@ class BinaryLogParser:
         
         try:
             files_to_process = []
+            cutoff_time = None
+            if days_lookback:
+                cutoff_time = (datetime.datetime.now() - datetime.timedelta(days=days_lookback)).timestamp()
+
             for path in paths:
                 if self._stop_event: break
                 cp = os.path.normpath(path)
+                print(f"DEBUG: Checking path: '{cp}' Exists: {os.path.exists(cp)}")
                 if os.path.exists(cp):
-                    files_to_process.extend(glob.glob(os.path.join(cp, "*.data")))
+                    all_data_files = glob.glob(os.path.join(cp, "*.data")) + glob.glob(os.path.join(cp, "*.DATA"))
+                    # Deduplicate in case of case-insensitive filesystem
+                    all_data_files = list(set(all_data_files))
+                    if cutoff_time:
+                        all_data_files = [f for f in all_data_files if os.path.getmtime(f) >= cutoff_time]
+                    files_to_process.extend(all_data_files)
+            
+            files_to_process = sorted(list(files_to_process))
+            print(f"DEBUG: Found {len(files_to_process)} files after glob.")
             
             files_to_process = [f for f in files_to_process if "TradeActivityLog" in os.path.basename(f)]
-            acc_set = set()
+            print(f"DEBUG: {len(files_to_process)} files after name filter.")
+
             if account_filter:
                 acc_set = {a.upper() for a in account_filter}
                 files_to_process = [f for f in files_to_process if any(acc in os.path.basename(f).upper() for acc in acc_set)]
-            elif filter_symbol:
-                files_to_process = sorted(list(files_to_process), reverse=True)
+                print(f"DEBUG: {len(files_to_process)} files after account filter {acc_set}.")
+            
+            # ALWAYS sort files by name/date to ensure logical FIFO ordering during pairing
+            files_to_process = sorted(list(files_to_process))
+            
+            with open("import_files_trace.log", "w") as ftrace:
+                ftrace.write(f"Scanned {len(files_to_process)} files.\n")
+                for f in files_to_process:
+                     ftrace.write(f"QUEUED: {f} | Mtime: {os.path.getmtime(f)}\n")
             
             total_files = len(files_to_process)
             if total_files == 0:
@@ -378,6 +424,7 @@ class BinaryLogParser:
             
             with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
                 batch_size = 50
+                all_unique_fills = {} # Initialize all_unique_fills
                 for i in range(0, total_files, batch_size):
                     if self._stop_event: break
                     batch = files_to_process[i:i+batch_size]
@@ -385,11 +432,22 @@ class BinaryLogParser:
                     self.message = f"Ripping: {i}/{total_files} ({self.progress}%)..."
                     
                     loop = asyncio.get_event_loop()
+                    # _parse_file_nitro is a global helper function
                     tasks = [loop.run_in_executor(executor, partial(_parse_file_nitro, fp, filter_symbol)) for fp in batch]
-                    results = await asyncio.gather(*tasks)
                     
-                    for res in results:
-                        if res: all_fills.extend(res)
+                    for f_task in await asyncio.gather(*tasks):
+                        res = f_task
+                        if res:
+                            all_fills.extend(res)
+                            # Generate unique_fills_map logic inline or just extend all_fills
+                            for f in res:
+                                # Fuzzy Deduplication: Round to seconds to handle Instance Jitter (1-second window)
+                                # Ignore OrderID in the key since some messages for the same fill have it and others don't
+                                ts_key = f['timestamp'][:19]
+                                key = (f['account_name'], f['symbol'], f['side'], f['price'], f['quantity'], ts_key)
+                                if key not in all_unique_fills:
+                                    all_unique_fills[key] = f
+
                     self.stats["processed"] = min(total_files, i + batch_size)
                     self.stats["found"] = len(all_fills)
                     await asyncio.sleep(0.01)
@@ -399,21 +457,14 @@ class BinaryLogParser:
                 self.running = False
                 return
 
-            # Deduplicate fills
-            unique_fills_map = {}
-            for f in all_fills:
-                ts_sec = f['timestamp'][:19]
-                key = (f['account_name'], f['symbol'], f['side'], f['price'], f['quantity'], ts_sec)
-                if key not in unique_fills_map:
-                    unique_fills_map[key] = f
-            
-            deduped_fills = list(unique_fills_map.values())
+            # Use the unique fills collected in the loop
+            deduped_fills = list(all_unique_fills.values())
             
             self.message = "FIFO Reconstruction..."
-            trades = self._pairs_to_trades(deduped_fills)
+            trades, unpaired = self._pairs_to_trades(deduped_fills, persist_state=True)
             
-            if not trades:
-                self.message = "Could not pair fills."
+            if not trades and not unpaired:
+                self.message = "No fills found to process."
                 self.running = False
                 return
 
@@ -423,12 +474,40 @@ class BinaryLogParser:
             self.message = "Saving to DB..."
             new_count = self._save_trades_to_db(trades)
             
-            self.message = "Purging anomalies (Rules 4 & 5)..."
-            purge_acc = account_filter[0] if account_filter and len(account_filter) == 1 else None
-            self.purge_anomalies(account=purge_acc, symbol=filter_symbol, purge_overnight=True)
+            # Debug Trace: Did we actually save any Feb 17 trades for SIM15?
+            sim15_feb17 = [t for t in trades if t['account'].upper() == '3Q_SIM15' and '2026-02-17' in t['entry_time']]
+            with open("import_debug.log", "a") as fld:
+                fld.write(f"FINAL SAVE CHECK: 3Q_SIM15 Feb 17 trades in list: {len(sim15_feb17)}\n")
             
+            self.message = "Applying Shield Rules (Purging Anomalies)..."
+            # Always purge all accounts involved in the import session
+            breakdown = self.purge_anomalies(account=None, symbol=filter_symbol, purge_overnight=True)
+            
+            # Aggregate stats across all accounts
+            total_future = sum(b.get("future", {}).get("count", 0) for b in breakdown.values())
+            total_long_duration = sum(b.get("long_duration", {}).get("count", 0) for b in breakdown.values())
+            total_outliers = sum(b.get("outliers", {}).get("count", 0) for b in breakdown.values())
+            total_eod_1700 = sum(b.get("eod_1700", {}).get("count", 0) for b in breakdown.values())
+            total_price_mismatch = sum(b.get("price_mismatch", {}).get("count", 0) for b in breakdown.values())
+            
+            total_dropped = total_future + total_long_duration + total_outliers + total_eod_1700 + total_price_mismatch
+            attempted = new_count + total_dropped
+            drop_pct = round((total_dropped / attempted * 100), 1) if attempted > 0 else 0
+            
+            # Final Stats Update
             self.stats["found"] = new_count
-            self.message = f"Import Complete! {new_count} Trades Added."
+            self.stats["unpaired_fills"] = unpaired
+            self.stats["dropped_long_duration"] = total_long_duration
+            self.stats["dropped_eod_1700"] = total_eod_1700
+            self.stats["dropped_outliers"] = total_outliers
+            self.stats["dropped_pct"] = drop_pct
+            self.stats["breakdown"] = breakdown
+            
+            self.message = f"Import Complete! Added: {new_count} | Dropped: {total_dropped} ({drop_pct}%) | Open: {unpaired} fills"
+            
+            with open("import_debug.log", "a") as fld:
+                fld.write(f"SUMMARY: Added {new_count}, Dropped {total_dropped} ({drop_pct}%), Unpaired (Open) {unpaired}\n")
+                fld.write(f"BREAKDOWN: {str(breakdown)}\n")
             
         except Exception as e:
             import traceback
@@ -438,7 +517,10 @@ class BinaryLogParser:
         finally:
             self.running = False
 
-    def _pairs_to_trades(self, fills: List[Dict]) -> List[Dict]:
+    def _pairs_to_trades(self, fills: List[Dict], persist_state: bool = True) -> (List[Dict], int):
+        conn = sqlite3.connect(self.db_path)
+        # conn.row_factory = sqlite3.Row # Dict access
+        
         groups = {}
         for f in fills:
             key = (f['account_name'], f['symbol'])
@@ -446,54 +528,135 @@ class BinaryLogParser:
             groups[key].append(f)
             
         all_trades = []
-        for (acc, specific_sym), group in groups.items():
-            base_sym = _get_base_symbol_standalone(specific_sym)
-            meta = SYMBOL_METADATA.get(base_sym, {"multiplier": 1, "comm": 4.20})
-            multiplier = meta['multiplier']
-            commission_per_leg = meta['comm'] / 2.0
-
-            group.sort(key=lambda x: (x.get('ts_val', 0), x.get('offset', 0)))
-            
-            buys, sells = [], []
-            for f in group:
-                qty, side, price, ts = f['quantity'], f['side'], f['price'], f['timestamp']
+        unpaired_count = 0
+        
+        try:
+            for (acc, specific_sym), group in groups.items():
+                base_sym = _get_base_symbol_standalone(specific_sym)
                 
-                if side == 'BUY' or side == 'LONG':
-                    while qty > 0 and sells:
-                        s = sells[0]
-                        match_qty = min(qty, s['qty'])
-                        pnl = (s['price'] - price) * match_qty * multiplier
-                        total_comm = round(match_qty * (commission_per_leg * 2), 2)
-                        all_trades.append({
-                            "account": acc, "symbol": base_sym, "side": "SHORT",
-                            "entry_time": s['time'], "exit_time": ts, 
-                            "entry_price": s['price'], "exit_price": price,
-                            "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
-                            "commission": total_comm
+                # 1. LOAD PENDING FILLS (Stateful)
+                if persist_state:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT side, entry_time, price, quantity FROM pending_fills WHERE account_name = ? AND symbol = ? ORDER BY created_at ASC",
+                        (acc, base_sym)
+                    )
+                    rows = cursor.fetchall()
+                    # Convert back to fill dicts
+                    pending = []
+                    for r in rows:
+                        # r: (side, entry_time, price, quantity)
+                        # We need to adapt them to the loop structure
+                        # The loop expects: qty, side, price, ts, ts_val
+                        # We'll construct a pseudo-fill
+                        side_u = r[0].upper()
+                        ts_str = r[1]
+                        
+                        ts_val = 0
+                        try:
+                            dt = datetime.datetime.fromisoformat(ts_str)
+                            ts_val = dt.timestamp()
+                        except: pass
+                        
+                        # We put them in the group? Or pre-populate buys/sells?
+                        # Pre-populating buys/sells is safer essentially.
+                        # But the loop iterates 'group'.
+                        # Let's add them to 'group' and let the sort handle order?
+                        # Yes, if we trust timestamps.
+                        
+                        pending.append({
+                            "account_name": acc, "symbol": specific_sym, # Use specific?
+                            "side": side_u, "quantity": r[3], "price": r[2], 
+                            "timestamp": ts_str, "ts_val": ts_val,
+                            "offset": -1 # Priority
                         })
-                        qty -= match_qty
-                        s['qty'] -= match_qty
-                        if s['qty'] <= 0: sells.pop(0)
-                    if qty > 0: buys.append({"qty": qty, "price": price, "time": ts})
-                else:
-                    while qty > 0 and buys:
-                        b = buys[0]
-                        match_qty = min(qty, b['qty'])
-                        pnl = (price - b['price']) * match_qty * multiplier
-                        total_comm = round(match_qty * (commission_per_leg * 2), 2)
-                        all_trades.append({
-                            "account": acc, "symbol": base_sym, "side": "LONG",
-                            "entry_time": b['time'], "exit_time": ts,
-                            "entry_price": b['price'], "exit_price": price,
-                            "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
-                            "commission": total_comm
-                        })
-                        qty -= match_qty
-                        b['qty'] -= match_qty
-                        if b['qty'] <= 0: buys.pop(0)
-                    if qty > 0: sells.append({"qty": qty, "price": price, "time": ts})
+                    
+                    # Merge pending into group
+                    group.extend(pending)
 
-        return all_trades
+                meta = SYMBOL_METADATA.get(base_sym, {"multiplier": 1, "comm": 4.20})
+                multiplier = meta['multiplier']
+                commission_per_leg = meta['comm'] / 2.0
+
+                group.sort(key=lambda x: (x.get('ts_val', 0), x.get('offset', 0)))
+                
+                buys, sells = [], []
+                for f in group:
+                    qty, side, price, ts = f['quantity'], f['side'], f['price'], f['timestamp']
+                    ts_val = f.get('ts_val', 0)
+                    
+                    if side == 'BUY' or side == 'LONG':
+                        # Skip stale sells (> 24h)
+                        # sells = [s for s in sells if ts_val - s['ts_val'] < 86400] 
+                        # DISABLE STALE CHECK for stateful logic? No, keep it but maybe relax?
+                        # If we carry forward, we want to match even if > 24h? 
+                        # For now keep 24h rule to avoid matching ancient noise.
+                        sells = [s for s in sells if ts_val - s['ts_val'] < 86400]
+                        
+                        while qty > 0 and sells:
+                            s = sells[0]
+                            match_qty = min(qty, s['qty'])
+                            pnl = (s['price'] - price) * match_qty * multiplier
+                            total_comm = round(match_qty * (commission_per_leg * 2), 2)
+                            all_trades.append({
+                                "account": acc, "symbol": base_sym, "side": "SHORT",
+                                "entry_time": s['time'], "exit_time": ts, 
+                                "entry_price": s['price'], "exit_price": price,
+                                "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
+                                "commission": total_comm
+                            })
+                            qty -= match_qty
+                            s['qty'] -= match_qty
+                            if s['qty'] <= 0: sells.pop(0)
+                        if qty > 0: buys.append({"qty": qty, "price": price, "time": ts, "ts_val": ts_val})
+                    else:
+                        # Skip stale buys (> 24h)
+                        buys = [b for b in buys if ts_val - b['ts_val'] < 86400]
+                        while qty > 0 and buys:
+                            b = buys[0]
+                            match_qty = min(qty, b['qty'])
+                            pnl = (price - b['price']) * match_qty * multiplier
+                            total_comm = round(match_qty * (commission_per_leg * 2), 2)
+                            all_trades.append({
+                                "account": acc, "symbol": base_sym, "side": "LONG",
+                                "entry_time": b['time'], "exit_time": ts,
+                                "entry_price": b['price'], "exit_price": price,
+                                "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
+                                "commission": total_comm
+                            })
+                            qty -= match_qty
+                            b['qty'] -= match_qty
+                            if b['qty'] <= 0: buys.pop(0)
+                        if qty > 0: sells.append({"qty": qty, "price": price, "time": ts, "ts_val": ts_val})
+                
+                unpaired_count += sum(b['qty'] for b in buys)
+                unpaired_count += sum(s['qty'] for s in sells)
+                
+                # 2. SAVE REMAINING AS PENDING (Stateful)
+                if persist_state:
+                    cursor = conn.cursor()
+                    # Clear old for this bucket
+                    cursor.execute("DELETE FROM pending_fills WHERE account_name = ? AND symbol = ?", (acc, base_sym))
+                    
+                    # Insert new leftovers
+                    # Buys
+                    for b in buys:
+                        cursor.execute(
+                            "INSERT INTO pending_fills (account_name, symbol, side, entry_time, price, quantity) VALUES (?, ?, ?, ?, ?, ?)",
+                            (acc, base_sym, 'BUY', b['time'], b['price'], b['qty'])
+                        )
+                    # Sells
+                    for s in sells:
+                        cursor.execute(
+                            "INSERT INTO pending_fills (account_name, symbol, side, entry_time, price, quantity) VALUES (?, ?, ?, ?, ?, ?)",
+                            (acc, base_sym, 'SELL', s['time'], s['price'], s['qty'])
+                        )
+                    conn.commit()
+
+        finally:
+            conn.close()
+
+        return all_trades, int(unpaired_count)
 
     def _aggregate_trades(self, trades: List[Dict]) -> List[Dict]:
         if not trades: return []
@@ -521,13 +684,18 @@ class BinaryLogParser:
         for t in trades:
             try:
                 try:
-                    t1 = datetime.datetime.fromisoformat(t['entry_time'])
-                    t2 = datetime.datetime.fromisoformat(t['exit_time'])
-                    duration = int((t2 - t1).total_seconds() / 60.0)
-                    hour, dow = t1.hour, t1.weekday()
+                    t1_utc = datetime.datetime.fromisoformat(t['entry_time']).replace(tzinfo=datetime.timezone.utc)
+                    t2_utc = datetime.datetime.fromisoformat(t['exit_time']).replace(tzinfo=datetime.timezone.utc)
+                    duration = int((t2_utc - t1_utc).total_seconds() / 60.0)
+                    
+                    # Store hour and day of week in New York time for session analysis
+                    t1_ny = t1_utc.astimezone(NY_TZ)
+                    hour, dow = t1_ny.hour, t1_ny.weekday()
                 except: duration, hour, dow = 0, 0, 0
                 side = "LONG" if "LONG" in t['side'].upper() or "BUY" in t['side'].upper() else "SHORT"
-                sig = f"{t['account']}_{t['symbol']}_{t['side']}_{t['entry_time']}_{t['exit_time']}_{t['entry_price']}_{t['exit_price']}_{t['quantity']}"
+                acc_upper = t['account'].upper()
+                sym_upper = t['symbol'].upper()
+                sig = f"{acc_upper}_{sym_upper}_{side}_{t['entry_time']}_{t['exit_time']}_{t['entry_price']}_{t['exit_price']}_{t['quantity']}"
                 tid = "T" + hashlib.md5(sig.encode()).hexdigest()[:12]
                 c.execute("""
                     INSERT OR IGNORE INTO processed_trades (
@@ -536,11 +704,14 @@ class BinaryLogParser:
                         profit_loss, commission, duration_minutes,
                         hour_of_day, day_of_week
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (tid, t['account'], t['symbol'], t['entry_time'], t['exit_time'],
+                """, (tid, acc_upper, sym_upper, t['entry_time'], t['exit_time'],
                       t['entry_price'], t['exit_price'], t['quantity'], side, 
                       t['profit_loss'], t['commission'], duration, hour, dow))
                 count += 1
-            except: pass
+                         
+            except Exception as e:
+                with open("db_error.log", "a") as err:
+                    err.write(f"DB Error for {tid}: {e}\n")
         conn.commit()
         conn.close()
         return count
@@ -548,30 +719,144 @@ class BinaryLogParser:
     def purge_anomalies(self, account: str = None, symbol: Optional[str] = None, purge_overnight: bool = False):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        where_clause, params = [], []
+        
+        # Determine which accounts to process
         if account:
-            where_clause.append("account_name = ?")
-            params.append(account)
-        if symbol:
-            where_clause.append("symbol = ?")
-            params.append(symbol)
-        base_where = " AND ".join(where_clause) if where_clause else "1=1"
-        results = {"future": 0, "overnight": 0, "outliers": 0, "price_mismatch": 0, "close_boundary": 0}
-        limit_date = (datetime.datetime.now() + datetime.timedelta(days=2)).isoformat()
-        c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND entry_time > ?", params + [limit_date])
-        session_cross_where = "CASE WHEN time(entry_time) >= '18:00:00' THEN date(entry_time) ELSE date(entry_time, '-1 day') END != CASE WHEN time(exit_time) >= '18:00:00' THEN date(exit_time) ELSE date(exit_time, '-1 day') END"
-        if purge_overnight: c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ({session_cross_where})", params)
-        close_cross_where = "date(entry_time) = date(exit_time) AND time(entry_time) < '17:00:00' AND time(exit_time) >= '17:00:00'"
-        if purge_overnight: c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ({close_cross_where})", params)
-        multiday_where = "date(entry_time) != date(exit_time)"
-        if purge_overnight: c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ({multiday_where})", params)
-        c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ABS(profit_loss) > 50000", params)
-        for sym, meta in SYMBOL_METADATA.items():
-            pmin, pmax = meta.get("price_min"), meta.get("price_max")
-            if pmin is not None and pmax is not None:
-                c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND symbol = ? AND (entry_price < ? OR entry_price > ? OR exit_price < ? OR exit_price > ?)", params + [sym, pmin, pmax, pmin, pmax])
+            accounts = [account]
+        else:
+            c.execute("SELECT DISTINCT account_name FROM processed_trades")
+            accounts = [r[0] for r in c.fetchall()]
+            
+        where_symbol = " AND symbol LIKE ? || '%'" if symbol else ""
+        params_symbol = [symbol] if symbol else []
+        
+        # Structure: { account_name: { rule_name: { count: int, pnl: float } } }
+        breakdown = {}
+        for acc in accounts:
+            acc_breakdown = {
+                "future": {"count": 0, "pnl": 0.0, "qty": 0},
+                "long_duration": {"count": 0, "pnl": 0.0, "qty": 0}, 
+                "outliers": {"count": 0, "pnl": 0.0, "qty": 0}, 
+                "eod_1700": {"count": 0, "pnl": 0.0, "qty": 0}, 
+                "price_mismatch": {"count": 0, "pnl": 0.0, "qty": 0}
+            }
+            base_where = "account_name = ?" + where_symbol
+            base_params = [acc] + params_symbol
+            
+            # Fetch all trades to filter in Python
+            
+            ids_to_drop_future, ids_to_drop_long, ids_to_drop_eod = [], [], []
+            pnl_future, pnl_long, pnl_eod = 0.0, 0.0, 0.0
+            qty_future, qty_long, qty_eod = 0, 0, 0
+
+            # Assuming naive ISO strings in DB are UTC
+            c.execute(f"SELECT trade_id, entry_time, exit_time, profit_loss, quantity FROM processed_trades WHERE {base_where}", base_params)
+            
+            rows = c.fetchall()
+            now_utc = datetime.datetime.now(datetime.timezone.utc) # Moved outside loop
+            for tid, t1_str, t2_str, pnl, qty in rows:
+                try:
+                    pnl = float(pnl) if pnl else 0.0
+                    qty = int(qty) if qty else 0
+                    
+                    t1_full = datetime.datetime.fromisoformat(t1_str)
+                    t2_full = datetime.datetime.fromisoformat(t2_str)
+                    
+                    # Ensure timezone awareness (assume UTC if missing)
+                    if t1_full.tzinfo is None: t1_full = t1_full.replace(tzinfo=datetime.timezone.utc)
+                    if t2_full.tzinfo is None: t2_full = t2_full.replace(tzinfo=datetime.timezone.utc)
+                    
+                    reason = "KEEP"
+                    
+                    # 1. Future Trades
+                    if t1_full > now_utc + datetime.timedelta(minutes=5):
+                        reason = "FUTURE"
+                        ids_to_drop_future.append(tid)
+                        pnl_future += pnl
+                        qty_future += qty
+                        
+                    # 2. Long Duration (> 24h)
+                    elif (t2_full - t1_full).total_seconds() > 86400:
+                        reason = "LONG_DURATION"
+                        ids_to_drop_long.append(tid)
+                        pnl_long += pnl
+                        qty_long += qty
+
+                    # 3. EOD 17:00-18:00 Gap (NY Time)
+                    # Convert to NY time
+                    elif purge_overnight:
+                        t1_ny = t1_full.astimezone(NY_TZ)
+                        t2_ny = t2_full.astimezone(NY_TZ)
+                        
+                        # Check strictly if open or close is within 17:00:00 - 17:59:59
+                        # SC RTH gap Logic
+                        if (t1_ny.hour == 17) or (t2_ny.hour == 17):
+                            reason = "EOD_1700"
+                            ids_to_drop_eod.append(tid)
+                            pnl_eod += pnl
+                            qty_eod += qty
+                except Exception as e:
+                    print(f"Error checking trade {tid}: {e}")
+                    pass
+
+            # Log deletions for debugging
+            if ids_to_drop_future or ids_to_drop_long or ids_to_drop_eod:
+                print(f"DEBUG: EXECUTION CONFIRMED - Purging {len(ids_to_drop_eod)} EOD trades for {acc}")
+                with open("import_debug.log", "a") as f:
+                    f.write(f"PURGE {acc}: Future={len(ids_to_drop_future)} (${pnl_future:.2f}) | Long={len(ids_to_drop_long)} (${pnl_long:.2f}) | EOD={len(ids_to_drop_eod)} (${pnl_eod:.2f})\n")
+                    f.write(f"TOTAL DROPPED PNL for {acc}: {(pnl_future + pnl_long + pnl_eod):.2f}\n")
+                    if ids_to_drop_eod:
+                         f.write(f"SAMPLE EOD DROP: {ids_to_drop_eod[:3]}\n")
+
+            def delete_batch(ids):
+                if not ids: return 0
+                chunk_size = 500
+                count = 0
+                for i in range(0, len(ids), 500):
+                    chunk = ids[i:i+500]
+                    placeholders = ",".join(["?"] * len(chunk))
+                    c.execute(f"DELETE FROM processed_trades WHERE trade_id IN ({placeholders})", chunk)
+                    count += c.rowcount
+                return count
+
+            acc_breakdown["future"]["count"] = delete_batch(ids_to_drop_future)
+            acc_breakdown["future"]["pnl"] = pnl_future
+            acc_breakdown["future"]["qty"] = qty_future
+            
+            acc_breakdown["long_duration"]["count"] = delete_batch(ids_to_drop_long)
+            acc_breakdown["long_duration"]["pnl"] = pnl_long
+            acc_breakdown["long_duration"]["qty"] = qty_long
+            
+            acc_breakdown["eod_1700"]["count"] = delete_batch(ids_to_drop_eod)
+            acc_breakdown["eod_1700"]["pnl"] = pnl_eod
+            acc_breakdown["eod_1700"]["qty"] = qty_eod
+            
+            # 4. PnL Outliers (Drop)
+            c.execute(f"SELECT SUM(profit_loss) FROM processed_trades WHERE ({base_where}) AND ABS(profit_loss) > 50000", base_params)
+            pnl_outliers = c.fetchone()[0] or 0.0
+            
+            c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ABS(profit_loss) > 50000", base_params)
+            outlier_count = c.rowcount
+            acc_breakdown["outliers"]["count"] = outlier_count
+            acc_breakdown["outliers"]["pnl"] = pnl_outliers
+            
+            if outlier_count > 0:
+                with open("import_debug.log", "a") as f:
+                    f.write(f"PURGE {acc}: Outliers={outlier_count} (${pnl_outliers:.2f})\n")
+            
+            # 5. Price Mismatches (Drop)
+            # PnL for bad price is not calculated/needed as per requirement
+            for sym, meta in SYMBOL_METADATA.items():
+                pmin, pmax = meta.get("price_min"), meta.get("price_max")
+                if pmin is not None and pmax is not None:
+                    # Just count, no PnL calc for bad price as requested
+                    c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND symbol = ? AND (entry_price < ? OR entry_price > ? OR exit_price < ? OR exit_price > ?)", base_params + [sym, pmin, pmax, pmin, pmax])
+                    acc_breakdown["price_mismatch"]["count"] += c.rowcount
+            
+            breakdown[acc] = acc_breakdown
+            
         conn.commit()
         conn.close()
-        return results
+        return breakdown
 
 importer = BinaryLogParser()

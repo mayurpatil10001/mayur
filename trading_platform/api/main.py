@@ -442,9 +442,19 @@ async def check_path(request: dict = Body(...)):
         import glob
         import os
         import re
-        
+        import datetime
+        from trading_platform.services.settings import settings_service
+
         path = request.get("path", "")
         target_symbol = request.get("symbol", "").upper()
+        # Respect saved lookback days if available
+        settings = settings_service.get_settings()
+        try:
+            days_limit = int(settings.get("import_days", 30))
+        except:
+            days_limit = 30
+            
+        cutoff_time = (datetime.datetime.now() - datetime.timedelta(days=days_limit)).timestamp() if days_limit > 0 else 0
         
         if not path:
             return {"exists": False, "files": [], "message": "No path provided"}
@@ -456,12 +466,16 @@ async def check_path(request: dict = Body(...)):
         if not os.path.isdir(clean_path):
             return {"exists": True, "files": [], "message": "Path is not a directory"}
             
-        all_files = glob.glob(os.path.join(clean_path, "*.txt")) + \
-                    glob.glob(os.path.join(clean_path, "*.log")) + \
-                    glob.glob(os.path.join(clean_path, "*.data"))
+        all_files_raw = glob.glob(os.path.join(clean_path, "*.txt")) + \
+                        glob.glob(os.path.join(clean_path, "*.log")) + \
+                        glob.glob(os.path.join(clean_path, "*.data"))
+        
+        # Filter by date
+        all_files = [f for f in all_files_raw if os.path.getmtime(f) >= cutoff_time]
         
         if not all_files:
-            return {"exists": True, "files": [], "count": 0, "accounts": [], "message": "No log files found"}
+            msg = f"No log files found in last {days_limit} days" if days_limit > 0 else "No log files found in directory"
+            return {"exists": True, "files": [], "count": 0, "accounts": [], "message": msg}
 
         # Group files by account
         account_files = {}
@@ -470,7 +484,7 @@ async def check_path(request: dict = Body(...)):
                 fname = os.path.basename(f)
                 parts = fname.split('.')
                 if len(parts) > 1:
-                    account = parts[-2]
+                    account = parts[-2].upper()
                     account = re.sub(r'_UTC$', '', account)
                     if account not in account_files:
                         account_files[account] = []
@@ -513,18 +527,29 @@ async def check_path(request: dict = Body(...)):
                         if file_size > 0:
                             data = b""
                             with open(recent_file, "rb") as bf:
-                                data += bf.read(50 * 1024)
-                                if file_size > 100 * 1024:
-                                    bf.seek(file_size - (100 * 1024))
+                                # Read first 100KB
+                                data += bf.read(100 * 1024)
+                                # If file is large, also read the last 200KB where recent trades are
+                                if file_size > 300 * 1024:
+                                    bf.seek(file_size - (200 * 1024))
+                                    data += bf.read()
+                                elif file_size > 100 * 1024:
+                                    # Just read the rest
                                     data += bf.read()
                                 
-                                # Check patterns
-                                pattern_a = rb'\b' + target_symbol.encode() + rb'[FGHJKMNQUVXZ]\d{1,2}\b'
-                                pattern_b = rb'(?:Symbol|Contract|Simulated)[:\s]+' + target_symbol.encode() + rb'\b'
+                                # Check patterns - Case insensitive
+                                uppercase_data = data.upper()
                                 
-                                if re.search(pattern_a, data, re.IGNORECASE) or \
-                                   re.search(pattern_b, data, re.IGNORECASE) or \
-                                   (recent_file.lower().endswith(('.txt', '.log')) and target_symbol.encode() in data.upper()):
+                                # pattern_a: match symbol + month code + year (e.g. NQH24)
+                                pattern_a = rb'\b' + target_symbol.encode() + rb'[FGHJKMNQUVXZ]\d{1,2}\b'
+                                # pattern_b: match Symbol: NQ or Contract: NQ
+                                pattern_b = rb'(?:SYMBOL|CONTRACT|SIMULATED)[:\s]+' + target_symbol.encode() + rb'\b'
+                                # pattern_c: just find the symbol string if it's a text log
+                                pattern_c = target_symbol.encode() + rb'\b'
+                                
+                                if re.search(pattern_a, uppercase_data) or \
+                                   re.search(pattern_b, uppercase_data) or \
+                                   re.search(pattern_c, uppercase_data):
                                     found_in_history = True
                                     break
                     except: pass
@@ -564,12 +589,19 @@ async def start_import(background_tasks: BackgroundTasks, request: dict = Body(.
     symbol = request.get("symbol", None)
     accounts = request.get("accounts", None) 
     
+    from trading_platform.services.settings import settings_service
+    settings = settings_service.get_settings()
+    try:
+        days = int(request.get("days", settings.get("import_days", 30)))
+    except:
+        days = 30
+    
     if not paths:
-        return {"message": "No paths provided, checking defaults...", "running": False} # Or handle gracefully
+        return {"message": "No paths provided, checking defaults...", "running": False}
         
     # Start background task with optional filters
-    background_tasks.add_task(importer.run_import, paths, symbol, accounts)
-    return {"message": f"Import started{' for ' + str(accounts) if accounts else ''}", "running": True}
+    background_tasks.add_task(importer.run_import, paths, symbol, accounts, days_lookback=days)
+    return {"message": f"Import started{' for ' + str(accounts) if accounts else ''} (Last {days} days)", "running": True}
 
 @app.post("/api/system/import-stop")
 async def stop_import():

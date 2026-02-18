@@ -557,7 +557,7 @@ async def get_hourly_breakdown(
             CASE WHEN SUM(profit_loss) > 0 THEN SUM(profit_loss) ELSE 0 END as runup,
             SUM(profit_loss) as equity_peak
         FROM processed_trades 
-        WHERE account_name = ? AND symbol = ? {date_filter}
+        WHERE UPPER(account_name) = UPPER(?) AND UPPER(symbol) = UPPER(?) {date_filter}
         GROUP BY 1
         ORDER BY time_slot
         """

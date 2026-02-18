@@ -33,7 +33,8 @@ async def health_check():
     status = "healthy" if is_healthy else "unhealthy"
     
     return APIResponse(
-        success=True,
+        status="success",
+        message="System is healthy",
         data={
             "status": status,
             "timestamp": datetime.utcnow().isoformat(),
@@ -56,7 +57,8 @@ async def detailed_health_check(
         health_summary = health_monitor.get_health_summary()
         
         return APIResponse(
-            success=True,
+            status="success",
+            message="Detailed health status retrieved",
             data=health_summary
         )
         
@@ -94,7 +96,8 @@ async def get_metrics(
         system_metrics_history = health_monitor.get_metrics_history(minutes)
         
         return APIResponse(
-            success=True,
+            status="success",
+            message=f"Metrics retrieved for last {minutes} minutes",
             data={
                 "period_minutes": minutes,
                 "timestamp": datetime.utcnow().isoformat(),

@@ -1,10 +1,10 @@
-/* Monitoring & System Control Page Styles */
 .monitoring {
   padding: 24px;
-  max-width: 1650px;
+  max-width: 1750px;
   margin: 0 auto;
   min-height: calc(100vh - 100px);
-  background: #f1f5f9;
+  background: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Header & Status Bar */
@@ -72,10 +72,10 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Grid Layout */
+/* Grid Layout - Narrowing the control section */
 .monitoring-grid {
   display: grid;
-  grid-template-columns: 450px 1fr;
+  grid-template-columns: 380px 1fr;
   gap: 24px;
 }
 
@@ -112,46 +112,71 @@
   margin: 0;
 }
 
-/* Ingestion Cards */
+/* Ingestion Cards - Premium Compact Design */
 .ingestion-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
 .ingestion-card {
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 15px;
-  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.ingestion-card:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .symbol-name {
-  font-weight: 800;
-  font-size: 16px;
-  color: #334155;
-}
-
-.path-input-group {
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: #1e293b;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
+.symbol-name::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 2px;
+}
+
 .path-input-group input {
-  font-size: 11px;
-  padding: 8px;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-size: 10px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   width: 100%;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.path-input-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  color: #1e293b;
 }
 
 .button-group {
@@ -160,27 +185,42 @@
 }
 
 .btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-scan {
-  background: #334155;
-  color: white;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .btn-import {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
-.btn-scan:hover { background: #0f172a; }
-.btn-import:hover { background: #1d4ed8; }
+.btn-scan:hover { 
+  background: #e2e8f0; 
+  color: #0f172a;
+}
+.btn-import:hover { 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  filter: brightness(1.1);
+}
 
 /* Filter Pill Controls */
 .filter-pills {

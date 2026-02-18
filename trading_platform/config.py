@@ -50,6 +50,7 @@ class Config:
     # File processing
     MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "100"))
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", "1000"))
+    RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "500"))
     
     @classmethod
     def get_sierra_chart_paths(cls) -> List[Path]:
