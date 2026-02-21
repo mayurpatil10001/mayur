@@ -110,6 +110,7 @@ export interface MonteCarloResults {
   expected_shortfall: Record<string, number>;
   percentiles: Record<string, number>;
   probability_of_loss: number;
+  sample_paths?: number[][];
   simulation_metadata: {
     historical_data_points: number;
     simulation_start_date: string;

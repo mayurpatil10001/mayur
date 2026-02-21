@@ -39,7 +39,7 @@ class FreeMarketDataService:
         self.stooq_symbols = {
             'SPY': 'spy.us',
             'QQQ': 'qqq.us', 
-            'VIX': 'vix'
+            'VIX': 'vi.f'  # Updated to vi.f (VIX index)
         }
         
         # Rate limiting
@@ -192,6 +192,11 @@ class FreeMarketDataService:
             MarketDataValidationError: If CSV cannot be parsed
         """
         try:
+            # Check for 'No data' response
+            if csv_content.strip() == "No data":
+                logger.warning(f"Stooq returned 'No data' for {symbol}")
+                raise MarketDataValidationError(f"No data returned from Stooq for {symbol}")
+
             # Stooq CSV format: Date,Open,High,Low,Close,Volume
             df = pd.read_csv(
                 io.StringIO(csv_content),

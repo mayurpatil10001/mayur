@@ -365,8 +365,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .vix-regime-loading p {
@@ -413,16 +418,16 @@
   .visualization-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .summary-grid {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
-  
+
   .forecast-probabilities {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .prob-item {
     flex-direction: row;
     justify-content: space-between;
@@ -434,60 +439,60 @@
     padding: 1rem;
     gap: 1rem;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .analyzer-controls {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
     width: 100%;
   }
-  
+
   .control-group {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .current-regime-panel {
     padding: 1rem;
   }
-  
+
   .regime-header {
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
   }
-  
+
   .regime-details {
     grid-template-columns: 1fr;
   }
-  
+
   .panel-header {
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
   }
-  
+
   .panel-stats {
     flex-direction: column;
     gap: 0.25rem;
   }
-  
+
   .summary-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .regime-stat {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .regime-details {
     text-align: left;
   }
@@ -497,29 +502,29 @@
   .vix-regime-analyzer {
     padding: 0.75rem;
   }
-  
+
   .chart-container {
     padding: 0.5rem;
   }
-  
+
   .summary-card,
   .regime-indicator-card {
     padding: 0.75rem;
   }
-  
+
   .regime-breakdown {
     gap: 0.5rem;
   }
-  
+
   .regime-stat {
     padding: 0.5rem;
     font-size: 0.75rem;
   }
-  
+
   .vix-statistics {
     gap: 0.25rem;
   }
-  
+
   .stat-item {
     font-size: 0.75rem;
   }
@@ -527,15 +532,16 @@
 
 /* High-contrast mode support */
 @media (prefers-contrast: high) {
+
   .visualization-panel,
   .summary-card {
     border-width: 2px;
   }
-  
+
   .regime-badge {
     border: 2px solid currentColor;
   }
-  
+
   .regime-stat {
     border: 1px solid currentColor;
   }
@@ -547,52 +553,52 @@
     background: #1f2937;
     color: #f9fafb;
   }
-  
+
   .header-content h2 {
     color: #f9fafb;
   }
-  
+
   .control-group label {
     color: #f9fafb;
   }
-  
+
   .control-group select {
     background: #374151;
     border-color: #4b5563;
     color: #f9fafb;
   }
-  
+
   .visualization-panel,
   .summary-panel {
     background: #374151;
     border-color: #4b5563;
   }
-  
+
   .chart-container {
     background: #1f2937;
   }
-  
+
   .summary-card {
     background: #1f2937;
     border-color: #4b5563;
   }
-  
+
   .summary-header h4 {
     color: #f9fafb;
   }
-  
+
   .stat-label {
     color: #9ca3af;
   }
-  
+
   .stat-value {
     color: #e5e7eb;
   }
-  
+
   .detail-row .label {
     color: rgba(255, 255, 255, 0.8);
   }
-  
+
   .detail-row .value {
     color: white;
   }
@@ -600,25 +606,119 @@
 
 /* Print styles */
 @media print {
+
   .analyzer-controls,
   .retry-button {
     display: none;
   }
-  
+
   .vix-regime-analyzer {
     box-shadow: none;
     border: 1px solid #000;
   }
-  
+
   .visualization-panel,
   .summary-card {
     break-inside: avoid;
     margin-bottom: 1rem;
   }
-  
+
   .current-regime-panel {
     background: #f3f4f6 !important;
     color: #000 !important;
     border: 2px solid #000;
   }
+}
+
+/* ── VIX Impact Summary Panel ─────────────────────────────────── */
+
+.impact-summary-panel {
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  border-left: 5px solid;
+}
+
+.impact-summary-panel.severity-low {
+  background: #f0fdf4;
+  border-left-color: #10b981;
+}
+
+.impact-summary-panel.severity-medium {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.impact-summary-panel.severity-high {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.impact-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.impact-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.significance-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.impact-lines {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.impact-lines li {
+  font-size: 0.925rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* ── Optimal Range Callout ───────────────────────────────────── */
+
+.optimal-range-callout {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #065f46;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* ── Date Input Styling ──────────────────────────────────────── */
+
+.control-group input[type="date"] {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+}
+
+.control-group input[type="date"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }

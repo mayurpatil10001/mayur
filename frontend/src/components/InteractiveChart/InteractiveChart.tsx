@@ -30,15 +30,27 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
 
-  // Calculate chart dimensions and data ranges
+  // Flag for empty data — used in JSX conditional (NOT as early return, to satisfy Rules of Hooks)
+  const isEmpty = !data || data.length === 0;
+
+  // Calculate chart dimensions and data ranges (safe defaults when empty)
   const margin = { top: 50, right: 80, bottom: 80, left: 100 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
 
-  const maxPnL = Math.max(...data.map(d => d.cumulative_pnl));
-  const minPnL = Math.min(...data.map(d => d.cumulative_pnl));
-  const range = Math.max(Math.abs(maxPnL), Math.abs(minPnL)) || 1000;
-  const centerY = margin.top + chartHeight / 2;
+  const pnlValues = isEmpty ? [0] : data.map(d => d.cumulative_pnl);
+  const maxPnL = pnlValues.reduce((a, b) => b > a ? b : a, pnlValues[0]);
+  const minPnL = pnlValues.reduce((a, b) => b < a ? b : a, pnlValues[0]);
+  // Dynamic scaling with 10% padding
+  const padding = (maxPnL - minPnL) * 0.1 || 100;
+  const domainMin = minPnL - padding;
+  const domainMax = maxPnL + padding;
+  const domainRange = domainMax - domainMin || 1000;
+
+  // Helper to map P&L to Y-coordinate
+  const getY = useCallback((pnl: number) => {
+    return margin.top + chartHeight - ((pnl - domainMin) / domainRange) * chartHeight;
+  }, [domainMin, domainRange, margin.top, chartHeight]);
 
   // Reset zoom and pan
   const resetView = useCallback(() => {
@@ -90,7 +102,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
     let pathData = '';
     data.forEach((point, index) => {
       const x = margin.left + index * pointSpacing + pan.x;
-      const y = centerY - (point.cumulative_pnl / range) * (chartHeight / 2);
+      const y = getY(point.cumulative_pnl);
 
       if (index === 0) {
         pathData += `M ${x} ${y}`;
@@ -100,18 +112,20 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
     });
 
     return pathData;
-  }, [data, chartWidth, chartHeight, centerY, range, zoom, pan, margin]);
+  }, [data, chartWidth, zoom, pan, margin.left, getY]);
 
   // Generate grid lines
   const generateGridLines = useCallback(() => {
     const gridLines = [];
-    const ySteps = 10;
+    const ySteps = 8;
     const xSteps = Math.min(20, data.length);
 
     // Horizontal grid lines
     for (let i = 0; i <= ySteps; i++) {
-      const y = margin.top + (i * chartHeight / ySteps);
-      const value = range - (i * 2 * range / ySteps);
+      const ratio = i / ySteps;
+      const y = margin.top + chartHeight * (1 - ratio);
+      const value = domainMin + ratio * domainRange;
+
       gridLines.push(
         <g key={`h-grid-${i}`}>
           <line
@@ -121,7 +135,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
             y2={y}
             stroke="#f3f4f6"
             strokeWidth="1"
-            strokeDasharray={i === ySteps / 2 ? "none" : "2,2"}
+            strokeDasharray="2,2"
           />
           <text
             x={margin.left - 10}
@@ -179,7 +193,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
     }
 
     return gridLines;
-  }, [data, chartWidth, chartHeight, margin, range, zoom, pan, formatCurrency, height]);
+  }, [data, chartWidth, chartHeight, margin, domainMin, domainRange, zoom, pan, formatCurrency, height]);
 
   // Generate data points
   const generateDataPoints = useCallback(() => {
@@ -187,7 +201,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
 
     return data.map((point, index) => {
       const x = margin.left + index * pointSpacing + pan.x;
-      const y = centerY - (point.cumulative_pnl / range) * (chartHeight / 2);
+      const y = getY(point.cumulative_pnl);
 
       // Only render points that are visible
       if (x < margin.left - 20 || x > margin.left + chartWidth + 20) {
@@ -210,7 +224,31 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
         />
       );
     }).filter(Boolean);
-  }, [data, chartWidth, chartHeight, centerY, range, zoom, pan, margin, hoveredPoint]);
+  }, [data, chartWidth, zoom, pan, margin.left, getY, hoveredPoint]);
+
+  if (isEmpty) {
+    return (
+      <div className="interactive-chart" style={{ margin: 0 }}>
+        <div style={{
+          width,
+          height: Math.min(height, 300),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+          borderRadius: '12px',
+          border: '1px solid #dee2e6',
+          color: '#6c757d',
+          flexDirection: 'column',
+          gap: '10px'
+        }}>
+          <span style={{ fontSize: '40px' }}>📊</span>
+          <span style={{ fontSize: '16px', fontWeight: 500 }}>No chart data available</span>
+          <span style={{ fontSize: '13px', opacity: 0.7 }}>Select a symbol and time horizon to view the equity curve</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="interactive-chart" style={{ margin: 0 }}>
@@ -229,7 +267,6 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
         <div className="chart-info">
           <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
           <span>Points: {data.length}</span>
-          <span>P&L Scale: {formatCurrency(range)}</span>
         </div>
       </div>
 
@@ -324,7 +361,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
             <g>
               <rect
                 x={margin.left + (hoveredPoint * chartWidth * zoom / Math.max(data.length - 1, 1)) + pan.x + 10}
-                y={centerY - (data[hoveredPoint].cumulative_pnl / range) * (chartHeight / 2) - 40}
+                y={getY(data[hoveredPoint].cumulative_pnl) - 40}
                 width="200"
                 height="60"
                 fill="rgba(0, 0, 0, 0.9)"
@@ -334,7 +371,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
               />
               <text
                 x={margin.left + (hoveredPoint * chartWidth * zoom / Math.max(data.length - 1, 1)) + pan.x + 20}
-                y={centerY - (data[hoveredPoint].cumulative_pnl / range) * (chartHeight / 2) - 20}
+                y={getY(data[hoveredPoint].cumulative_pnl) - 20}
                 fontSize="12"
                 fill="white"
                 fontWeight="500"
@@ -343,7 +380,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
               </text>
               <text
                 x={margin.left + (hoveredPoint * chartWidth * zoom / Math.max(data.length - 1, 1)) + pan.x + 20}
-                y={centerY - (data[hoveredPoint].cumulative_pnl / range) * (chartHeight / 2) - 5}
+                y={getY(data[hoveredPoint].cumulative_pnl) - 5}
                 fontSize="12"
                 fill="white"
                 fontWeight="500"

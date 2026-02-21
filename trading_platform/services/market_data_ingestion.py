@@ -17,7 +17,7 @@ from loguru import logger
 
 from ..models.time_bin_analytics import MarketData
 from ..models.database import ProcessedTrade
-from ..database.connection import get_db_session
+from ..database.database import SessionLocal
 
 
 @dataclass
@@ -60,15 +60,59 @@ class MarketDataIngestion:
     
     def __init__(self, db_session: Optional[Session] = None):
         """Initialize the market data ingestion service."""
-        self.db_session = db_session or get_db_session()
+        self.db_session = db_session or SessionLocal()
         self.supported_symbols = ['SPY', 'QQQ', '^VIX']
         self.symbol_mapping = {
             'SPY': 'SPY',
             'QQQ': 'QQQ', 
             'VIX': '^VIX'
         }
+        self.stooq_mapping = {
+            'SPY': 'spy.us',
+            'QQQ': 'qqq.us',
+            'VIX': 'vi.f'  # Updated to vi.f which is more reliable on Stooq
+        }
         # Initialize free data service as fallback (lazy loading to avoid circular imports)
         self._free_data_service = None
+
+    def _fetch_from_db(self, symbol: str, start_date: datetime, end_date: datetime) -> Optional[pd.DataFrame]:
+        """Fetch market data from local database cache."""
+        try:
+            storage_symbol = symbol.replace('^', '')
+            query = self.db_session.query(MarketData).filter(
+                MarketData.symbol == storage_symbol,
+                MarketData.date >= start_date.date(),
+                MarketData.date <= end_date.date()
+            ).order_by(MarketData.date.asc())
+            
+            records = query.all()
+            if not records:
+                return None
+                
+            # Lenient check for data coverage (e.g., if we have at least 1 record for every 10 calendar days, 
+            # we assume we have enough trading days for the requested range)
+            # This accounts for weekends, holidays, and partial history imports.
+            if len(records) < ((end_date - start_date).days * 0.1): 
+                logger.info(f"Insufficient cached data for {symbol}: found {len(records)} records for { (end_date - start_date).days} day range")
+                return None
+                
+            data = []
+            for r in records:
+                data.append({
+                    'Date': pd.Timestamp(r.date),
+                    'Open': r.open_price,
+                    'High': r.high_price,
+                    'Low': r.low_price,
+                    'Close': r.close_price,
+                    'Volume': r.volume or 0
+                })
+            
+            df = pd.DataFrame(data)
+            df.set_index('Date', inplace=True)
+            return df
+        except Exception as e:
+            logger.warning(f"Error fetching {symbol} from cache: {e}")
+            return None
         
     def fetch_spy_data(self, start_date: datetime, end_date: datetime) -> MarketDataSeries:
         """
@@ -86,12 +130,18 @@ class MarketDataIngestion:
         """
         logger.info(f"Fetching SPY data from {start_date.date()} to {end_date.date()}")
         
-        # Try Yahoo Finance first
+        # Try local cache first
+        cache_data = self._fetch_from_db('SPY', start_date, end_date)
+        if cache_data is not None:
+            logger.info(f"Using cached SPY data: {len(cache_data)} records")
+            return self._validate_market_data(cache_data, 'SPY', start_date, end_date)
+
+        # Try Yahoo Finance
         try:
             spy_ticker = yf.Ticker('SPY')
             data = spy_ticker.history(
                 start=start_date.strftime('%Y-%m-%d'),
-                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),  # Include end date
+                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
                 interval='1d',
                 auto_adjust=True,
                 prepost=False
@@ -100,6 +150,7 @@ class MarketDataIngestion:
             if not data.empty:
                 validated_data = self._validate_market_data(data, 'SPY', start_date, end_date)
                 logger.info(f"Successfully fetched {len(validated_data.data)} SPY records from Yahoo Finance")
+                self.store_market_data(validated_data) # Cache it
                 return validated_data
             else:
                 logger.warning("No SPY data from Yahoo Finance, trying free data source...")
@@ -115,6 +166,7 @@ class MarketDataIngestion:
             
             result = self._free_data_service.fetch_spy_data(start_date, end_date)
             logger.info(f"Successfully fetched {result.total_records} SPY records from free data source")
+            self.store_market_data(result) # Cache it
             return result
             
         except Exception as e:
@@ -137,12 +189,18 @@ class MarketDataIngestion:
         """
         logger.info(f"Fetching QQQ data from {start_date.date()} to {end_date.date()}")
         
-        # Try Yahoo Finance first
+        # Try local cache first
+        cache_data = self._fetch_from_db('QQQ', start_date, end_date)
+        if cache_data is not None:
+            logger.info(f"Using cached QQQ data: {len(cache_data)} records")
+            return self._validate_market_data(cache_data, 'QQQ', start_date, end_date)
+
+        # Try Yahoo Finance
         try:
             qqq_ticker = yf.Ticker('QQQ')
             data = qqq_ticker.history(
                 start=start_date.strftime('%Y-%m-%d'),
-                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),  # Include end date
+                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
                 interval='1d',
                 auto_adjust=True,
                 prepost=False
@@ -151,6 +209,7 @@ class MarketDataIngestion:
             if not data.empty:
                 validated_data = self._validate_market_data(data, 'QQQ', start_date, end_date)
                 logger.info(f"Successfully fetched {len(validated_data.data)} QQQ records from Yahoo Finance")
+                self.store_market_data(validated_data) # Cache it
                 return validated_data
             else:
                 logger.warning("No QQQ data from Yahoo Finance, trying free data source...")
@@ -166,6 +225,7 @@ class MarketDataIngestion:
             
             result = self._free_data_service.fetch_qqq_data(start_date, end_date)
             logger.info(f"Successfully fetched {result.total_records} QQQ records from free data source")
+            self.store_market_data(result) # Cache it
             return result
             
         except Exception as e:
@@ -188,12 +248,18 @@ class MarketDataIngestion:
         """
         logger.info(f"Fetching VIX data from {start_date.date()} to {end_date.date()}")
         
-        # Try Yahoo Finance first
+        # Try local cache first
+        cache_data = self._fetch_from_db('VIX', start_date, end_date)
+        if cache_data is not None:
+            logger.info(f"Using cached VIX data: {len(cache_data)} records")
+            return self._validate_market_data(cache_data, 'VIX', start_date, end_date)
+
+        # Try Yahoo Finance
         try:
             vix_ticker = yf.Ticker('^VIX')
             data = vix_ticker.history(
                 start=start_date.strftime('%Y-%m-%d'),
-                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),  # Include end date
+                end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
                 interval='1d',
                 auto_adjust=True,
                 prepost=False
@@ -202,12 +268,14 @@ class MarketDataIngestion:
             if not data.empty:
                 validated_data = self._validate_market_data(data, 'VIX', start_date, end_date)
                 logger.info(f"Successfully fetched {len(validated_data.data)} VIX records from Yahoo Finance")
+                self.store_market_data(validated_data) # Cache it
                 return validated_data
             else:
                 logger.warning("No VIX data from Yahoo Finance, trying free data source...")
                 
         except Exception as e:
-            logger.warning(f"Yahoo Finance failed for VIX: {e}, trying free data source...")
+            logger.warning(f"Yahoo Finance failed for VIX: {e}")
+            logger.info("Trying free data source as fallback...")
         
         # Fallback to free data source (Stooq)
         try:
@@ -217,6 +285,7 @@ class MarketDataIngestion:
             
             result = self._free_data_service.fetch_vix_data(start_date, end_date)
             logger.info(f"Successfully fetched {result.total_records} VIX records from free data source")
+            self.store_market_data(result) # Cache it
             return result
             
         except Exception as e:

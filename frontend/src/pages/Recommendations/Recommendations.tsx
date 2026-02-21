@@ -5,8 +5,13 @@ import DragDropDashboard from '../../components/DragDropDashboard';
 import StrategyValidationAnalytics from '../../components/StrategyValidationAnalytics';
 import PerformanceBreakdown from '../../components/PerformanceBreakdown';
 import RecommendationMatrix from './components/RecommendationMatrix';
+import PredictorMatrix from './components/PredictorMatrix';
 import StrategyValidation from './components/StrategyValidation';
 import BacktestSimulation from './components/BacktestSimulation';
+import MonteCarloChart from '../../components/MonteCarloChart/MonteCarloChart';
+import VIXRegimeAnalyzer from '../../components/VIXRegimeAnalyzer/VIXRegimeAnalyzer';
+import FoldComparisonMatrix from './components/FoldComparisonMatrix';
+import { apiService } from '../../services/api';
 import './Recommendations.css';
 import './MatrixOverride.css';
 import { fetchRecommendations } from '../../store/slices/recommendationsSlice';
@@ -45,7 +50,11 @@ interface CombinedStats {
     largest_loser: number;
     profit_factor: number;
     sharpe_ratio: number;
+    sortino_ratio: number;
     max_drawdown: number;
+    max_drawdown_pct: number;
+    avg_trades_per_day: number;
+    trading_days: number;
     first_trade_date: string;
     last_trade_date: string;
   };
@@ -90,16 +99,80 @@ const Recommendations: React.FC = () => {
   const [timeFilteredStats, setTimeFilteredStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'matrix' | 'validation' | 'settings' | 'backtest'>('matrix');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'validation' | 'settings' | 'backtest' | 'vix' | 'probability' | 'walkforward'>('matrix');
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     minAvgProfit: 12.0,  // Set to $12
     minWinRate: 45.0,    // Set to 45%
     minTrades: 100       // Set to 100 trades
   });
-  const [timeHorizon, setTimeHorizon] = useState<string>('30');
+  const [timeHorizon, setTimeHorizon] = useState<string>('all');
 
   const [validationData, setValidationData] = useState<any>(null);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
+
+  // Phase 2 state
+  const [probabilityData, setProbabilityData] = useState<any>(null);
+  const [isLoadingProbability, setIsLoadingProbability] = useState(false);
+  const [predictorData, setPredictorData] = useState<any>(null);
+  const [isLoadingPredictor, setIsLoadingPredictor] = useState(false);
+  const [walkForwardData, setWalkForwardData] = useState<any>(null);
+  const [isLoadingWalkForward, setIsLoadingWalkForward] = useState(false);
+  const [chartSource, setChartSource] = useState<'backtest' | 'walkforward'>('backtest');
+  const [showPredictorOverlay, setShowPredictorOverlay] = useState(false);
+  const [lookbackWeeks, setLookbackWeeks] = useState<number>(13);
+  const [testWeeks, setTestWeeks] = useState<number>(3);
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+  const [matrixViewMode, setMatrixViewMode] = useState<'standard' | 'probability'>('standard');
+  const [expandedFold, setExpandedFold] = useState<number | null>(null);
+
+  const downloadCSV = (fold: any) => {
+    if (!fold.oos_trade_list || fold.oos_trade_list.length === 0) {
+      alert("No trades found for this fold.");
+      return;
+    }
+
+    // Create CSV content with quoting for safety
+    const headers = ['Time', 'Date', 'Account', 'Time Slot', 'Day of Week', 'PnL'];
+    const rows = fold.oos_trade_list.map((t: any) => [
+      `"${t.time || ''}"`,
+      `"${t.date || ''}"`,
+      `"${t.account || ''}"`,
+      `"${t.time_slot || ''}"`,
+      t.day_of_week ?? '',
+      t.pnl
+    ]);
+
+    // Add UTF-8 BOM for Excel
+    const csvString = [
+      headers.join(','),
+      ...rows.map((row: any[]) => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.setAttribute('download', `oos_trades_fold_${fold.fold}.csv`);
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+  };
+
+  const tabExplanations: Record<string, string> = {
+    matrix: "Aggregated view of the best performing models per time-slot and day of week. Identifies the optimal configuration for every trading hour.",
+    validation: "High-intensity statistical validation using t-stats and 10,000 Monte Carlo simulations to verify the edge is distinct from random noise.",
+    probability: "Direct expectancy model showing Confidence-Weighted Expected Value (CWEV) and risk metrics like Skewness and CVaR-95.",
+    walkforward: "Out-of-Sample (OOS) reality check. Iteratively tests the model on unseen data clusters to prevent over-fitting.",
+    vix: "Volatility-contextualized performance. Analyzes model efficiency across Low, Medium, and High VIX regimes.",
+    backtest: "Forward-looking ensemble simulation. Executes the combined recommendations to verify total strategy expectancy.",
+    settings: "Neural engine configuration. Adjust core filters to prioritize stability, absolute profit, or statistical significance."
+  };
 
   // Sample data for Trading Readiness Assessment
   const getReadinessAssessmentData = () => {
@@ -342,9 +415,9 @@ const Recommendations: React.FC = () => {
         },
         {
           label: 'Max Drawdown',
-          value: `$${Math.abs(metrics.max_drawdown || 0).toLocaleString()}`,
+          value: metrics.max_drawdown_pct ? `${Math.abs(metrics.max_drawdown_pct).toFixed(1)}%` : `$${Math.abs(metrics.max_drawdown || 0).toLocaleString()}`,
           category: 'risk' as PerformanceCategory,
-          status: getPerformanceStatus(Math.abs(metrics.max_drawdown || 0), 1000, 5000, true)
+          status: getPerformanceStatus(metrics.max_drawdown_pct || 0, 5, 10, true)
         },
         {
           label: 'Volatility',
@@ -487,7 +560,7 @@ const Recommendations: React.FC = () => {
   const [isRunningBacktest, setIsRunningBacktest] = useState(false);
   const [backtestError, setBacktestError] = useState<string | null>(null);
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']; // Removed Saturday
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
   const timeHorizonOptions = [
     { value: '7', label: '7 Days' },
@@ -534,7 +607,7 @@ const Recommendations: React.FC = () => {
     if (selectedSymbol) {
       fetchRecommendationData(selectedSymbol);
     }
-  }, [selectedSymbol, filterSettings, timeHorizon]);
+  }, [selectedSymbol, filterSettings, timeHorizon, matrixViewMode]);
 
   const fetchSymbols = async () => {
     try {
@@ -553,15 +626,23 @@ const Recommendations: React.FC = () => {
     }
   };
 
+  const timeOptions = [
+    { label: '30 Days', value: '30d' },
+    { label: '90 Days', value: '90d' },
+    { label: 'All Time', value: 'all' }
+  ];
+
   const fetchRecommendationData = async (symbol: string, settings?: FilterSettings) => {
     setIsLoading(true);
     setError(null);
 
     const currentSettings = settings || filterSettings;
+    const logic = matrixViewMode === 'probability' ? 'statistical' : 'classic';
     const params = new URLSearchParams({
       min_avg_profit: currentSettings.minAvgProfit.toString(),
       min_win_rate: currentSettings.minWinRate.toString(),
-      min_trades: currentSettings.minTrades.toString()
+      min_trades: currentSettings.minTrades.toString(),
+      selection_logic: logic
     });
 
     try {
@@ -572,6 +653,12 @@ const Recommendations: React.FC = () => {
       if (matrixResult.status === 'success') {
         setMatrix(matrixResult.data.matrix || {});
       }
+
+      // Proactively fetch probability matrix for integrated view
+      fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${symbol}/probability?days_back=90`)
+        .then(r => r.json())
+        .then(d => { if (d.status === 'success') setProbabilityData(d.data); })
+        .catch(console.error);
 
       // Fetch backtest data with same filter parameters and time horizon
       const daysBack = getDaysFromTimeHorizon(timeHorizon);
@@ -598,6 +685,22 @@ const Recommendations: React.FC = () => {
         setCombinedStats(statsResult.data);
       }
 
+      // Automatically fetch strategy validation data for the integrated view
+      fetchStrategyValidationData(symbol);
+
+      // If chartSource is explicitly set to Walk-Forward, we must refetch it as well because logic changed
+      // This ensures chart and stats stay in sync when switching logic (Classic vs Stats)
+      if (chartSource === 'walkforward') {
+        // Use the current logic to fetch
+        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${symbol}?selection_logic=${logic}`, { method: 'POST' })
+          .then(r => r.json()).then(d => {
+            if (d.status === 'success') {
+              setWalkForwardData({ ...d.data, logic });
+            }
+          })
+          .catch(console.error);
+      }
+
       // Fetch time-filtered statistics
       await fetchTimeFilteredStats(symbol, daysBack);
 
@@ -613,8 +716,8 @@ const Recommendations: React.FC = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(value);
   };
 
@@ -637,9 +740,9 @@ const Recommendations: React.FC = () => {
 
   const handleApplySettings = () => {
     if (selectedSymbol) {
+      setActiveTab('matrix');
       fetchRecommendationData(selectedSymbol, filterSettings);
     }
-    setActiveTab('matrix');
   };
 
   // Fetch time-filtered statistics
@@ -664,7 +767,8 @@ const Recommendations: React.FC = () => {
   };
 
   // Fetch validation data for the entire recommendation strategy
-  const fetchStrategyValidationData = async () => {
+  const fetchStrategyValidationData = async (symbol: string = selectedSymbol) => {
+    if (!symbol) return;
     setIsLoadingValidation(true);
     try {
       console.log('🔬 Fetching validation for entire recommendation strategy');
@@ -680,7 +784,7 @@ const Recommendations: React.FC = () => {
       });
 
       // Fetch the complete trade list (same as CSV export)
-      const tradesResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/backtest/${selectedSymbol}?${params}`);
+      const tradesResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/backtest/${symbol}?${params}`);
       if (!tradesResponse.ok) {
         throw new Error(`Trades API failed: ${tradesResponse.status}`);
       }
@@ -709,7 +813,7 @@ const Recommendations: React.FC = () => {
         }
 
         const combinedValidation = {
-          symbol: selectedSymbol,
+          symbol: symbol,
           strategy_type: 'Multi-Account Time-Bin Strategy',
           time_horizon: getTimeHorizonLabel(timeHorizon),
           total_trades: trades.length,
@@ -720,9 +824,9 @@ const Recommendations: React.FC = () => {
 
         setValidationData(combinedValidation);
         console.log('✅ Strategy validation data loaded:', combinedValidation);
-
       } else {
-        throw new Error('No trades data available');
+        console.warn('⚠️ No trades data available for validation');
+        setValidationData(null);
       }
 
     } catch (error) {
@@ -782,7 +886,20 @@ const Recommendations: React.FC = () => {
     const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
     const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
     const stdDev = Math.sqrt(variance);
-    const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0; // Annualized
+
+    // Annualize Sharpe using ACTUAL calendar span from real trade dates.
+    // This matches how the backend computes it — using first/last trade date.
+    const tradeDates = trades
+      .map((t: any) => t.date || t.entry_time || t.exit_time)
+      .filter(Boolean)
+      .map((d: string) => new Date(d).getTime())
+      .filter((t: number) => !isNaN(t));
+    const calendarDays = tradeDates.length >= 2
+      ? Math.max(1, (Math.max(...tradeDates) - Math.min(...tradeDates)) / (1000 * 60 * 60 * 24))
+      : Math.max(1, Math.ceil(trades.length / 10)); // fallback heuristic
+    const tradesPerDay = trades.length / calendarDays;
+    const annualFreq = tradesPerDay * 252; // 252 trading days/year
+    const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(annualFreq) : 0; // Annualized
 
     // Drawdown analysis
     let runningPnL = 0;
@@ -883,6 +1000,8 @@ const Recommendations: React.FC = () => {
 
       // Risk metrics
       sharpe_ratio: sharpeRatio,
+      sharpe_calendar_days: Math.round(calendarDays),
+      sharpe_trades_per_day: parseFloat(tradesPerDay.toFixed(1)),
       max_drawdown: maxDrawdown,
       max_drawdown_pct: totalPnL > 0 ? (maxDrawdown / totalPnL) * 100 : 0,
       volatility: stdDev,
@@ -942,7 +1061,7 @@ const Recommendations: React.FC = () => {
 
       for (const timeSlot of timeSlots) {
         const [hour, minute] = timeSlot.split(':').map(Number);
-        for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) { // Mon-Fri
+        for (let dayOfWeek = 0; dayOfWeek < 5; dayOfWeek++) { // Mon-Fri (0-4)
           const cellData = getCellData(timeSlot, dayOfWeek);
           if (cellData && cellData.best_account) {
             timeBins.push({
@@ -1156,226 +1275,692 @@ const Recommendations: React.FC = () => {
   }
 
   return (
-    <div className="recommendations">
-      {/* Top Navigation Bar */}
-      <div className="top-navigation">
-        <div className="nav-left">
-          <h1>Trading Recommendations</h1>
-          <div className="selection-header">
-            <div className="selection-group">
-              <span className="selector-label">Select Symbol:</span>
-              <div className="pill-selector">
-                {symbols.map(symbol => (
-                  <button
-                    key={symbol.symbol}
-                    className={`filter-btn ${selectedSymbol === symbol.symbol ? 'active' : ''}`}
-                    onClick={() => setSelectedSymbol(symbol.symbol)}
-                  >
-                    {symbol.symbol === 'FD' ? 'FDAX' : symbol.symbol}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {selectedSymbol && (
-              <div className="selection-group">
-                <span className="selector-label">Time Horizon:</span>
-                <div className="pill-selector">
-                  {timeHorizonOptions.map(opt => (
-                    <button
-                      key={opt.value}
-                      className={`filter-btn ${timeHorizon === opt.value ? 'active' : ''}`}
-                      onClick={() => setTimeHorizon(opt.value)}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {selectedSymbol && (
-              <div className="selection-group" style={{ marginLeft: 'auto' }}>
-                <button
-                  className="refresh-btn"
-                  onClick={() => fetchRecommendationData(selectedSymbol)}
-                  disabled={isLoading}
-                  style={{ height: '40px', padding: '0 20px', borderRadius: '8px' }}
-                >
-                  {isLoading ? 'Loading...' : 'Refresh Data'}
-                </button>
-              </div>
-            )}
-          </div>
+    <div className="recommendations-page">
+      <header className="premium-header">
+        <div className="header-title-section">
+          <h1>Trading Intel & Strategy Optimization</h1>
+          <p className="header-subtitle">Time-bin analysis & ensemble engine</p>
         </div>
-      </div>
+
+        <div className="dashboard-tabs">
+          {[
+            { id: 'matrix', label: 'Matrix', icon: '📅' },
+            { id: 'walkforward', label: 'Walk-Forward', icon: '🔄' },
+            { id: 'vix', label: 'VIX', icon: '🌊' },
+            { id: 'backtest', label: 'Sim', icon: '🧪' },
+            { id: 'settings', label: 'Filters', icon: '⚙️' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              className={`dashboard-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onMouseEnter={() => setHoveredTab(tab.id)}
+              onMouseLeave={() => setHoveredTab(null)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                if (tab.id === 'matrix') fetchStrategyValidationData();
+                else if (tab.id === 'probability' && !probabilityData) {
+                  setIsLoadingProbability(true);
+                  fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
+                    .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); })
+                    .catch(console.error).finally(() => setIsLoadingProbability(false));
+                } else if (tab.id === 'walkforward' && !walkForwardData) {
+                  setIsLoadingWalkForward(true);
+                  fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST' })
+                    .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData(d.data); })
+                    .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                }
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="header-controls">
+          <div className="premium-select-group">
+            <span className="premium-select-label">Asset View:</span>
+            <select className="premium-select" value={selectedSymbol} onChange={(e) => setSelectedSymbol(e.target.value)}>
+              {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol === 'FD' ? 'FDAX' : s.symbol}</option>)}
+            </select>
+
+            <span className="premium-select-label" style={{ marginLeft: '12px' }}>Time:</span>
+            <select className="premium-select" value={timeHorizon} onChange={(e) => setTimeHorizon(e.target.value as '30d' | '90d' | 'all')}>
+              <option value="30d">30 Days</option>
+              <option value="90d">90 Days</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <button className="premium-button" style={{ padding: '8px 16px', fontSize: '13px' }} onClick={() => fetchRecommendationData(selectedSymbol)} disabled={isLoading}>
+            {isLoading ? '...' : '⚡ Refresh'}
+          </button>
+        </div>
+      </header>
 
       {selectedSymbol ? (
-        <div className="dashboard-content">
-          {/* pinned Strategy Hub Section */}
-          <div className="strategy-hub-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
-            gap: '20px',
-            marginBottom: '30px',
-            padding: '10px'
-          }}>
-            <div className="pinned-card">
-              <h3 style={{ marginBottom: '15px' }}>🔬 Strategy Validation Summary</h3>
-              <StrategyValidationAnalytics {...getStrategyValidationData()} subtitle={`${selectedSymbol} Multi-Account Time-Bin Strategy`} />
+        <main className="dashboard-container">
+          <div className="metrics-row">
+            <div className="premium-card kpi-card">
+              <span className="metric-label">Net Cumulative Profit</span>
+              <span className={`metric-value ${backtestMetadata?.total_pnl >= 0 ? 'kpi-success' : 'kpi-error'}`}>
+                {formatCurrency(backtestMetadata?.total_pnl || 0)}
+              </span>
+              <div className="metric-icon-bg">💰</div>
             </div>
-            <div className="pinned-card">
-              <h3 style={{ marginBottom: '15px' }}>🎯 Trading Readiness Assessment</h3>
-              <TradingReadinessAssessment {...getReadinessAssessmentData()} />
+            <div className="premium-card kpi-card">
+              <span className="metric-label">Ensemble Win Rate</span>
+              <span className="metric-value kpi-success">
+                {(combinedStats?.combined_metrics.win_rate || 0).toFixed(1)}%
+              </span>
+              <div className="metric-icon-bg">🎯</div>
             </div>
-            <div className="pinned-card" style={{ gridColumn: '1 / -1' }}>
-              <h3 style={{ marginBottom: '15px' }}>📊 Performance Breakdown</h3>
-              <PerformanceBreakdown {...getPerformanceBreakdownData()} />
+            <div className="premium-card kpi-card">
+              <span className="metric-label">Annualized Sharpe</span>
+              <span className="metric-value kpi-warning">
+                {(combinedStats?.combined_metrics.sharpe_ratio || 0).toFixed(2)}
+              </span>
+              <div className="metric-icon-bg">📈</div>
+            </div>
+            <div className="premium-card kpi-card">
+              <span className="metric-label">Max Drawdown</span>
+              <span className="metric-value kpi-error">
+                {combinedStats?.combined_metrics.max_drawdown_pct ? (
+                  `${combinedStats.combined_metrics.max_drawdown_pct.toFixed(1)}%`
+                ) : (
+                  backtestMetadata?.total_pnl > 0 ?
+                    `${(Math.abs(combinedStats?.combined_metrics.max_drawdown || 0) / backtestMetadata.total_pnl * 100).toFixed(1)}%` :
+                    formatCurrency(combinedStats?.combined_metrics.max_drawdown || 0)
+                )}
+                {combinedStats?.combined_metrics.max_drawdown_pct || backtestMetadata?.total_pnl > 0 ? (
+                  <span style={{ fontSize: '12px', marginLeft: '4px', verticalAlign: 'middle', fontWeight: 600, opacity: 0.8 }}>
+                    ({formatCurrency(combinedStats?.combined_metrics.max_drawdown || 0)})
+                  </span>
+                ) : null}
+              </span>
+              <div className="metric-icon-bg">📉</div>
             </div>
           </div>
 
-          <div className="legacy-content" style={{ marginTop: '20px', borderTop: '1px solid #ddd', paddingTop: '30px' }}>
-            <div className="content-header">
-              <div className="tab-navigation">
-                <button
-                  className={`content-tab ${activeTab === 'matrix' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('matrix')}
-                >
-                  Recommendation Matrix
-                </button>
-                <button
-                  className={`content-tab ${activeTab === 'validation' ? 'active' : ''}`}
-                  onClick={handleShowStrategyValidation}
-                >
-                  🔬 Deep Validation
-                </button>
-                <button
-                  className={`content-tab ${activeTab === 'backtest' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('backtest')}
-                >
-                  📈 Backtest Simulation
-                </button>
-                <button
-                  className={`content-tab ${activeTab === 'settings' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('settings')}
-                >
-                  Filter Settings
-                </button>
+
+          <section className="tab-content-area">
+            {activeTab === 'matrix' && (
+              <div style={{ marginBottom: '12px' }}>
+                <div className="premium-info-box" style={{ margin: 0, padding: '10px 16px', borderLeft: '4px solid var(--accent-color)', display: 'flex', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                    <span style={{ fontSize: '18px' }}>🧩</span> Strategy Ensemble Matrix
+                  </h4>
+                </div>
               </div>
-            </div>
+            )}
 
-            {error && <div className="error-message">{error}</div>}
 
-            <div className="tab-content" style={{ minHeight: '400px' }}>
-              {activeTab === 'matrix' && (
-                <div className="matrix-tab-container">
-                  <RecommendationMatrix
-                    matrix={matrix}
-                    timeSlots={getTimeSlots()}
-                    dayNames={dayNames}
-                    formatCurrency={formatCurrency}
-                  />
-                  <div className="strategy-explanation">
-                    <h3>📊 How This Strategy Works</h3>
-                    <div className="explanation-grid">
-                      <div className="explanation-step">
-                        <span className="step-num">1</span>
-                        <p><strong>Analyze:</strong> System finds the best account for each time slot.</p>
+            {activeTab === 'matrix' && (
+              <div className="matrix-view-split" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px' }}>
+                <div className="split-column">
+                  <div className="premium-card" style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Recommendation Matrix</h3>
+                      <div className="dashboard-tabs" style={{ margin: 0, padding: '2px' }}>
+                        <button
+                          className={`dashboard-tab ${matrixViewMode === 'standard' ? 'active' : ''}`}
+                          onClick={() => {
+                            setMatrixViewMode('standard');
+                            if (chartSource === 'walkforward') {
+                              setIsLoadingWalkForward(true);
+                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=classic`, { method: 'POST' })
+                                .then(r => r.json()).then(d => {
+                                  if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'classic' });
+                                })
+                                .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                            }
+                          }}
+                          style={{ padding: '4px 12px', fontSize: '11px' }}
+                        >
+                          Classic: Avg/Win
+                        </button>
+                        <button
+                          className={`dashboard-tab ${matrixViewMode === 'probability' ? 'active' : ''}`}
+                          onClick={() => {
+                            setMatrixViewMode('probability');
+                            if (!probabilityData) {
+                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
+                                .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); });
+                            }
+                            // Invalidate walkForwardData logic attribute so it refetches if user clicks Out-of-Sample
+                            // Or refetch immediately if currently viewing WalkForward
+                            if (chartSource === 'walkforward') {
+                              setIsLoadingWalkForward(true);
+                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=statistical`, { method: 'POST' })
+                                .then(r => r.json()).then(d => {
+                                  if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'statistical' });
+                                })
+                                .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                            }
+                          }}
+                          style={{ padding: '4px 12px', fontSize: '11px' }}
+                        >
+                          Stats: CWEV/P(Profit)
+                        </button>
                       </div>
-                      <div className="explanation-step">
-                        <span className="step-num">2</span>
-                        <p><strong>Filter:</strong> Strategy only trades when the recommendation matches.</p>
+                    </div>
+
+                    <div style={{
+                      padding: '10px 16px',
+                      background: 'rgba(99, 102, 241, 0.04)',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      border: '1px solid rgba(99, 102, 241, 0.1)'
+                    }}>
+                      <span style={{ fontSize: '14px' }}>{matrixViewMode === 'standard' ? '📊' : '📐'}</span>
+                      <div>
+                        {matrixViewMode === 'standard' ? (
+                          <span><strong>Classic Selection:</strong> Ranks models by <strong>Avg Profit → Win Rate</strong>. <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ Avg Trade</strong> | <strong>% Win Rate</strong></span></span>
+                        ) : (
+                          <span><strong>Statistical Selection:</strong> Ranks models by <strong>CWEV</strong> (Confidence-Weighted EV). <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ CWEV</strong> | <strong>% Probability &gt; 0</strong></span></span>
+                        )}
                       </div>
-                      <div className="explanation-step">
-                        <span className="step-num">3</span>
-                        <p><strong>Validate:</strong> P&L chart shows the selective trading results.</p>
+                    </div>
+
+                    <RecommendationMatrix
+                      matrix={matrix}
+                      probabilityMatrix={probabilityData?.probability_matrix}
+                      viewMode={matrixViewMode}
+                      timeSlots={getTimeSlots()}
+                      dayNames={dayNames}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+                </div>
+
+                <div className="split-column">
+                  <div className="premium-card" style={{ padding: '16px' }}>
+                    <div className="chart-header" style={{ marginBottom: '12px' }}>
+                      <h2 style={{ fontSize: '15px', margin: 0 }}>Strategy Intelligence Curve (In-Sample)</h2>
+                    </div>
+
+                    {/* Date Range Display */}
+                    <div style={{ padding: '0 0 8px 0', marginTop: '-4px', fontSize: '11px', color: '#888', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ opacity: 0.7 }}>📅 Data Range:</span>
+                      <span style={{ fontWeight: 500, color: '#ccc' }}>
+                        {backtestMetadata?.start_date && backtestMetadata?.end_date ?
+                          `${backtestMetadata.start_date} — ${backtestMetadata.end_date}` : 'Loading...'}
+                      </span>
+                    </div>
+                    <InteractiveChart
+                      data={backtestData}
+                      formatCurrency={formatCurrency}
+                      height={400}
+                    />
+                  </div>
+
+                  {/* Integrated Validation & Risk Section */}
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>🔬</span> Deep Validation Audit
+                      </h3>
+                      <button
+                        className="premium-button secondary"
+                        style={{ padding: '2px 8px', fontSize: '11px', height: '24px' }}
+                        onClick={() => fetchStrategyValidationData(selectedSymbol)}
+                        disabled={isLoadingValidation}
+                      >
+                        {isLoadingValidation ? '...' : '🔄 Refresh Audit'}
+                      </button>
+                    </div>
+
+                    <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
+                      <div className="premium-card" style={{ padding: '16px', minHeight: '180px' }}>
+                        {isLoadingValidation ? (
+                          <div className="monte-carlo-placeholder">
+                            <div className="loading-spinner" style={{ marginBottom: '15px' }}></div>
+                            <p>Performing deep statistical audit...</p>
+                          </div>
+                        ) : validationData ? (
+                          <StrategyValidation
+                            validationData={validationData}
+                            formatCurrency={formatCurrency}
+                            getTimeHorizonLabel={getTimeHorizonLabel}
+                            timeHorizon={timeHorizon}
+                          />
+                        ) : (
+                          <div className="monte-carlo-placeholder">
+                            <p>No validation data available for current filters.</p>
+                            <button className="premium-button" onClick={() => fetchStrategyValidationData(selectedSymbol)} style={{ marginTop: '12px' }}>
+                              Try Recalculating
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="premium-card" style={{ padding: '16px' }}>
+                        <h3 style={{ marginBottom: '12px', fontSize: '15px' }}>🎲 Monte Carlo Risk Profile</h3>
+                        <MonteCarloChart
+                          accountName={selectedSymbol}
+                          showControls={true}
+                          height={300}
+                          simulationParams={{ num_simulations: 10000, time_horizon_days: 21 }}
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {activeTab === 'validation' && (
-                <StrategyValidation
-                  validationData={validationData}
-                  formatCurrency={formatCurrency}
-                  getTimeHorizonLabel={getTimeHorizonLabel}
-                  timeHorizon={timeHorizon}
-                />
-              )}
+            {activeTab === 'walkforward' && (
+              <div className="tab-content-area">
+                {/* WF Setup and Logic Explanation */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 350px) 1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                  <div className="premium-card" style={{ padding: '20px', border: '1px solid var(--accent-color)' }}>
+                    <h3 style={{ fontSize: '16px', marginBottom: '15px' }}>⚙️ Walk-Forward Setup</h3>
+                    <div className="filter-group" style={{ marginBottom: '15px' }}>
+                      <label style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>Selection Logic</label>
+                      <select
+                        value={matrixViewMode}
+                        onChange={(e) => setMatrixViewMode(e.target.value as any)}
+                        className="premium-select"
+                        style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                      >
+                        <option value="standard">Classic ($ Avg Trade)</option>
+                        <option value="probability">Statistical (CWEV)</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                      <div className="filter-group">
+                        <label style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>Train Log (Weeks)</label>
+                        <input
+                          type="number"
+                          value={lookbackWeeks}
+                          onChange={(e) => setLookbackWeeks(parseInt(e.target.value) || 1)}
+                          className="premium-input"
+                          style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                          min="4"
+                          max="52"
+                        />
+                      </div>
+                      <div className="filter-group">
+                        <label style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>Test Step (Weeks)</label>
+                        <input
+                          type="number"
+                          value={testWeeks}
+                          onChange={(e) => setTestWeeks(parseInt(e.target.value) || 1)}
+                          className="premium-input"
+                          style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                          min="1"
+                          max="24"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      className="premium-button"
+                      style={{ width: '100%', marginTop: '5px' }}
+                      onClick={() => {
+                        setIsLoadingWalkForward(true);
+                        setIsLoadingPredictor(true);
+                        const logic = matrixViewMode === 'probability' ? 'statistical' : 'classic';
 
-              {activeTab === 'backtest' && (
-                <BacktestSimulation
-                  isRunning={isRunningBacktest}
-                  status={backtestStatus}
-                  results={backtestResults}
-                  error={backtestError}
-                  onRunBacktest={runBacktest}
-                  config={backtestConfig}
-                  onConfigChange={setBacktestConfig}
-                  formatCurrency={formatCurrency}
-                />
-              )}
+                        // Run WF
+                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=${logic}&training_days=${lookbackWeeks * 7}&testing_days=${testWeeks * 7}&step_days=${testWeeks * 7}`, { method: 'POST' })
+                          .then(r => r.json()).then(d => {
+                            if (d.status === 'success') setWalkForwardData({ ...d.data, logic });
+                          })
+                          .catch(console.error).finally(() => setIsLoadingWalkForward(false));
 
-              {activeTab === 'settings' && (
-                <div className="settings-tab-container">
-                  <h3>Filter Settings</h3>
-                  <div className="settings-grid">
-                    <div className="setting-field">
-                      <label>Min Avg Profit ($)</label>
-                      <input
-                        type="number"
-                        value={filterSettings.minAvgProfit}
-                        onChange={(e) => handleSettingsChange({
-                          ...filterSettings,
-                          minAvgProfit: parseFloat(e.target.value) || 0
-                        })}
-                      />
-                    </div>
-                    <div className="setting-field">
-                      <label>Min Win Rate (%)</label>
-                      <input
-                        type="number"
-                        value={filterSettings.minWinRate}
-                        onChange={(e) => handleSettingsChange({
-                          ...filterSettings,
-                          minWinRate: parseFloat(e.target.value) || 0
-                        })}
-                      />
-                    </div>
-                    <div className="setting-actions">
-                      <button onClick={handleApplySettings} className="apply-btn">Apply Settings</button>
-                    </div>
+                        // Run Predictor
+                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/predict-week/${selectedSymbol}?lookback_weeks=${lookbackWeeks}`)
+                          .then(r => r.json()).then(d => { if (d.status === 'success') setPredictorData(d.data); })
+                          .catch(console.error).finally(() => setIsLoadingPredictor(false));
+                      }}
+                      disabled={isLoadingWalkForward || isLoadingPredictor}
+                    >
+                      {isLoadingWalkForward ? '🔄 Running Analysis...' : '🚀 Run Full WF Validation'}
+                    </button>
+                  </div>
+
+                  <div className="premium-info-box" style={{ margin: 0, padding: '16px', borderLeft: '4px solid var(--accent-color)' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>🔄 OOS Logic</h4>
+                    <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.5', opacity: 0.9 }}>
+                      "Out-of-Sample" validation simulates real trading by training models on historical data and testing them on <strong>unseen future segments</strong>.
+                      This confirms robust edges that persist across multiple independent time clusters.
+                    </p>
+                  </div>
+
+                  <div className="premium-info-box" style={{ margin: 0, padding: '16px', borderLeft: '4px solid #f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>🔮 Rolling Predictor</h4>
+                    <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.5', opacity: 0.9 }}>
+                      Analyzes recursive results from the last <strong>{lookbackWeeks} weeks</strong>. It identifies which accounts have shown the highest
+                      agreement and consistent performance recently to forecast upcoming alpha.
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Overall Strategy Performance Section */}
-            <div className="strategy-performance-section" style={{ marginTop: '50px' }}>
-              <div className="perf-header">
-                <h2>Total Strategy Equity Curve ({getTimeHorizonLabel(timeHorizon)})</h2>
-                <div className="perf-metrics">
-                  <span>Total P&L: <strong className={(backtestMetadata?.total_pnl || 0) >= 0 ? 'pos' : 'neg'}>{formatCurrency(backtestMetadata?.total_pnl || 0)}</strong></span>
-                  <span>Trades Executed: <strong>{backtestMetadata?.total_trades_followed || 0}</strong></span>
+                {/* Main WF Content */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px', marginBottom: '24px' }}>
+                  {/* OOS Curve */}
+                  <div className="premium-card" style={{ padding: '24px' }}>
+                    <div className="chart-header">
+                      <h2 style={{ fontSize: '16px' }}>Strategy Intelligence Curve (Out-of-Sample)</h2>
+                      {walkForwardData?.sharpe && (
+                        <div style={{ fontSize: '14px' }}>
+                          OOS Sharpe: <strong style={{ color: walkForwardData.sharpe > 1.5 ? '#00cc88' : '#ffaa00' }}>{walkForwardData.sharpe}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: '0 0 16px 0', marginTop: '-8px', fontSize: '12px', color: '#888' }}>
+                      {walkForwardData?.folds?.length ? (
+                        <span>📅 Range: {walkForwardData.folds[0].test_start} — {walkForwardData.folds[walkForwardData.folds.length - 1].test_end} (Rolling OOS)</span>
+                      ) : 'Run analysis to view OOS curve'}
+                    </div>
+                    <InteractiveChart
+                      data={(walkForwardData?.folds || []).flatMap((f: any) =>
+                        (f.chart_data && f.chart_data.length > 0) ? f.chart_data : []
+                      )}
+                      formatCurrency={formatCurrency}
+                      height={500}
+                    />
+                  </div>
+
+                  {/* Predictor Matrix */}
+                  <div className="premium-card" style={{ padding: '24px' }}>
+                    <h2 style={{ fontSize: '16px', marginBottom: '20px' }}>ML Predictor Insights (Next 7 Days Forecast)</h2>
+                    {predictorData ? (
+                      <PredictorMatrix
+                        predictions={predictorData.predictions}
+                        dayNames={dayNames}
+                        timeSlots={getTimeSlots()}
+                      />
+                    ) : (
+                      <div className="monte-carlo-placeholder" style={{ height: '400px' }}>
+                        <p>Run analysis to forecast next week's alpha</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reality Check Table */}
+                {walkForwardData && (
+                  <div className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
+                    <div className="matrix-card-header" style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: '#fcfcfc' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h3 style={{ fontSize: '18px', margin: 0 }}>Walk-Forward Reality Check (Folds Detail)</h3>
+                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          Out-of-sample (WF) results reflect realistic future expectancy.
+                        </p>
+                      </div>
+                      <div className={`metric-value ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`} style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', backgroundColor: walkForwardData.aggregate.statistically_significant ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)' }}>
+                        {walkForwardData.aggregate.statistically_significant ? '✅ Confirmed Edge' : '⚠️ Insufficient Alpha'}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '24px' }}>
+                      <div className={`aggregate-panel ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`} style={{ marginTop: 0, marginBottom: '24px' }}>
+                        <div className="aggregate-main">
+                          <strong>{walkForwardData.aggregate.recommendation}</strong>
+                        </div>
+                        <div className="aggregate-metrics">
+                          <div className="metric"><span>Folds</span><strong>{walkForwardData.aggregate.total_folds}</strong></div>
+                          <div className="metric"><span>Consistency</span><strong>{(walkForwardData.aggregate.consistency_ratio * 100).toFixed(0)}%</strong></div>
+                          <div className="metric"><span>Mean OOS PnL</span><strong className={walkForwardData.aggregate.mean_fold_pnl >= 0 ? "success-text" : "error-text"}>${walkForwardData.aggregate.mean_fold_pnl?.toFixed(0)}</strong></div>
+                          <div className="metric"><span>Mean Sharpe</span><strong className={walkForwardData.aggregate.mean_sharpe >= 0 ? "success-text" : "error-text"}>{walkForwardData.aggregate.mean_sharpe?.toFixed(2)}</strong></div>
+                          <div className="metric"><span>p-value</span><strong>{walkForwardData.aggregate.permutation_p_value}</strong></div>
+                        </div>
+                      </div>
+
+                      <div className="table-responsive">
+                        <table className="premium-table wf-folds-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '60px' }}>Fold</th>
+                              <th>Train Period</th>
+                              <th>Test Period</th>
+                              <th style={{ textAlign: 'right' }}>Trades</th>
+                              <th style={{ textAlign: 'right' }}>OOS PnL</th>
+                              <th style={{ textAlign: 'right' }}>Cum. PnL</th>
+                              <th style={{ textAlign: 'right' }}>Avg Trade</th>
+                              <th style={{ textAlign: 'right' }}>Win Rate</th>
+                              <th style={{ textAlign: 'right' }}>Sharpe</th>
+                              <th style={{ textAlign: 'right' }}>Max DD</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {walkForwardData.folds.map((fold: any) => (
+                              <React.Fragment key={fold.fold}>
+                                <tr
+                                  key={fold.fold}
+                                  onClick={() => setExpandedFold(expandedFold === fold.fold ? null : fold.fold)}
+                                  className={expandedFold === fold.fold ? 'expanded-row-selected' : ''}
+                                  style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                >
+                                  <td style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                    {expandedFold === fold.fold ? '▼' : '▶'} #{fold.fold}
+                                  </td>
+                                  <td className="small" style={{ color: '#64748b' }}>{fold.train_start} <span style={{ opacity: 0.5 }}>→</span> {fold.train_end}</td>
+                                  <td className="small" style={{ fontWeight: 500 }}>{fold.test_start} <span style={{ opacity: 0.5 }}>→</span> {fold.test_end}</td>
+                                  <td style={{ textAlign: 'right' }}>{fold.oos_trades}</td>
+                                  <td className="bold" style={{ textAlign: 'right', color: fold.profitable ? 'var(--success-color)' : 'var(--error-color)' }}>
+                                    {fold.total_pnl >= 0 ? '+' : ''}${fold.total_pnl?.toFixed(0)}
+                                  </td>
+                                  <td style={{ textAlign: 'right', fontWeight: 600, color: (fold.cumulative_pnl_oos ?? 0) >= 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+                                    {(fold.cumulative_pnl_oos ?? 0) >= 0 ? '+' : ''}${(fold.cumulative_pnl_oos ?? 0).toFixed(0)}
+                                  </td>
+                                  <td style={{ textAlign: 'right', color: fold.avg_trade >= 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+                                    ${fold.avg_trade?.toFixed(0)}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>{fold.win_rate}%</td>
+                                  <td style={{ textAlign: 'right', fontWeight: 600, color: fold.sharpe >= 1 ? 'var(--success-color)' : (fold.sharpe >= 0 ? 'var(--text-primary)' : 'var(--error-color)') }}>
+                                    {fold.sharpe?.toFixed(2)}
+                                  </td>
+                                  <td style={{ textAlign: 'right', color: 'var(--error-color)' }}>
+                                    ${fold.max_drawdown_dollars?.toFixed(0)}
+                                  </td>
+                                </tr>
+                                {expandedFold === fold.fold && (
+                                  <tr className="expansion-row">
+                                    <td colSpan={10} style={{ backgroundColor: '#f8fafc', padding: '24px', borderBottom: '2px solid var(--accent-color)' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Fold #{fold.fold} Deep Drill-Down</h4>
+                                        <button
+                                          className="premium-button secondary"
+                                          onClick={(e) => { e.stopPropagation(); downloadCSV(fold); }}
+                                          style={{ padding: '8px 16px', fontSize: '13px' }}
+                                        >
+                                          📥 Export OOS Trades to CSV
+                                        </button>
+                                      </div>
+
+                                      <FoldComparisonMatrix
+                                        trainMatrix={fold.train_matrix || {}}
+                                        oosResults={fold.oos_matrix_results || {}}
+                                        timeSlots={backtestMetadata?.time_slots || []}
+                                        dayNames={['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']}
+                                      />
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'walkforward' && false && (
+              <div className="premium-card" style={{ padding: '24px' }}>
+                <div className="matrix-card-header">
+                  <h3>Walk-Forward Reality Check (Out-of-Sample)</h3>
+                  <div className={`metric-value ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`}>{walkForwardData.aggregate.statistically_significant ? '✅ Confirmed Edge' : '⚠️ Insufficient Alpha'}</div>
+                </div>
+                <div className={`aggregate-panel ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`}>
+                  <div className="aggregate-main"><strong>{walkForwardData.aggregate.recommendation}</strong><p>Out-of-sample (WF) results reflect realistic future expectancy.</p></div>
+                  <div className="aggregate-metrics">
+                    <div className="metric"><span>Folds</span><strong>{walkForwardData.aggregate.total_folds}</strong></div>
+                    <div className="metric"><span>Consistency</span><strong>{(walkForwardData.aggregate.consistency_ratio * 100).toFixed(0)}%</strong></div>
+                    <div className="metric"><span>Mean OOS PnL</span><strong>${walkForwardData.aggregate.mean_fold_pnl?.toFixed(0)}</strong></div>
+                    <div className="metric"><span>Mean Sharpe</span><strong>{walkForwardData.aggregate.mean_sharpe?.toFixed(2)}</strong></div>
+                    <div className="metric"><span>p-value</span><strong>{walkForwardData.aggregate.permutation_p_value}</strong></div>
+                  </div>
+                </div>
+                <div className="table-responsive" style={{ marginTop: '24px' }}>
+                  <table className="premium-table">
+                    <thead><tr><th>Fold</th><th>Train Period</th><th>Test Period</th><th>Trades</th><th>OOS PnL</th><th>Avg Trade</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th></tr></thead>
+                    <tbody>
+                      {walkForwardData.folds.map((fold: any) => (
+                        <tr key={fold.fold} className={fold.profitable ? 'success' : 'error'}>
+                          <td>#{fold.fold}</td>
+                          <td className="small">{fold.train_start} - {fold.train_end}</td>
+                          <td className="small">{fold.test_start} - {fold.test_end}</td>
+                          <td>{fold.oos_trades}</td>
+                          <td className="bold">${fold.total_pnl?.toFixed(0)}</td>
+                          <td>${fold.avg_trade?.toFixed(0)}</td>
+                          <td>{fold.win_rate}%</td>
+                          <td>{fold.sharpe?.toFixed(2)}</td>
+                          <td className="error">${fold.max_drawdown_dollars?.toFixed(0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <InteractiveChart
-                data={backtestData}
-                formatCurrency={formatCurrency}
-                height={500}
+            )}
+
+            {activeTab === 'backtest' && (
+              <div className="premium-card"><BacktestSimulation isRunning={isRunningBacktest} status={backtestStatus} results={backtestResults} error={backtestError} onRunBacktest={runBacktest} config={backtestConfig} onConfigChange={setBacktestConfig} formatCurrency={formatCurrency} /></div>
+            )}
+
+            {activeTab === 'vix' && (
+              <VIXRegimeAnalyzer
+                accountName={selectedSymbol}
+                startDate={backtestMetadata?.start_date}
+                endDate={backtestMetadata?.end_date}
               />
-            </div>
+            )}
+
+            {activeTab === 'probability' && (
+              <div className="premium-card" style={{ padding: '24px' }}>
+                <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 800 }}>Statistical Probability Matrix</h3>
+                {isLoadingProbability ? <div className="loader">Computing Distributions...</div> : probabilityData && (
+                  <>
+                    <div style={{ marginBottom: '24px' }}>
+                      <RecommendationMatrix
+                        matrix={matrix}
+                        probabilityMatrix={probabilityData?.probability_matrix}
+                        viewMode="probability"
+                        timeSlots={getTimeSlots()}
+                        dayNames={dayNames}
+                        formatCurrency={formatCurrency}
+                      />
+                    </div>
+
+                    <h3 style={{ marginTop: '32px', marginBottom: '16px', fontSize: '16px', fontWeight: 700 }}>Top Confidence-Weighted Opportunities</h3>
+                    <div className="table-responsive">
+                      <table className="premium-table compact">
+                        <thead><tr><th>Slot</th><th>Day</th><th>Best Account</th><th>EV</th><th>P(Profit)</th><th>CWEV</th><th>Std Dev</th><th>Skew</th><th>CVaR-95</th></tr></thead>
+                        <tbody>
+                          {(() => {
+                            const flatData: any[] = [];
+                            Object.entries(probabilityData.probability_matrix || {}).forEach(([slot, days]: [string, any]) => {
+                              Object.entries(days).forEach(([day, cell]: [string, any]) => {
+                                const acct = cell.accounts?.[cell.best_account];
+                                if (acct) flatData.push({ slot, day, cell, acct });
+                              });
+                            });
+
+                            return flatData
+                              .sort((a, b) => (b.acct.confidence_weighted_ev || 0) - (a.acct.confidence_weighted_ev || 0))
+                              .map(({ slot, day, cell, acct }) => (
+                                <tr key={`${slot}-${day}`} className={acct.confidence_weighted_ev > 0 ? 'success' : 'error'}>
+                                  <td>{slot}</td>
+                                  <td>{dayNames[parseInt(day)]}</td>
+                                  <td className="monospace small">{cell.best_account}</td>
+                                  <td>${acct.expected_value?.toFixed(0)}</td>
+                                  <td>{acct.p_profit}%</td>
+                                  <td className="bold">${acct.confidence_weighted_ev?.toFixed(0)}</td>
+                                  <td>${acct.std_dev?.toFixed(0)}</td>
+                                  <td className={acct.skewness > 0 ? 'success-text' : 'error-text'}>{acct.skewness?.toFixed(2)}</td>
+                                  <td className="error-text">${acct.cvar_95?.toFixed(0)}</td>
+                                </tr>
+                              ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="premium-card" style={{ padding: '32px' }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Global Strategy Filters</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    These parameters control the threshold for a model to be considered "viable".
+                    Updating these filters will globally re-calibrate the Recommendation Matrix,
+                    Strategy Validation ensemble, and all probabilistic models.
+                  </p>
+                </div>
+                <div className="settings-grid">
+                  <div className="setting-field"><label>Minimum Average Profit ($ / trade)</label><input type="number" value={filterSettings.minAvgProfit} onChange={(e) => setFilterSettings({ ...filterSettings, minAvgProfit: parseFloat(e.target.value) || 0 })} /></div>
+                  <div className="setting-field"><label>Minimum Win Rate (%)</label><input type="number" value={filterSettings.minWinRate} onChange={(e) => setFilterSettings({ ...filterSettings, minWinRate: parseFloat(e.target.value) || 0 })} /></div>
+                  <div className="setting-field"><label>Minimum Sample Size (Trades)</label><input type="number" value={filterSettings.minTrades} onChange={(e) => setFilterSettings({ ...filterSettings, minTrades: parseInt(e.target.value) || 0 })} /></div>
+                  <div className="setting-actions">
+                    <button onClick={handleApplySettings} className="premium-button">⚡ Apply Global Overrides</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {activeTab !== 'matrix' && activeTab !== 'vix' && (
+            <footer className="strategy-performance-section">
+              <div className="premium-card" style={{ padding: '24px' }}>
+                <div className="chart-header">
+                  <h2>Strategy Intelligence Curve</h2>
+                  <div className="source-selector-premium">
+                    <button className={`source-btn-premium ${chartSource === 'backtest' ? 'active' : 'inactive'}`} onClick={() => setChartSource('backtest')}>In-Sample (Backtest)</button>
+                    <button className={`source-btn-premium ${chartSource === 'walkforward' ? 'active' : 'inactive'}`} onClick={() => {
+                      setChartSource('walkforward');
+                      if (!walkForwardData) {
+                        setIsLoadingWalkForward(true);
+                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST' })
+                          .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData(d.data); })
+                          .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                      }
+                    }}>Out-of-Sample (WF)</button>
+                  </div>
+                </div>
+                <InteractiveChart
+                  data={chartSource === 'backtest' ? backtestData : (walkForwardData?.folds || []).flatMap((f: any, i: number) =>
+                    (f.chart_data || []).map((d: any) => ({
+                      ...d,
+                      cumulative_pnl: d.cumulative_pnl + (walkForwardData.folds.slice(0, i).reduce((sum: number, prev: any) => sum + (prev.total_pnl || 0), 0))
+                    }))
+                  )}
+                  formatCurrency={formatCurrency}
+                  height={450}
+                />
+              </div>
+            </footer>
+          )}
+        </main>
+      ) : (
+        <div className="empty-state">
+          <div className="premium-card">
+            <div className="empty-icon">🔍</div>
+            <h2>Neural Link Offline</h2>
+            <p>Select an asset class to initialize the optimization matrix.</p>
           </div>
         </div>
-      ) : (
-        <div className="no-symbol-selected">
-          <div className="empty-state-icon">📈</div>
-          <h2>Select a Symbol to Begin</h2>
-          <p>Select a trading symbol from the tabs above to see detailed analytics, recommendations, and strategy validation.</p>
-        </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };
 

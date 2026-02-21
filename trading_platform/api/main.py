@@ -17,7 +17,7 @@ import time
 from typing import Dict, Any, Optional
 
 from ..config import config
-from .routers import accounts, trades, analytics, recommendations, data_ingestion, auth, health, time_bin_analytics, exports, advanced_recommendations, system, analysis, trade_import, account_management
+from .routers import accounts, trades, analytics, recommendations, data_ingestion, auth, health, time_bin_analytics, exports, advanced_recommendations, system, analysis, trade_import, account_management, backtesting, vix_regime
 from .dependencies import get_database_session, get_service_container
 from .middleware import LoggingMiddleware, ErrorHandlingMiddleware, SecurityHeadersMiddleware, RateLimitMiddleware, MonitoringMiddleware
 from .exceptions import TradingPlatformException
@@ -429,6 +429,20 @@ def setup_routers(app: FastAPI) -> None:
     app.include_router(
         analysis.router,
         tags=["Analysis Jobs"]
+    )
+    
+    # Backtesting router — mounted at /api/backtesting (NOT under /api/v1)
+    # to match the frontend expectation: POST /api/backtesting/run
+    app.include_router(
+        backtesting.router,
+        prefix="/api/backtesting",
+        tags=["Backtesting"]
+    )
+    
+    app.include_router(
+        vix_regime.router,
+        prefix="/api/vix-regime",
+        tags=["VIX Regime"]
     )
 
 

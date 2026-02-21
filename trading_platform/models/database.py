@@ -74,11 +74,8 @@ class ProcessedTrade(Base):
     
     __tablename__ = "processed_trades"
     
-    # Primary key
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    
     # Trade identification
-    trade_id = Column(String(200), unique=True, nullable=False)
+    trade_id = Column(String(200), primary_key=True, nullable=False)
     account_name = Column(String(50), ForeignKey('accounts.name'), nullable=False)
     symbol = Column(String(50), nullable=False)
     
@@ -100,13 +97,6 @@ class ProcessedTrade(Base):
     duration_minutes = Column(Integer, nullable=False)
     hour_of_day = Column(Integer, nullable=False)
     day_of_week = Column(Integer, nullable=False)
-    
-    # Order references
-    entry_order_id = Column(String(100), nullable=False)
-    exit_order_id = Column(String(100), nullable=False)
-    
-    # Metadata
-    created_timestamp = Column(DateTime, nullable=False, default=func.now())
     
     # Foreign key relationship
     account = relationship("Account", back_populates="trades")

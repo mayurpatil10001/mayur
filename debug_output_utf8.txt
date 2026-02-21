@@ -1,0 +1,71 @@
+2026-02-20 10:05:07.159 | INFO     | trading_platform.services.vix_regime_analyzer:get_equity_curve_with_regimes:552 - Building equity curve with regimes for NQ
+2026-02-20 10:05:07.160 | INFO     | trading_platform.services.vix_regime_analyzer:synchronize_vix_with_trades:188 - Synchronizing VIX data with trades for NQ
+Fetching equity curve for NQ from 2024-03-03 00:00:00 to 2026-02-18 00:00:00
+2026-02-20 10:05:07,192 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-20 10:05:07,196 INFO sqlalchemy.engine.Engine SELECT processed_trades.id AS processed_trades_id, processed_trades.trade_id AS processed_trades_trade_id, processed_trades.account_name AS processed_trades_account_name, processed_trades.symbol AS processed_trades_symbol, processed_trades.entry_time AS processed_trades_entry_time, processed_trades.exit_time AS processed_trades_exit_time, processed_trades.entry_price AS processed_trades_entry_price, processed_trades.exit_price AS processed_trades_exit_price, processed_trades.quantity AS processed_trades_quantity, processed_trades.side AS processed_trades_side, processed_trades.profit_loss AS processed_trades_profit_loss, processed_trades.commission AS processed_trades_commission, processed_trades.duration_minutes AS processed_trades_duration_minutes, processed_trades.hour_of_day AS processed_trades_hour_of_day, processed_trades.day_of_week AS processed_trades_day_of_week, processed_trades.entry_order_id AS processed_trades_entry_order_id, processed_trades.exit_order_id AS processed_trades_exit_order_id, processed_trades.created_timestamp AS processed_trades_created_timestamp 
+FROM processed_trades 
+WHERE (processed_trades.account_name = ? OR (processed_trades.symbol LIKE ? || '%')) AND processed_trades.entry_time >= ? AND processed_trades.entry_time <= ? ORDER BY processed_trades.entry_time ASC
+2026-02-20 10:05:07,196 INFO sqlalchemy.engine.Engine [generated in 0.00065s] ('NQ', 'NQ', '2024-03-03 00:00:00.000000', '2026-02-18 00:00:00.000000')
+2026-02-20 10:05:07.197 | ERROR    | trading_platform.services.vix_regime_analyzer:_get_trade_details:428 - Error getting trade details: (sqlite3.OperationalError) no such column: processed_trades.id
+[SQL: SELECT processed_trades.id AS processed_trades_id, processed_trades.trade_id AS processed_trades_trade_id, processed_trades.account_name AS processed_trades_account_name, processed_trades.symbol AS processed_trades_symbol, processed_trades.entry_time AS processed_trades_entry_time, processed_trades.exit_time AS processed_trades_exit_time, processed_trades.entry_price AS processed_trades_entry_price, processed_trades.exit_price AS processed_trades_exit_price, processed_trades.quantity AS processed_trades_quantity, processed_trades.side AS processed_trades_side, processed_trades.profit_loss AS processed_trades_profit_loss, processed_trades.commission AS processed_trades_commission, processed_trades.duration_minutes AS processed_trades_duration_minutes, processed_trades.hour_of_day AS processed_trades_hour_of_day, processed_trades.day_of_week AS processed_trades_day_of_week, processed_trades.entry_order_id AS processed_trades_entry_order_id, processed_trades.exit_order_id AS processed_trades_exit_order_id, processed_trades.created_timestamp AS processed_trades_created_timestamp 
+FROM processed_trades 
+WHERE (processed_trades.account_name = ? OR (processed_trades.symbol LIKE ? || '%')) AND processed_trades.entry_time >= ? AND processed_trades.entry_time <= ? ORDER BY processed_trades.entry_time ASC]
+[parameters: ('NQ', 'NQ', '2024-03-03 00:00:00.000000', '2026-02-18 00:00:00.000000')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 10:05:07.197 | WARNING  | trading_platform.services.vix_regime_analyzer:synchronize_vix_with_trades:195 - No trades found for NQ
+Result length: 0
+2026-02-20 10:05:07,198 INFO sqlalchemy.engine.Engine SELECT processed_trades.id AS processed_trades_id, processed_trades.trade_id AS processed_trades_trade_id, processed_trades.account_name AS processed_trades_account_name, processed_trades.symbol AS processed_trades_symbol, processed_trades.entry_time AS processed_trades_entry_time, processed_trades.exit_time AS processed_trades_exit_time, processed_trades.entry_price AS processed_trades_entry_price, processed_trades.exit_price AS processed_trades_exit_price, processed_trades.quantity AS processed_trades_quantity, processed_trades.side AS processed_trades_side, processed_trades.profit_loss AS processed_trades_profit_loss, processed_trades.commission AS processed_trades_commission, processed_trades.duration_minutes AS processed_trades_duration_minutes, processed_trades.hour_of_day AS processed_trades_hour_of_day, processed_trades.day_of_week AS processed_trades_day_of_week, processed_trades.entry_order_id AS processed_trades_entry_order_id, processed_trades.exit_order_id AS processed_trades_exit_order_id, processed_trades.created_timestamp AS processed_trades_created_timestamp 
+FROM processed_trades 
+WHERE (processed_trades.account_name = ? OR (processed_trades.symbol LIKE ? || '%')) AND processed_trades.entry_time >= ? AND processed_trades.entry_time <= ?
+2026-02-20 10:05:07,199 INFO sqlalchemy.engine.Engine [generated in 0.00019s] ('NQ', 'NQ', '2024-03-03 00:00:00.000000', '2026-02-18 00:00:00.000000')
+Traceback (most recent call last):
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: processed_trades.id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\SierraChart\SC results WF\debug_backend_vix.py", line 31, in <module>
+    ).filter(ProcessedTrade.entry_time >= start_date).filter(ProcessedTrade.entry_time <= end_date).all()
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\orm\query.py", line 2693, in all
+    return self._iter().all()  # type: ignore
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\orm\query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\orm\session.py", line 2308, in execute
+    return self._execute_internal(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\orm\session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\orm\context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    return meth(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\SierraChart\SC results WF\venv\lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: processed_trades.id
+[SQL: SELECT processed_trades.id AS processed_trades_id, processed_trades.trade_id AS processed_trades_trade_id, processed_trades.account_name AS processed_trades_account_name, processed_trades.symbol AS processed_trades_symbol, processed_trades.entry_time AS processed_trades_entry_time, processed_trades.exit_time AS processed_trades_exit_time, processed_trades.entry_price AS processed_trades_entry_price, processed_trades.exit_price AS processed_trades_exit_price, processed_trades.quantity AS processed_trades_quantity, processed_trades.side AS processed_trades_side, processed_trades.profit_loss AS processed_trades_profit_loss, processed_trades.commission AS processed_trades_commission, processed_trades.duration_minutes AS processed_trades_duration_minutes, processed_trades.hour_of_day AS processed_trades_hour_of_day, processed_trades.day_of_week AS processed_trades_day_of_week, processed_trades.entry_order_id AS processed_trades_entry_order_id, processed_trades.exit_order_id AS processed_trades_exit_order_id, processed_trades.created_timestamp AS processed_trades_created_timestamp 
+FROM processed_trades 
+WHERE (processed_trades.account_name = ? OR (processed_trades.symbol LIKE ? || '%')) AND processed_trades.entry_time >= ? AND processed_trades.entry_time <= ?]
+[parameters: ('NQ', 'NQ', '2024-03-03 00:00:00.000000', '2026-02-18 00:00:00.000000')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Error: (sqlite3.OperationalError) no such column: processed_trades.id
+[SQL: SELECT processed_trades.id AS processed_trades_id, processed_trades.trade_id AS processed_trades_trade_id, processed_trades.account_name AS processed_trades_account_name, processed_trades.symbol AS processed_trades_symbol, processed_trades.entry_time AS processed_trades_entry_time, processed_trades.exit_time AS processed_trades_exit_time, processed_trades.entry_price AS processed_trades_entry_price, processed_trades.exit_price AS processed_trades_exit_price, processed_trades.quantity AS processed_trades_quantity, processed_trades.side AS processed_trades_side, processed_trades.profit_loss AS processed_trades_profit_loss, processed_trades.commission AS processed_trades_commission, processed_trades.duration_minutes AS processed_trades_duration_minutes, processed_trades.hour_of_day AS processed_trades_hour_of_day, processed_trades.day_of_week AS processed_trades_day_of_week, processed_trades.entry_order_id AS processed_trades_entry_order_id, processed_trades.exit_order_id AS processed_trades_exit_order_id, processed_trades.created_timestamp AS processed_trades_created_timestamp 
+FROM processed_trades 
+WHERE (processed_trades.account_name = ? OR (processed_trades.symbol LIKE ? || '%')) AND processed_trades.entry_time >= ? AND processed_trades.entry_time <= ?]
+[parameters: ('NQ', 'NQ', '2024-03-03 00:00:00.000000', '2026-02-18 00:00:00.000000')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-02-20 10:05:07,205 INFO sqlalchemy.engine.Engine ROLLBACK

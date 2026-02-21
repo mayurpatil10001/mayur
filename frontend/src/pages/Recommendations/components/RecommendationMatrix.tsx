@@ -14,6 +14,21 @@ interface RecommendationMatrixProps {
             [dayOfWeek: number]: MatrixCellData;
         };
     };
+    probabilityMatrix?: {
+        [timeSlot: string]: {
+            [dayOfWeek: number]: {
+                best_account: string;
+                accounts: {
+                    [account: string]: {
+                        confidence_weighted_ev: number;
+                        p_profit: number;
+                        skewness: number;
+                    };
+                };
+            };
+        };
+    };
+    viewMode: 'standard' | 'probability';
     timeSlots: string[];
     dayNames: string[];
     formatCurrency: (value: number) => string;
@@ -21,6 +36,8 @@ interface RecommendationMatrixProps {
 
 const RecommendationMatrix: React.FC<RecommendationMatrixProps> = ({
     matrix,
+    probabilityMatrix,
+    viewMode,
     timeSlots,
     dayNames,
     formatCurrency
@@ -68,15 +85,30 @@ const RecommendationMatrix: React.FC<RecommendationMatrixProps> = ({
                                 <td className="time-slot-cell">{timeSlot}</td>
                                 {[0, 1, 2, 3, 4, 5].map(dayOfWeek => {
                                     const cellData = getCellData(timeSlot, dayOfWeek);
+                                    const probCell = probabilityMatrix?.[timeSlot]?.[dayOfWeek];
+                                    const probAcct = probCell?.best_account ? probCell.accounts[probCell.best_account] : null;
                                     const cellClass = getCellClass(cellData);
+
+                                    // Determine which account to show based on mode
+                                    const displayAccount = viewMode === 'standard'
+                                        ? cellData?.best_account
+                                        : (probCell?.best_account || cellData?.best_account);
 
                                     return (
                                         <td key={dayOfWeek} className={cellClass}>
                                             {cellData ? (
                                                 <div className="cell-content">
-                                                    <div className="best-account">{cellData.best_account}</div>
+                                                    <div className="best-account">{displayAccount}</div>
                                                     <div className="cell-stats">
-                                                        {formatCurrency(cellData.avg_trade)}, {cellData.win_rate.toFixed(1)}%
+                                                        {viewMode === 'standard' ? (
+                                                            `${formatCurrency(cellData.avg_trade)}, ${cellData.win_rate.toFixed(1)}%`
+                                                        ) : (
+                                                            probAcct ? (
+                                                                <span title={`Skew: ${probAcct.skewness}`}>
+                                                                    CWEV: {formatCurrency(probAcct.confidence_weighted_ev)}, {probAcct.p_profit.toFixed(0)}%
+                                                                </span>
+                                                            ) : 'No Prob'
+                                                        )}
                                                     </div>
                                                 </div>
                                             ) : (

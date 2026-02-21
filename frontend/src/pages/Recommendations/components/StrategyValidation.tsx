@@ -34,92 +34,68 @@ const StrategyValidation: React.FC<StrategyValidationProps> = ({
         return Math.round((passedCriteria / criteria.length) * 100);
     };
 
+    const readinessScore = getReadinessScore();
+
     return (
         <div className="validation-results">
-            <div className="summary-cards">
-                <div className="summary-card total-pnl">
-                    <div className="card-header">
-                        <span className="card-icon">💰</span>
-                        <span className="card-title">Total P&L</span>
-                    </div>
-                    <div className={`card-value ${analysis.total_pnl > 0 ? 'positive' : 'negative'}`}>
+            {/* Horizontal KPI Row */}
+            <div className="validation-compact-header">
+                <div className="compact-summary-card">
+                    <span className="card-label">Total P&L</span>
+                    <span className={`card-value ${analysis.total_pnl > 0 ? 'positive' : 'negative'}`}>
                         {formatCurrency(analysis.total_pnl)}
-                    </div>
-                    <div className="card-subtitle">{validationData.total_trades} trades</div>
+                    </span>
+                    <span className="card-subtitle">{validationData.total_trades} trades</span>
                 </div>
 
-                <div className="summary-card win-rate">
-                    <div className="card-header">
-                        <span className="card-icon">🎯</span>
-                        <span className="card-title">Win Rate</span>
-                    </div>
-                    <div className={`card-value ${analysis.win_rate > 0.5 ? 'good' : 'neutral'}`}>
-                        {(analysis.win_rate * 100).toFixed(1)}%
-                    </div>
-                    <div className="card-subtitle">{analysis.winning_trades} winners</div>
+                <div className="compact-summary-card">
+                    <span className="card-label">Win Rate</span>
+                    <span className="card-value">{(analysis.win_rate * 100).toFixed(1)}%</span>
+                    <span className="card-subtitle">{analysis.winning_trades} winners</span>
                 </div>
 
-                <div className="summary-card avg-trade">
-                    <div className="card-header">
-                        <span className="card-icon">📊</span>
-                        <span className="card-title">Avg Trade</span>
-                    </div>
-                    <div className={`card-value ${analysis.avg_trade > 0 ? 'positive' : 'negative'}`}>
+                <div className="compact-summary-card">
+                    <span className="card-label">Avg Trade</span>
+                    <span className={`card-value ${analysis.avg_trade > 0 ? 'positive' : 'negative'}`}>
                         {formatCurrency(analysis.avg_trade)}
-                    </div>
-                    <div className="card-subtitle">per trade</div>
+                    </span>
+                    <span className="card-subtitle">per trade</span>
                 </div>
 
-                <div className="summary-card sharpe">
-                    <div className="card-header">
-                        <span className="card-icon">⚡</span>
-                        <span className="card-title">Sharpe Ratio</span>
-                    </div>
-                    <div className={`card-value ${analysis.sharpe_ratio > 1 ? 'good' : analysis.sharpe_ratio > 0 ? 'neutral' : 'negative'}`}>
-                        {analysis.sharpe_ratio?.toFixed(2) || 'N/A'}
-                    </div>
-                    <div className="card-subtitle">risk-adjusted</div>
-                </div>
-            </div>
-
-            <div className="readiness-score-container">
-                <div className="score-header">
-                    <h3>Trading Readiness Score</h3>
-                    <span className={`score-badge ${getReadinessScore() >= 80 ? 'ready' : 'not-ready'}`}>
-                        {getReadinessScore()}%
+                <div className="compact-summary-card">
+                    <span className="card-label">Sharpe Ratio</span>
+                    <span className="card-value">{analysis.sharpe_ratio?.toFixed(2) || '0.00'}</span>
+                    <span className="card-subtitle" title={`Annualized over ${analysis.sharpe_calendar_days ?? '?'} calendar days @ ${analysis.sharpe_trades_per_day ?? '?'} trades/day`}>
+                        {analysis.sharpe_calendar_days
+                            ? `${analysis.sharpe_calendar_days}d · ${analysis.sharpe_trades_per_day}/day`
+                            : 'risk-adjusted'}
                     </span>
                 </div>
-                <div className="score-description">
-                    {getReadinessScore() >= 80
-                        ? 'Strategy is ready for live trading with proper risk management.'
-                        : 'Strategy needs further testing or optimization before live use.'}
-                </div>
             </div>
 
-            <div className="trust-section">
-                <h3>🔍 Strategy Trust Indicators</h3>
-                <div className="trust-grid">
-                    <div className={`trust-item ${analysis.statistical_significance ? 'pass' : 'fail'}`}>
+
+
+            {/* Footer Summary (Readiness + Trust) */}
+            <div className="validation-compact-footer">
+                <div className="compact-readiness">
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>Readiness:</span>
+                    <span className={`readiness-compact-score ${readinessScore >= 80 ? 'ready' : 'not-ready'}`}>
+                        {readinessScore}%
+                    </span>
+                </div>
+
+                <div className="compact-trust-grid">
+                    <div className="compact-trust-item">
                         <span className="trust-icon">{analysis.statistical_significance ? '✅' : '❌'}</span>
                         <div className="trust-info">
-                            <div className="trust-title">Statistical Significance</div>
-                            <div className="trust-explanation">
-                                {analysis.statistical_significance
-                                    ? 'Strong evidence results are not due to chance.'
-                                    : 'Results may be due to random luck (p \u2265 0.05).'}
-                            </div>
+                            <span className="trust-title">Significance</span>
                         </div>
                     </div>
 
-                    <div className={`trust-item ${analysis.sample_size_adequate ? 'pass' : 'warning'}`}>
+                    <div className="compact-trust-item">
                         <span className="trust-icon">{analysis.sample_size_adequate ? '✅' : '⚠️'}</span>
                         <div className="trust-info">
-                            <div className="trust-title">Sample Size Adequacy</div>
-                            <div className="trust-explanation">
-                                {analysis.sample_size_adequate
-                                    ? 'Sufficient trade volume for reliable analysis.'
-                                    : 'Need more trades for a conclusive result.'}
-                            </div>
+                            <span className="trust-title">Sample Size</span>
                         </div>
                     </div>
                 </div>
