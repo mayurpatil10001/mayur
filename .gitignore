@@ -3,18 +3,35 @@ venv/
 env/
 ENV/
 
+# Node.js
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+build/
+dist/
+frontend/build/
+
 # Environment variables
 .env
 .env.*
 
-*.db
+# Logs and Caches
 *.log
 *.pack
-frontend/node_modules/.cache/babel-loader/*.json
-frontend/node_modules/.cache/webpack/*
-frontend/node_modules/.cache/babel-loader/*
-frontend/node_modules/.cache/*.pack
-frontend/node_modules/.cache/default-development/*.pack
+.pytest_cache/
+__pycache__/
+.eslintcache
+frontend/node_modules/.cache/
+.git-error-*
+
+# Database
+*.db
+*.db-shm
+*.db-wal
 
 # Data samples
 data/samples/

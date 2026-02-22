@@ -831,18 +831,57 @@ class BinaryLogParser:
             acc_breakdown["eod_1700"]["pnl"] = pnl_eod
             acc_breakdown["eod_1700"]["qty"] = qty_eod
             
-            # 4. PnL Outliers (Drop)
-            c.execute(f"SELECT SUM(profit_loss) FROM processed_trades WHERE ({base_where}) AND ABS(profit_loss) > 50000", base_params)
-            pnl_outliers = c.fetchone()[0] or 0.0
-            
-            c.execute(f"DELETE FROM processed_trades WHERE ({base_where}) AND ABS(profit_loss) > 50000", base_params)
-            outlier_count = c.rowcount
-            acc_breakdown["outliers"]["count"] = outlier_count
-            acc_breakdown["outliers"]["pnl"] = pnl_outliers
-            
-            if outlier_count > 0:
-                with open("import_debug.log", "a") as f:
-                    f.write(f"PURGE {acc}: Outliers={outlier_count} (${pnl_outliers:.2f})\n")
+            # 4. Statistical PnL Outliers (Drop)
+            # Use Z-score logic per symbol: Mean + X * StdDev
+            # We calculate this specifically for the symbol context to avoid bias
+            symbol_list = []
+            if symbol:
+                symbol_list = [symbol]
+            else:
+                c.execute("SELECT DISTINCT symbol FROM processed_trades WHERE account_name = ?", (acc,))
+                symbol_list = [r[0] for r in c.fetchall()]
+
+            for sym in symbol_list:
+                # Calculate stats for this sym/acc
+                c.execute(
+                    "SELECT AVG(profit_loss), AVG(profit_loss * profit_loss) - (AVG(profit_loss) * AVG(profit_loss)) as variance "
+                    "FROM processed_trades WHERE account_name = ? AND symbol = ?", 
+                    (acc, sym)
+                )
+                row = c.fetchone()
+                if row and row[0] is not None:
+                    avg_pnl = row[0]
+                    # StdDev = sqrt(variance)
+                    std_dev = (row[1] ** 0.5) if row[1] > 0 else 0
+                    
+                    # Statistical Threshold: 5 Sigma (Very conservative, but will catch the $21k Jan spike)
+                    # For a normal distribution, 5 sigma is 1 in 3.5 million. 
+                    # For trading, it's roughly 4-6 sigma for "lottery" moves.
+                    sigma_multiplier = 5.0
+                    upper_bound = avg_pnl + (sigma_multiplier * std_dev)
+                    lower_bound = avg_pnl - (sigma_multiplier * std_dev)
+                    
+                    # We also add a minimum floor ($4,000) so we don't prune small-variance strategies
+                    final_upper = max(upper_bound, 4000)
+                    final_lower = min(lower_bound, -4000)
+
+                    c.execute(
+                        "SELECT trade_id, profit_loss FROM processed_trades "
+                        "WHERE account_name = ? AND symbol = ? AND (profit_loss > ? OR profit_loss < ?)",
+                        (acc, sym, final_upper, final_lower)
+                    )
+                    outliers_to_drop = c.fetchall()
+                    
+                    if outliers_to_drop:
+                        ids = [o[0] for o in outliers_to_drop]
+                        pnl_sum = sum(o[1] for o in outliers_to_drop)
+                        
+                        dropped_count = delete_batch(ids)
+                        acc_breakdown["outliers"]["count"] += dropped_count
+                        acc_breakdown["outliers"]["pnl"] += pnl_sum
+                        
+                        with open("import_debug.log", "a") as f:
+                            f.write(f"PURGE {acc} [{sym}]: Outliers={dropped_count} (${pnl_sum:.2f}) | Thresholds: {final_lower:.0f} to {final_upper:.0f}\n")
             
             # 5. Price Mismatches (Drop)
             # PnL for bad price is not calculated/needed as per requirement

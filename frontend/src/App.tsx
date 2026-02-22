@@ -10,6 +10,7 @@ import AccountsByHour from './pages/AccountsByHour/AccountsByHour';
 import Monitoring from './pages/Monitoring/Monitoring';
 import TradeImport from './pages/TradeImport/TradeImport';
 import AccountManagement from './pages/AccountManagement/AccountManagement';
+import DiscoveryExplorer from './pages/Discovery/DiscoveryExplorer';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
           <Routes>
             <Route path="/" element={<SimpleDashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/discovery" element={<DiscoveryExplorer />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/accounts-by-hour" element={<AccountsByHour />} />

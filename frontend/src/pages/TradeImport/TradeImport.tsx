@@ -23,6 +23,7 @@ interface ImportResult {
     duplicates?: number;
     errors: string[];
     trades: ParsedTrade[];
+    stats?: Record<string, any>;
 }
 
 const TradeImport: React.FC = () => {
@@ -116,6 +117,60 @@ const TradeImport: React.FC = () => {
                             <ul>
                                 {previewResult.errors.map((err, i) => <li key={i}>{err}</li>)}
                             </ul>
+                        </div>
+                    )}
+
+                    {previewResult.stats && Object.keys(previewResult.stats).length > 0 && (
+                        <div className="import-stats-summary">
+                            <h3>🛡️ Shield Filter Summary</h3>
+                            <div className="stats-grid">
+                                {(() => {
+                                    const totals = {
+                                        outliers: 0,
+                                        long_duration: 0,
+                                        eod_1700: 0,
+                                        future: 0,
+                                        price_mismatch: 0
+                                    };
+
+                                    Object.values(previewResult.stats).forEach((accStats: any) => {
+                                        totals.outliers += accStats.outliers?.count || 0;
+                                        totals.long_duration += accStats.long_duration?.count || 0;
+                                        totals.eod_1700 += accStats.eod_1700?.count || 0;
+                                        totals.future += accStats.future?.count || 0;
+                                        totals.price_mismatch += accStats.price_mismatch?.count || 0;
+                                    });
+
+                                    return (
+                                        <>
+                                            {totals.outliers > 0 && (
+                                                <div className="stat-item outlier">
+                                                    <label>Math Outliers Removed</label>
+                                                    <span>{totals.outliers}</span>
+                                                </div>
+                                            )}
+                                            {totals.long_duration > 0 && (
+                                                <div className="stat-item">
+                                                    <label>Long Duration (&gt;24h)</label>
+                                                    <span>{totals.long_duration}</span>
+                                                </div>
+                                            )}
+                                            {totals.eod_1700 > 0 && (
+                                                <div className="stat-item">
+                                                    <label>EOD 17:00 Gap</label>
+                                                    <span>{totals.eod_1700}</span>
+                                                </div>
+                                            )}
+                                            {totals.future > 0 && (
+                                                <div className="stat-item">
+                                                    <label>Future Trades</label>
+                                                    <span>{totals.future}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     )}
 

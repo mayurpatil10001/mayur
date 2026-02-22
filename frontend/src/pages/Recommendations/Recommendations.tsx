@@ -122,7 +122,7 @@ const Recommendations: React.FC = () => {
   const [lookbackWeeks, setLookbackWeeks] = useState<number>(13);
   const [testWeeks, setTestWeeks] = useState<number>(3);
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
-  const [matrixViewMode, setMatrixViewMode] = useState<'standard' | 'probability'>('standard');
+  const [matrixViewMode, setMatrixViewMode] = useState<'standard' | 'probability' | 'ensemble'>('standard');
   const [expandedFold, setExpandedFold] = useState<number | null>(null);
 
   const downloadCSV = (fold: any) => {
@@ -611,7 +611,11 @@ const Recommendations: React.FC = () => {
 
   const fetchSymbols = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/analytics/symbols');
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch('/api/v1/analytics/symbols', { headers });
       const result = await response.json();
 
       if (result.status === 'success' && result.data?.symbols) {
@@ -622,7 +626,7 @@ const Recommendations: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching symbols:', err);
-      setError('Failed to load symbols');
+      setError('Failed to load symbols from server.');
     }
   };
 
@@ -637,7 +641,10 @@ const Recommendations: React.FC = () => {
     setError(null);
 
     const currentSettings = settings || filterSettings;
-    const logic = matrixViewMode === 'probability' ? 'statistical' : 'classic';
+    let logic = 'classic';
+    if (matrixViewMode === 'probability') logic = 'statistical';
+    if (matrixViewMode === 'ensemble') logic = 'ensemble';
+
     const params = new URLSearchParams({
       min_avg_profit: currentSettings.minAvgProfit.toString(),
       min_win_rate: currentSettings.minWinRate.toString(),
@@ -646,8 +653,12 @@ const Recommendations: React.FC = () => {
     });
 
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       // Fetch recommendation matrix with parameters
-      const matrixResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${symbol}?${params}`);
+      const matrixResponse = await fetch(`/api/v1/analytics/recommendations/matrix/${symbol}?${params}`, { headers });
       const matrixResult = await matrixResponse.json();
 
       if (matrixResult.status === 'success') {
@@ -655,7 +666,7 @@ const Recommendations: React.FC = () => {
       }
 
       // Proactively fetch probability matrix for integrated view
-      fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${symbol}/probability?days_back=90`)
+      fetch(`/api/v1/analytics/recommendations/matrix/${symbol}/probability?days_back=90`, { headers })
         .then(r => r.json())
         .then(d => { if (d.status === 'success') setProbabilityData(d.data); })
         .catch(console.error);
@@ -663,7 +674,7 @@ const Recommendations: React.FC = () => {
       // Fetch backtest data with same filter parameters and time horizon
       const daysBack = getDaysFromTimeHorizon(timeHorizon);
       console.log('[BACKTEST] Fetching backtest data:', { symbol, daysBack, params: params.toString() });
-      const backtestResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/backtest/${symbol}?days_back=${daysBack}&${params}`);
+      const backtestResponse = await fetch(`/api/v1/analytics/recommendations/backtest/${symbol}?days_back=${daysBack}&${params}`, { headers });
       const backtestResult = await backtestResponse.json();
 
       console.log('[BACKTEST] Backtest result:', backtestResult);
@@ -678,7 +689,7 @@ const Recommendations: React.FC = () => {
       }
 
       // Fetch combined statistics with same filter parameters and time horizon
-      const statsResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/combined-stats/${symbol}?days_back=${daysBack}&${params}`);
+      const statsResponse = await fetch(`/api/v1/analytics/recommendations/combined-stats/${symbol}?days_back=${daysBack}&${params}`, { headers });
       const statsResult = await statsResponse.json();
 
       if (statsResult.status === 'success') {
@@ -692,7 +703,7 @@ const Recommendations: React.FC = () => {
       // This ensures chart and stats stay in sync when switching logic (Classic vs Stats)
       if (chartSource === 'walkforward') {
         // Use the current logic to fetch
-        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${symbol}?selection_logic=${logic}`, { method: 'POST' })
+        fetch(`/api/v1/analytics/recommendations/walk-forward/${symbol}?selection_logic=${logic}`, { method: 'POST', headers })
           .then(r => r.json()).then(d => {
             if (d.status === 'success') {
               setWalkForwardData({ ...d.data, logic });
@@ -748,6 +759,10 @@ const Recommendations: React.FC = () => {
   // Fetch time-filtered statistics
   const fetchTimeFilteredStats = async (symbol: string, daysBack: number) => {
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const params = new URLSearchParams({
         days_back: daysBack.toString(),
         min_avg_profit: filterSettings.minAvgProfit.toString(),
@@ -755,7 +770,7 @@ const Recommendations: React.FC = () => {
         min_trades: filterSettings.minTrades.toString()
       });
 
-      const response = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/combined-stats/${symbol}?${params}`);
+      const response = await fetch(`/api/v1/analytics/recommendations/combined-stats/${symbol}?${params}`, { headers });
       const result = await response.json();
 
       if (result.status === 'success') {
@@ -771,6 +786,10 @@ const Recommendations: React.FC = () => {
     if (!symbol) return;
     setIsLoadingValidation(true);
     try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       console.log('🔬 Fetching validation for entire recommendation strategy');
 
       // Get the same parameters used for the backtest
@@ -784,7 +803,7 @@ const Recommendations: React.FC = () => {
       });
 
       // Fetch the complete trade list (same as CSV export)
-      const tradesResponse = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/backtest/${symbol}?${params}`);
+      const tradesResponse = await fetch(`/api/v1/analytics/recommendations/backtest/${symbol}?${params}`, { headers });
       if (!tradesResponse.ok) {
         throw new Error(`Trades API failed: ${tradesResponse.status}`);
       }
@@ -800,7 +819,7 @@ const Recommendations: React.FC = () => {
         // Try to fetch advanced analytics if available
         let advancedAnalytics = null;
         try {
-          const advancedResponse = await fetch(`http://localhost:8000/api/v1/recommendations/advanced?min_confidence=0.0`);
+          const advancedResponse = await fetch(`/api/v1/recommendations/advanced?min_confidence=0.0`, { headers });
           if (advancedResponse.ok) {
             const advancedData = await advancedResponse.json();
             if (advancedData.status === 'success' && advancedData.data?.length > 0) {
@@ -1061,7 +1080,7 @@ const Recommendations: React.FC = () => {
 
       for (const timeSlot of timeSlots) {
         const [hour, minute] = timeSlot.split(':').map(Number);
-        for (let dayOfWeek = 0; dayOfWeek < 5; dayOfWeek++) { // Mon-Fri (0-4)
+        for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) { // Sun-Fri (0-5)
           const cellData = getCellData(timeSlot, dayOfWeek);
           if (cellData && cellData.best_account) {
             timeBins.push({
@@ -1110,10 +1129,12 @@ const Recommendations: React.FC = () => {
       };
 
       // Start backtest
-      const response = await fetch('http://localhost:8000/api/backtesting/run', {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/backtesting/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify(backtestRequest)
       });
@@ -1141,7 +1162,11 @@ const Recommendations: React.FC = () => {
 
     const poll = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/backtesting/status/${backtestId}`);
+        const token = localStorage.getItem('authToken');
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`/api/backtesting/status/${backtestId}`, { headers });
         if (!response.ok) {
           throw new Error('Failed to get backtest status');
         }
@@ -1175,7 +1200,11 @@ const Recommendations: React.FC = () => {
 
   const fetchBacktestResults = async (backtestId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/backtesting/results/${backtestId}?include_trades=true&include_daily_returns=true`);
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`/api/backtesting/results/${backtestId}?include_trades=true&include_daily_returns=true`, { headers });
       if (!response.ok) {
         throw new Error('Failed to fetch backtest results');
       }
@@ -1202,7 +1231,11 @@ const Recommendations: React.FC = () => {
         export: 'true'
       });
 
-      const response = await fetch(`http://localhost:8000/api/v1/analytics/recommendations/backtest/${selectedSymbol}?${params}`);
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`/api/v1/analytics/recommendations/backtest/${selectedSymbol}?${params}`, { headers });
       const result = await response.json();
 
       if (result.status === 'success' && result.data.trades) {
@@ -1253,7 +1286,7 @@ const Recommendations: React.FC = () => {
 
   // Function to check if a time slot has any recommendations
   const hasRecommendations = (timeSlot: string): boolean => {
-    for (let dayOfWeek = 0; dayOfWeek < 6; dayOfWeek++) { // 0-5 (Sun-Fri, no Saturday)
+    for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) { // 0-5 (Sun-Fri)
       if (getCellData(timeSlot, dayOfWeek)) {
         return true;
       }
@@ -1300,12 +1333,18 @@ const Recommendations: React.FC = () => {
                 if (tab.id === 'matrix') fetchStrategyValidationData();
                 else if (tab.id === 'probability' && !probabilityData) {
                   setIsLoadingProbability(true);
-                  fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
+                  const token = localStorage.getItem('authToken');
+                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+                  if (token) headers['Authorization'] = `Bearer ${token}`;
+                  fetch(`/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`, { headers })
                     .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); })
                     .catch(console.error).finally(() => setIsLoadingProbability(false));
                 } else if (tab.id === 'walkforward' && !walkForwardData) {
                   setIsLoadingWalkForward(true);
-                  fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST' })
+                  const token = localStorage.getItem('authToken');
+                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+                  if (token) headers['Authorization'] = `Bearer ${token}`;
+                  fetch(`/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST', headers })
                     .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData(d.data); })
                     .catch(console.error).finally(() => setIsLoadingWalkForward(false));
                 }
@@ -1415,7 +1454,7 @@ const Recommendations: React.FC = () => {
                           }}
                           style={{ padding: '4px 12px', fontSize: '11px' }}
                         >
-                          Classic: Avg/Win
+                          Classic
                         </button>
                         <button
                           className={`dashboard-tab ${matrixViewMode === 'probability' ? 'active' : ''}`}
@@ -1425,8 +1464,6 @@ const Recommendations: React.FC = () => {
                               fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
                                 .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); });
                             }
-                            // Invalidate walkForwardData logic attribute so it refetches if user clicks Out-of-Sample
-                            // Or refetch immediately if currently viewing WalkForward
                             if (chartSource === 'walkforward') {
                               setIsLoadingWalkForward(true);
                               fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=statistical`, { method: 'POST' })
@@ -1438,7 +1475,24 @@ const Recommendations: React.FC = () => {
                           }}
                           style={{ padding: '4px 12px', fontSize: '11px' }}
                         >
-                          Stats: CWEV/P(Profit)
+                          Statistical
+                        </button>
+                        <button
+                          className={`dashboard-tab ${matrixViewMode === 'ensemble' ? 'active' : ''}`}
+                          onClick={() => {
+                            setMatrixViewMode('ensemble');
+                            if (chartSource === 'walkforward') {
+                              setIsLoadingWalkForward(true);
+                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=ensemble`, { method: 'POST' })
+                                .then(r => r.json()).then(d => {
+                                  if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'ensemble' });
+                                })
+                                .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                            }
+                          }}
+                          style={{ padding: '4px 12px', fontSize: '11px' }}
+                        >
+                          Ensemble 2.0
                         </button>
                       </div>
                     </div>
@@ -1458,8 +1512,10 @@ const Recommendations: React.FC = () => {
                       <div>
                         {matrixViewMode === 'standard' ? (
                           <span><strong>Classic Selection:</strong> Ranks models by <strong>Avg Profit → Win Rate</strong>. <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ Avg Trade</strong> | <strong>% Win Rate</strong></span></span>
-                        ) : (
+                        ) : matrixViewMode === 'probability' ? (
                           <span><strong>Statistical Selection:</strong> Ranks models by <strong>CWEV</strong> (Confidence-Weighted EV). <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ CWEV</strong> | <strong>% Probability &gt; 0</strong></span></span>
+                        ) : (
+                          <span><strong>Ensemble Consensus:</strong> Ranks by <strong>Multi-Window Stability + Consistency</strong>. <span style={{ marginLeft: '8px', opacity: 0.9 }}>Filters noisy cells and prioritizes structural trades.</span></span>
                         )}
                       </div>
                     </div>
@@ -1566,6 +1622,7 @@ const Recommendations: React.FC = () => {
                       >
                         <option value="standard">Classic ($ Avg Trade)</option>
                         <option value="probability">Statistical (CWEV)</option>
+                        <option value="ensemble">Ensemble (Consensus 2.0)</option>
                       </select>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
@@ -1600,7 +1657,10 @@ const Recommendations: React.FC = () => {
                       onClick={() => {
                         setIsLoadingWalkForward(true);
                         setIsLoadingPredictor(true);
-                        const logic = matrixViewMode === 'probability' ? 'statistical' : 'classic';
+
+                        let logic = 'classic';
+                        if (matrixViewMode === 'probability') logic = 'statistical';
+                        if (matrixViewMode === 'ensemble') logic = 'ensemble';
 
                         // Run WF
                         fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=${logic}&training_days=${lookbackWeeks * 7}&testing_days=${testWeeks * 7}&step_days=${testWeeks * 7}`, { method: 'POST' })

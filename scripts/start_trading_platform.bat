@@ -1,4 +1,7 @@
 @echo off
+setlocal
+cd /d "%~dp0.."
+
 echo ========================================
 echo   Trading Optimization Platform Startup
 echo ========================================

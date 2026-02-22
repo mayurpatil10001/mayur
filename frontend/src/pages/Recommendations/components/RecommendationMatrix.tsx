@@ -6,6 +6,7 @@ interface MatrixCellData {
     total_pnl: number;
     avg_trade: number;
     win_rate: number;
+    confidence?: number;
 }
 
 interface RecommendationMatrixProps {
@@ -28,7 +29,7 @@ interface RecommendationMatrixProps {
             };
         };
     };
-    viewMode: 'standard' | 'probability';
+    viewMode: 'standard' | 'probability' | 'ensemble';
     timeSlots: string[];
     dayNames: string[];
     formatCurrency: (value: number) => string;
@@ -102,12 +103,18 @@ const RecommendationMatrix: React.FC<RecommendationMatrixProps> = ({
                                                     <div className="cell-stats">
                                                         {viewMode === 'standard' ? (
                                                             `${formatCurrency(cellData.avg_trade)}, ${cellData.win_rate.toFixed(1)}%`
+                                                        ) : viewMode === 'ensemble' ? (
+                                                            <span title={`Consensus Score: ${cellData.confidence || 'N/A'}`}>
+                                                                <strong>{formatCurrency(cellData.avg_trade)}</strong> | Consensus: {(cellData.confidence ? cellData.confidence * 100 : 0).toFixed(0)}%
+                                                            </span>
                                                         ) : (
                                                             probAcct ? (
                                                                 <span title={`Skew: ${probAcct.skewness}`}>
                                                                     CWEV: {formatCurrency(probAcct.confidence_weighted_ev)}, {probAcct.p_profit.toFixed(0)}%
                                                                 </span>
-                                                            ) : 'No Prob'
+                                                            ) : (
+                                                                `${formatCurrency(cellData.avg_trade)}, ${cellData.win_rate.toFixed(1)}%`
+                                                            )
                                                         )}
                                                     </div>
                                                 </div>

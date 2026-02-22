@@ -25,6 +25,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Link to="/dashboard" className={isActive('/dashboard')}>
               Dashboard
             </Link>
+            <Link to="/discovery" className={isActive('/discovery')}>
+              Discovery Explorer
+            </Link>
             <Link to="/monitoring" className={isActive('/monitoring')}>
               System Control
             </Link>

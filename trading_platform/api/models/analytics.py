@@ -486,164 +486,51 @@ class CorrelationAnalysisResponse(BaseModel):
 class PerformanceMetricsResponse(BaseModel):
     """Enhanced performance metrics response model."""
     
-    account_name: str = Field(
-        description="Account name",
-        example="IPS_TM_10"
-    )
-    
-    symbol: str = Field(
-        description="Trading symbol",
-        example="NQ"
-    )
-    
-    period_start: datetime = Field(
-        description="Analysis period start",
-        example="2024-01-01T00:00:00Z"
-    )
-    
-    period_end: datetime = Field(
-        description="Analysis period end",
-        example="2024-12-31T23:59:59Z"
-    )
-    
-    total_return: float = Field(
-        description="Total return amount",
-        example=15000.50
-    )
-    
-    total_trades: int = Field(
-        description="Total number of trades",
-        example=150
-    )
-    
-    winning_trades: int = Field(
-        description="Number of winning trades",
-        example=95
-    )
-    
-    losing_trades: int = Field(
-        description="Number of losing trades",
-        example=55
-    )
-    
-    win_rate: float = Field(
-        description="Win rate percentage",
-        example=63.33,
-        ge=0.0,
-        le=100.0
-    )
-    
-    average_win: float = Field(
-        description="Average winning trade amount",
-        example=285.75
-    )
-    
-    average_loss: float = Field(
-        description="Average losing trade amount",
-        example=-125.50
-    )
-    
-    profit_factor: float = Field(
-        description="Profit factor (gross profit / gross loss)",
-        example=1.85
-    )
-    
-    max_drawdown: float = Field(
-        description="Maximum drawdown amount",
-        example=-2500.00
-    )
-    
-    sharpe_ratio: Optional[float] = Field(
-        description="Sharpe ratio",
-        example=1.25
-    )
-    
-    volatility: float = Field(
-        description="Return volatility",
-        example=0.15
-    )
-    
-    largest_win: float = Field(
-        description="Largest winning trade",
-        example=750.00
-    )
-    
-    largest_loss: float = Field(
-        description="Largest losing trade",
-        example=-425.50
-    )
-    
-    average_trade_duration: float = Field(
-        description="Average trade duration in minutes",
-        example=42.5
-    )
-    
-    total_commission: float = Field(
-        description="Total commission paid",
-        example=630.0
-    )
-    
-    net_profit: float = Field(
-        description="Net profit after commissions",
-        example=14370.0
-    )
+    account_name: str = Field(description="Account name")
+    symbol: str = Field(description="Trading symbol")
+    period_start: datetime = Field(description="Analysis period start")
+    period_end: datetime = Field(description="Analysis period end")
+    total_return: float = Field(description="Total return amount")
+    total_trades: int = Field(description="Total number of trades")
+    winning_trades: int = Field(description="Number of winning trades")
+    losing_trades: int = Field(description="Number of losing trades")
+    win_rate: float = Field(description="Win rate percentage", ge=0.0, le=100.0)
+    average_win: float = Field(description="Average winning trade amount")
+    average_loss: float = Field(description="Average losing trade amount")
+    profit_factor: float = Field(description="Profit factor")
+    max_drawdown: float = Field(description="Maximum drawdown amount")
+    sharpe_ratio: Optional[float] = Field(description="Sharpe ratio")
+    volatility: float = Field(description="Return volatility")
+    largest_win: float = Field(description="Largest winning trade")
+    largest_loss: float = Field(description="Largest losing trade")
+    average_trade_duration: Optional[float] = Field(None, description="Average duration in minutes")
+    total_commission: Optional[float] = Field(0.0, description="Total commission")
+    net_profit: Optional[float] = Field(None, description="Net profit")
 
 
 class TemporalAnalysisResponse(BaseModel):
     """Enhanced temporal analysis response model."""
     
-    account_name: str = Field(
-        description="Account name",
-        example="IPS_TM_10"
-    )
-    
-    symbol: str = Field(
-        description="Trading symbol",
-        example="NQ"
-    )
-    
-    period_start: datetime = Field(
-        description="Analysis period start",
-        example="2024-01-01T00:00:00Z"
-    )
-    
-    period_end: datetime = Field(
-        description="Analysis period end",
-        example="2024-12-31T23:59:59Z"
-    )
-    
-    hourly_performance: Dict[str, Dict[str, Any]] = Field(
-        description="Performance metrics by hour of day",
-        example={
-            "9": {"trades": 25, "win_rate": 0.68, "avg_profit": 125.50, "total_pnl": 3137.50},
-            "10": {"trades": 30, "win_rate": 0.63, "avg_profit": 95.25, "total_pnl": 2857.50}
-        }
-    )
-    
-    daily_performance: Dict[str, Dict[str, Any]] = Field(
-        description="Performance metrics by day of week (0=Monday)",
-        example={
-            "0": {"trades": 35, "win_rate": 0.66, "avg_profit": 105.25, "total_pnl": 3683.75},
-            "1": {"trades": 32, "win_rate": 0.62, "avg_profit": 98.50, "total_pnl": 3152.00}
-        }
-    )
-    
-    best_trading_hours: List[int] = Field(
-        description="Hours with best performance",
-        example=[9, 14, 15]
-    )
-    
-    best_trading_days: List[int] = Field(
-        description="Days with best performance (0=Monday)",
-        example=[0, 4]
-    )
-    
-    statistical_significance: Dict[str, Any] = Field(
-        description="Statistical significance tests",
-        example={
-            "hourly_p_value": 0.032,
-            "daily_p_value": 0.045,
-            "significant_hours": [9, 14],
-            "significant_days": [0]
-        }
-    )
+    account_name: str
+    symbol: str
+    period_start: datetime
+    period_end: datetime
+    hourly_performance: Dict[str, Dict[str, Any]]
+    daily_performance: Dict[str, Dict[str, Any]]
+    best_trading_hours: List[int]
+    best_trading_days: List[int]
+    statistical_significance: Dict[str, Any]
+
+
+class EdgeDiscoveryResponse(BaseModel):
+    """Edge discovery response model."""
+    symbol: str
+    edges: List[Dict[str, Any]]
+
+
+class WalkForwardValidationResponse(BaseModel):
+    """Walk-forward validation response model."""
+    symbol: str
+    logic: str
+    equity_curve: List[Dict[str, Any]]
+    metrics: Dict[str, Any]
