@@ -1,0 +1,336 @@
+Time         | S | Qty | Px       | Pos   | RealPos | Note                      | Msg
+------------------------------------------------------------------------------------------------------------------------
+    02:00:02 | B |   3 |     0.00 |    41 |      84 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:02 | B |   3 |     0.00 |    44 |      87 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 02:00:02 | S |   3 |     0.00 |    41 |      87 |                           | Updated Internal Position Quantity to 3.
+    02:00:02 | S |   3 | 24964.00 |    38 |      84 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:02 | S |   1 | 24990.00 |    37 |      83 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:02 | S |   1 | 24995.25 |    36 |      82 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:02 | S |   1 | 25027.75 |    35 |      81 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:12 | S |   1 | 24990.00 |    34 |      80 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:00:12 | S |   1 |     0.00 |    33 |      80 |                           | Updated Internal Position Quantity to 2.
+    02:00:12 | S |   3 | 24964.00 |    30 |      77 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    02:00:12 | S |   2 | 24986.00 |    28 |      75 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:34 | S |   1 | 24995.25 |    27 |      74 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:00:34 | S |   1 |     0.00 |    26 |      74 |                           | Updated Internal Position Quantity to 1.
+    02:00:35 | S |   2 | 24986.00 |    24 |      72 | AT_NQ_TM(D-R-2+last50)    | Auto-trade canceled order: NQH26 [CBV][M
+    02:00:35 | S |   1 | 24985.25 |    23 |      71 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:00:35 | S |   1 | 24985.25 |    22 |      70 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Order update). Info: 
+    02:00:35 | S |   1 | 24985.50 |    21 |      69 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:37 | S |   1 | 24985.50 |    20 |      68 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:37 | S |   1 | 24985.75 |    19 |      67 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:37 | S |   1 | 24986.00 |    18 |      66 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:46 | S |   1 | 24986.00 |    17 |      65 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:46 | S |   1 | 24986.50 |    16 |      64 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:47 | S |   1 | 24986.50 |    15 |      63 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:47 | S |   1 | 24987.50 |    14 |      62 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:48 | S |   1 | 24988.50 |    13 |      61 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:48 | S |   1 | 24989.75 |    12 |      60 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:48 | S |   1 | 24990.25 |    11 |      59 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:49 | S |   1 | 24990.25 |    10 |      58 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:49 | S |   1 | 24990.50 |     9 |      57 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:50 | S |   1 | 24990.50 |     8 |      56 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:50 | S |   1 | 24991.00 |     7 |      55 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:52 | S |   1 | 24991.00 |     6 |      54 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:52 | S |   1 | 24991.25 |     5 |      53 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:52 | S |   1 | 24991.75 |     4 |      52 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:54 | S |   1 | 24991.75 |     3 |      51 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:54 | S |   1 | 24992.00 |     2 |      50 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:55 | S |   1 | 24993.00 |     1 |      49 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:57 | S |   1 | 24993.00 |     0 |      48 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:00:57 | S |   1 | 24993.25 |    -1 |      47 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:00:57 | S |   1 | 24995.25 |    -2 |      46 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:01:21 | S |   1 | 24995.25 |    -3 |      45 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    02:01:21 | S |   1 | 24995.50 |    -4 |      44 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:01:22 | S |   1 | 24996.25 |    -5 |      43 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:01:22 | S |   1 | 24998.25 |    -6 |      42 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:02:05 | S |   1 | 24998.25 |    -7 |      41 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:02:05 | S |   1 |     0.00 |    -8 |      41 |                           | Updated Internal Position Quantity to 0.
+    02:02:05 | S |   1 | 25027.75 |    -9 |      40 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    02:12:14 | B |   3 |     0.00 |    -6 |      43 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:12:14 | B |   3 |     0.00 |    -3 |      46 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 02:12:14 | S |   3 |     0.00 |    -6 |      46 |                           | Updated Internal Position Quantity to 3.
+    02:12:14 | S |   3 | 24996.25 |    -9 |      43 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:12:14 | S |   1 | 25025.25 |   -10 |      42 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:12:14 | S |   1 | 25031.00 |   -11 |      41 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:12:14 | S |   1 | 25067.25 |   -12 |      40 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:12:14 | S |   1 | 25067.25 |   -13 |      39 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    02:12:41 | S |   1 | 25025.25 |   -14 |      38 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:12:41 | S |   1 |     0.00 |   -15 |      38 |                           | Updated Internal Position Quantity to 2.
+    02:12:41 | S |   3 | 24996.25 |   -18 |      35 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    02:12:41 | S |   2 | 25020.75 |   -20 |      33 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:12:48 | S |   2 | 25020.75 |   -22 |      31 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:12:48 | S |   2 |     0.00 |   -24 |      31 |                           | Updated Internal Position Quantity to 0.
+    02:12:48 | S |   1 | 25031.00 |   -25 |      30 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    02:12:48 | S |   1 | 25067.25 |   -26 |      29 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:23 | B |   3 |     0.00 |   -23 |      32 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:23 | B |   3 |     0.00 |   -20 |      35 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 02:15:23 | S |   3 |     0.00 |   -23 |      35 |                           | Updated Internal Position Quantity to 3.
+    02:15:23 | S |   3 | 25014.25 |   -26 |      32 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:23 | S |   1 | 25030.75 |   -27 |      31 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:23 | S |   1 | 25036.75 |   -28 |      30 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:23 | S |   1 | 25073.25 |   -29 |      29 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:15:24 | S |   3 | 25014.25 |   -32 |      26 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    02:15:24 | S |   1 | 25030.75 |   -33 |      25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    02:15:24 | S |   1 | 25036.75 |   -34 |      24 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    02:15:24 | S |   1 | 25073.25 |   -35 |      23 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    02:18:14 | S |   1 | 25030.75 |   -36 |      22 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:18:14 | S |   1 |     0.00 |   -37 |      22 |                           | Updated Internal Position Quantity to 2.
+    02:18:14 | S |   3 | 25014.25 |   -40 |      19 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    02:18:14 | S |   2 | 25026.25 |   -42 |      17 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    02:18:56 | S |   2 | 25026.25 |   -44 |      15 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 02:18:56 | S |   2 |     0.00 |   -46 |      15 |                           | Updated Internal Position Quantity to 0.
+    02:18:56 | S |   1 | 25036.75 |   -47 |      14 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    02:18:56 | S |   1 | 25073.25 |   -48 |      13 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:18:56 | S |   1 | 25036.75 |   -49 |      12 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    02:18:56 | S |   1 | 25073.25 |   -50 |      11 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    02:26:26 | B |   3 |     0.00 |   -47 |      14 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:26:26 | B |   3 |     0.00 |   -44 |      17 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 02:26:26 | S |   3 |     0.00 |   -47 |      17 |                           | Updated Internal Position Quantity to 3.
+    02:26:26 | S |   3 | 25017.75 |   -50 |      14 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:26:26 | S |   1 | 25044.25 |   -51 |      13 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:26:26 | S |   1 | 25050.50 |   -52 |      12 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:26:26 | S |   1 | 25090.50 |   -53 |      11 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    02:26:26 | B |   3 |     0.00 |   -50 |      14 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+    02:26:27 | S |   3 | 25017.75 |   -53 |      11 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+    02:26:27 | S |   1 | 25044.25 |   -54 |      10 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+    02:26:27 | S |   1 | 25050.50 |   -55 |       9 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+    02:26:27 | S |   1 | 25090.50 |   -56 |       8 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+    03:05:08 | S |   3 | 25017.75 |   -59 |       5 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25017.75 Ask
+    03:23:35 | S |   1 | 25044.25 |   -60 |       4 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25044.25 Ask
+    03:43:04 | S |   1 | 25050.50 |   -61 |       3 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25050.50 Ask
+    04:05:48 | S |   3 | 25017.75 |   -64 |       0 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+    04:05:48 | S |   1 | 25044.25 |   -65 |      -1 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+    04:05:48 | S |   1 | 25050.50 |   -66 |      -2 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+    04:05:56 | S |   1 | 25090.50 |   -67 |      -3 | AT_NQ_TM(D-R-2+last50)    | Initiating: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 04:05:56 | B |   2 |     0.00 |   -65 |      -3 |                           | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:05:56 | S |   1 | 25090.50 |   -66 |      -4 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+[G] 04:05:56 | B |   2 |     0.00 |   -64 |      -4 |                           | Trading Evaluator (New). Info: Order fro
+[G] 04:05:56 | S |   2 |     0.00 |   -66 |      -4 |                           | Updated Internal Position Quantity to 0.
+    04:18:30 | S |   3 |     0.00 |   -69 |      -7 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 04:18:31 | S |   3 |     0.00 |   -72 |      -7 |                           | Updated Internal Position Quantity to -3
+    04:18:31 | B |   3 | 25036.75 |   -69 |      -4 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:18:31 | B |   1 | 25029.75 |   -68 |      -3 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:18:31 | B |   1 | 25028.75 |   -67 |      -2 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:18:31 | B |   1 | 25021.25 |   -66 |      -1 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:18:31 | B |   3 | 25036.75 |   -63 |       2 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    04:18:31 | B |   1 | 25029.75 |   -62 |       3 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    04:18:31 | B |   1 | 25028.75 |   -61 |       4 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    04:18:31 | B |   1 | 25021.25 |   -60 |       5 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    04:18:46 | B |   3 | 25036.75 |   -57 |       8 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 04:18:46 | S |   3 |     0.00 |   -60 |       8 |                           | Updated Internal Position Quantity to 0.
+    04:18:47 | B |   1 | 25029.75 |   -59 |       9 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    04:18:47 | B |   1 | 25028.75 |   -58 |      10 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:18:47 | B |   1 | 25021.25 |   -57 |      11 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:08 | B |   3 |     0.00 |   -54 |      14 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:08 | B |   3 |     0.00 |   -51 |      17 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 04:46:08 | S |   3 |     0.00 |   -54 |      17 |                           | Updated Internal Position Quantity to 3.
+    04:46:08 | S |   3 | 25070.50 |   -57 |      14 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:08 | S |   1 | 25084.25 |   -58 |      13 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:08 | S |   1 | 25087.00 |   -59 |      12 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:08 | S |   1 | 25104.25 |   -60 |      11 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:11 | S |   1 | 25084.25 |   -61 |      10 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 04:46:11 | S |   1 |     0.00 |   -62 |      10 |                           | Updated Internal Position Quantity to 2.
+    04:46:11 | S |   3 | 25070.50 |   -65 |       7 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    04:46:11 | S |   2 | 25082.25 |   -67 |       5 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+[G] 04:46:12 | S |   2 |     0.00 |   -69 |       5 |                           | Updated Internal Position Quantity to 0.
+    04:46:12 | S |   1 | 25087.00 |   -70 |       4 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    04:46:12 | S |   1 | 25104.25 |   -71 |       3 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:46:12 | S |   1 | 25104.25 |   -72 |       2 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    04:52:27 | B |   3 |     0.00 |   -69 |       5 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:52:27 | B |   3 |     0.00 |   -66 |       8 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 04:52:27 | S |   3 |     0.00 |   -69 |       8 |                           | Updated Internal Position Quantity to 3.
+    04:52:27 | S |   3 | 25083.75 |   -72 |       5 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:52:27 | S |   1 | 25094.25 |   -73 |       4 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:52:27 | S |   1 | 25097.25 |   -74 |       3 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:52:27 | S |   1 | 25116.75 |   -75 |       2 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:52:46 | S |   1 | 25094.25 |   -76 |       1 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 04:52:46 | S |   1 |     0.00 |   -77 |       1 |                           | Updated Internal Position Quantity to 2.
+    04:52:46 | S |   3 | 25083.75 |   -80 |      -2 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    04:52:46 | S |   2 | 25092.00 |   -82 |      -4 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    04:54:47 | S |   2 | 25092.00 |   -84 |      -6 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 04:54:47 | S |   2 |     0.00 |   -86 |      -6 |                           | Updated Internal Position Quantity to 0.
+    04:54:47 | S |   1 | 25097.25 |   -87 |      -7 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    04:54:47 | S |   1 | 25116.75 |   -88 |      -8 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    04:54:47 | S |   1 | 25097.25 |   -89 |      -9 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    04:54:47 | S |   1 | 25116.75 |   -90 |     -10 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:00:00 | B |   3 |     0.00 |   -87 |      -7 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 05:00:00 | S |   3 |     0.00 |   -90 |      -7 |                           | Updated Internal Position Quantity to 3.
+    05:00:00 | S |   3 | 25091.50 |   -93 |     -10 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:00:00 | S |   1 | 25100.25 |   -94 |     -11 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:00:00 | S |   1 | 25103.75 |   -95 |     -12 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:00:00 | S |   1 | 25124.75 |   -96 |     -13 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:00:00 | S |   1 | 25100.25 |   -97 |     -14 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Order update). Info: 
+    05:00:00 | S |   1 | 25103.75 |   -98 |     -15 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:00:00 | S |   1 | 25124.75 |   -99 |     -16 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:03:31 | S |   3 | 25091.50 |  -102 |     -19 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:03:31 | S |   3 |     0.00 |  -105 |     -19 |                           | Updated Internal Position Quantity to 0.
+    05:03:31 | S |   1 | 25100.25 |  -106 |     -20 | AT_NQ_TM(D-R-2+last50)    | Initiating: NQH26 [CBV][M]  3 Min  #6 | 
+    05:03:31 | S |   1 | 25103.75 |  -107 |     -21 | AT_NQ_TM(D-R-2+last50)    | NQH26 [CBV][M]  3 Min  #6 | Canceling al
+    05:03:31 | S |   1 | 25124.75 |  -108 |     -22 | AT_NQ_TM(D-R-2+last50)    | NQH26 [CBV][M]  3 Min  #6 | Canceling al
+    05:03:31 | S |   1 | 25100.25 |  -109 |     -23 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:03:31 | S |   1 | 25103.75 |  -110 |     -24 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:03:31 | S |   1 | 25124.75 |  -111 |     -25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:15:38 | S |   3 |     0.00 |  -114 |     -28 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 05:15:39 | S |   3 |     0.00 |  -117 |     -28 |                           | Updated Internal Position Quantity to -3
+    05:15:39 | B |   3 | 25081.50 |  -114 |     -25 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:15:39 | B |   1 | 25068.25 |  -113 |     -24 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:15:39 | B |   1 | 25064.00 |  -112 |     -23 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:15:39 | B |   1 | 25037.50 |  -111 |     -22 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:15:39 | B |   3 | 25081.50 |  -108 |     -19 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:15:39 | B |   1 | 25068.25 |  -107 |     -18 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:15:39 | B |   1 | 25064.00 |  -106 |     -17 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:15:39 | B |   1 | 25037.50 |  -105 |     -16 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    05:23:44 | B |   1 | 25068.25 |  -104 |     -15 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:23:44 | S |   1 |     0.00 |  -105 |     -15 |                           | Updated Internal Position Quantity to -2
+    05:23:44 | B |   3 | 25081.50 |  -102 |     -12 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    05:23:44 | B |   2 | 25071.50 |  -100 |     -10 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:23:51 | B |   2 | 25071.50 |   -98 |      -8 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:23:51 | S |   2 |     0.00 |  -100 |      -8 |                           | Updated Internal Position Quantity to 0.
+    05:23:51 | B |   1 | 25064.00 |   -99 |      -7 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    05:23:51 | B |   1 | 25037.50 |   -98 |      -6 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:23:51 | B |   1 | 25064.00 |   -97 |      -5 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:23:51 | B |   1 | 25037.50 |   -96 |      -4 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    05:29:59 | B |   3 |     0.00 |   -93 |      -1 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 05:30:00 | S |   3 |     0.00 |   -96 |      -1 |                           | Updated Internal Position Quantity to 3.
+    05:30:00 | S |   3 | 25073.50 |   -99 |      -4 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:30:00 | S |   1 | 25089.50 |  -100 |      -5 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:30:00 | S |   1 | 25094.25 |  -101 |      -6 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:30:00 | S |   1 | 25124.75 |  -102 |      -7 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:31:24 | S |   1 | 25089.50 |  -103 |      -8 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:31:24 | S |   1 |     0.00 |  -104 |      -8 |                           | Updated Internal Position Quantity to 2.
+    05:31:24 | S |   3 | 25073.50 |  -107 |     -11 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    05:31:24 | S |   2 | 25085.75 |  -109 |     -13 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:32:34 | S |   1 | 25094.25 |  -110 |     -14 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:32:34 | S |   1 |     0.00 |  -111 |     -14 |                           | Updated Internal Position Quantity to 1.
+    05:32:35 | S |   2 | 25085.75 |  -113 |     -16 | AT_NQ_TM(D-R-2+last50)    | Auto-trade canceled order: NQH26 [CBV][M
+    05:32:35 | S |   1 | 25084.25 |  -114 |     -17 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    05:32:35 | S |   1 | 25084.25 |  -115 |     -18 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Order update). Info: 
+    05:32:38 | S |   1 | 25084.25 |  -116 |     -19 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:32:38 | S |   1 | 25084.75 |  -117 |     -20 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:32:59 | S |   1 | 25084.75 |  -118 |     -21 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:32:59 | S |   1 | 25085.25 |  -119 |     -22 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:32:59 | S |   1 | 25086.00 |  -120 |     -23 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:33:00 | S |   1 | 25086.50 |  -121 |     -24 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:33:01 | S |   1 | 25086.50 |  -122 |     -25 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:33:01 | S |   1 | 25086.75 |  -123 |     -26 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:33:03 | S |   1 | 25086.75 |  -124 |     -27 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:33:04 | S |   1 | 25087.00 |  -125 |     -28 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:33:05 | S |   1 | 25087.00 |  -126 |     -29 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:33:06 | S |   1 | 25087.25 |  -127 |     -30 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:33:06 | S |   1 | 25087.25 |  -128 |     -31 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    05:33:07 | S |   1 | 25087.50 |  -129 |     -32 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    05:35:30 | S |   1 | 25087.50 |  -130 |     -33 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 05:35:30 | S |   1 |     0.00 |  -131 |     -33 |                           | Updated Internal Position Quantity to 0.
+    05:35:30 | S |   1 | 25124.75 |  -132 |     -34 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    05:35:30 | S |   1 | 25087.50 |  -133 |     -35 | AT_NQ_TM(D-R-2+last50)    | Order cancellation failed | Trading Eval
+    05:35:30 | S |   1 | 25124.75 |  -134 |     -36 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    06:09:15 | B |   3 |     0.00 |  -131 |     -33 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:09:15 | B |   3 |     0.00 |  -128 |     -30 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 06:09:15 | S |   3 |     0.00 |  -131 |     -30 |                           | Updated Internal Position Quantity to 3.
+    06:09:15 | S |   3 | 25079.50 |  -134 |     -33 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:09:15 | S |   1 | 25094.00 |  -135 |     -34 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:09:15 | S |   1 | 25098.50 |  -136 |     -35 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:09:15 | S |   1 | 25127.00 |  -137 |     -36 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:09:16 | S |   1 | 25127.00 |  -138 |     -37 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:13:02 | S |   1 | 25094.00 |  -139 |     -38 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:13:02 | S |   1 |     0.00 |  -140 |     -38 |                           | Updated Internal Position Quantity to 2.
+    06:13:02 | S |   3 | 25079.50 |  -143 |     -41 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    06:13:03 | S |   2 | 25090.50 |  -145 |     -43 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:13:53 | S |   2 | 25090.50 |  -147 |     -45 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:13:53 | S |   2 |     0.00 |  -149 |     -45 |                           | Updated Internal Position Quantity to 0.
+    06:13:53 | S |   1 | 25098.50 |  -150 |     -46 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    06:13:53 | S |   1 | 25127.00 |  -151 |     -47 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:13:53 | S |   1 | 25098.50 |  -152 |     -48 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    06:13:53 | S |   1 | 25127.00 |  -153 |     -49 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    06:25:20 | S |   3 |     0.00 |  -156 |     -52 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:20 | S |   3 |     0.00 |  -159 |     -55 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+[G] 06:25:20 | S |   3 |     0.00 |  -162 |     -55 |                           | Updated Internal Position Quantity to -3
+    06:25:20 | B |   3 | 25093.75 |  -159 |     -52 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:20 | B |   1 | 25083.25 |  -158 |     -51 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:20 | B |   1 | 25079.00 |  -157 |     -50 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:20 | B |   1 | 25052.50 |  -156 |     -49 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:20 | B |   3 | 25093.75 |  -153 |     -46 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:25:20 | B |   1 | 25083.25 |  -152 |     -45 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:25:20 | B |   1 | 25079.00 |  -151 |     -44 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:25:20 | B |   1 | 25052.50 |  -150 |     -43 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:25:47 | B |   1 | 25083.25 |  -149 |     -42 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:25:47 | S |   1 |     0.00 |  -150 |     -42 |                           | Updated Internal Position Quantity to -2
+    06:25:47 | B |   3 | 25093.75 |  -147 |     -39 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    06:25:48 | B |   2 | 25086.50 |  -145 |     -37 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:25:53 | B |   1 | 25079.00 |  -144 |     -36 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:25:53 | S |   1 |     0.00 |  -145 |     -36 |                           | Updated Internal Position Quantity to -1
+    06:25:53 | B |   2 | 25086.50 |  -143 |     -34 | AT_NQ_TM(D-R-2+last50)    | Auto-trade canceled order: NQH26 [CBV][M
+    06:25:53 | B |   1 | 25089.00 |  -142 |     -33 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:25:53 | B |   2 | 25086.50 |  -140 |     -31 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    06:25:53 | B |   1 | 25089.00 |  -139 |     -30 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:25:59 | B |   1 | 25089.00 |  -138 |     -29 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:25:59 | B |   1 | 25088.50 |  -137 |     -28 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:25:59 | B |   1 | 25088.00 |  -136 |     -27 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:11 | B |   1 | 25088.00 |  -135 |     -26 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:26:11 | B |   1 | 25087.75 |  -134 |     -25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:13 | B |   1 | 25087.75 |  -133 |     -24 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:26:13 | B |   1 | 25087.50 |  -132 |     -23 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:13 | B |   1 | 25086.50 |  -131 |     -22 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:14 | B |   1 | 25086.25 |  -130 |     -21 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:15 | B |   1 | 25085.50 |  -129 |     -20 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:21 | B |   1 | 25085.50 |  -128 |     -19 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:26:21 | B |   1 | 25084.75 |  -127 |     -18 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:21 | B |   1 | 25084.50 |  -126 |     -17 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:26:59 | B |   1 | 25084.50 |  -125 |     -16 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:26:59 | S |   1 |     0.00 |  -126 |     -16 |                           | Updated Internal Position Quantity to 0.
+    06:27:00 | B |   1 | 25052.50 |  -125 |     -15 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    06:34:18 | B |   3 |     0.00 |  -122 |     -12 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 06:34:18 | S |   3 |     0.00 |  -125 |     -12 |                           | Updated Internal Position Quantity to 3.
+    06:34:18 | S |   3 | 25085.25 |  -128 |     -15 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:34:18 | S |   1 | 25099.25 |  -129 |     -16 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:34:18 | S |   1 | 25103.75 |  -130 |     -17 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:34:18 | S |   1 | 25131.50 |  -131 |     -18 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:34:18 | S |   1 | 25099.25 |  -132 |     -19 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Order update). Info: 
+    06:34:18 | S |   1 | 25103.75 |  -133 |     -20 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:34:18 | S |   1 | 25131.50 |  -134 |     -21 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:35:11 | S |   1 | 25099.25 |  -135 |     -22 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:35:11 | S |   1 |     0.00 |  -136 |     -22 |                           | Updated Internal Position Quantity to 2.
+    06:35:11 | S |   3 | 25085.25 |  -139 |     -25 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    06:35:11 | S |   2 | 25096.00 |  -141 |     -27 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:37:32 | S |   2 | 25096.00 |  -143 |     -29 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:37:32 | S |   2 |     0.00 |  -145 |     -29 |                           | Updated Internal Position Quantity to 0.
+    06:37:32 | S |   1 | 25103.75 |  -146 |     -30 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+    06:37:32 | S |   1 | 25131.50 |  -147 |     -31 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:37:32 | S |   1 | 25131.50 |  -148 |     -32 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    06:39:29 | S |   3 |     0.00 |  -151 |     -35 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+[G] 06:39:29 | S |   3 |     0.00 |  -154 |     -35 |                           | Updated Internal Position Quantity to -3
+    06:39:29 | B |   3 | 25100.25 |  -151 |     -32 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:39:29 | B |   1 | 25089.00 |  -150 |     -31 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:39:29 | B |   1 | 25084.50 |  -149 |     -30 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:39:29 | B |   1 | 25057.50 |  -148 |     -29 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:39:29 | B |   1 | 25084.50 |  -147 |     -28 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:39:29 | B |   1 | 25057.50 |  -146 |     -27 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:43:20 | B |   1 | 25089.00 |  -145 |     -26 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:43:20 | S |   1 |     0.00 |  -146 |     -26 |                           | Updated Internal Position Quantity to -2
+    06:43:20 | B |   3 | 25100.25 |  -143 |     -23 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+    06:43:20 | B |   2 | 25092.25 |  -141 |     -21 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:42 | B |   1 | 25084.50 |  -140 |     -20 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:43:42 | S |   1 |     0.00 |  -141 |     -20 |                           | Updated Internal Position Quantity to -1
+    06:43:42 | B |   2 | 25092.25 |  -139 |     -18 | AT_NQ_TM(D-R-2+last50)    | Auto-trade canceled order: NQH26 [CBV][M
+    06:43:42 | B |   1 | 25094.50 |  -138 |     -17 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+    06:43:42 | B |   2 | 25092.25 |  -136 |     -15 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+    06:43:42 | B |   1 | 25094.50 |  -135 |     -14 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+    06:43:42 | B |   1 | 25093.50 |  -134 |     -13 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:43 | B |   1 | 25093.50 |  -133 |     -12 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:43:43 | B |   1 | 25093.25 |  -132 |     -11 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:48 | B |   1 | 25093.25 |  -131 |     -10 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:43:48 | B |   1 | 25092.75 |  -130 |      -9 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:57 | B |   1 | 25092.75 |  -129 |      -8 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:43:57 | B |   1 | 25092.25 |  -128 |      -7 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:57 | B |   1 | 25091.75 |  -127 |      -6 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:43:58 | B |   1 | 25091.75 |  -126 |      -5 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:43:58 | B |   1 | 25091.50 |  -125 |      -4 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:44:00 | B |   1 | 25091.50 |  -124 |      -3 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:44:00 | B |   1 | 25091.25 |  -123 |      -2 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:45:16 | B |   1 | 25091.25 |  -122 |      -1 | AT_NQ_TM(D-R-2+last50)    | Auto trail order modification. Trigger p
+    06:45:16 | B |   1 | 25091.00 |  -121 |       0 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+    06:46:23 | B |   1 | 25091.00 |  -120 |       1 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+[G] 06:46:23 | S |   1 |     0.00 |  -121 |       1 |                           | Updated Internal Position Quantity to 0.
+    06:46:23 | B |   1 | 25091.00 |  -120 |       2 | AT_NQ_TM(D-R-2+last50)    | Auto-trade canceled order: NQH26 [CBV][M
+    06:46:23 | B |   1 | 25057.50 |  -119 |       3 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  

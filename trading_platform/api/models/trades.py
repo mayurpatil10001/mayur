@@ -100,6 +100,11 @@ class TradeResponse(BaseModel):
         le=6
     )
     
+    trip_id: Optional[str] = Field(
+        default=None,
+        description="Logical round-trip identifier"
+    )
+    
     @property
     def net_profit_loss(self) -> float:
         """Calculate net profit/loss after commission."""

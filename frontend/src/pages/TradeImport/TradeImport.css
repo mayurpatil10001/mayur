@@ -217,3 +217,47 @@ button.secondary:hover:not(:disabled) {
 .stat-item.outlier span {
   color: #ef4444;
 }
+
+.stat-item.cleaned {
+  border-left: 4px solid #2563eb;
+}
+
+.stat-item.cleaned span {
+  color: #2563eb;
+}
+
+.ghost-fills-warning {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.ghost-fills-warning h3 {
+  margin-top: 0;
+  color: #b91c1c;
+}
+
+.ghost-fills-warning ul {
+  margin: 0;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+@keyframes loading-pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}

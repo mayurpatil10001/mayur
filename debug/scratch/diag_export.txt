@@ -1,0 +1,60 @@
+
+Time: 2025-12-18  09:05:56.979061
+  ActivityType: Fills
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+  InternalOrderID: 20091637
+
+Time: 2025-12-18  09:18:31.102976
+  ActivityType: Fills
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+  InternalOrderID: 20091769
+
+Time: 2025-12-18  09:18:46.901215
+  ActivityType: Fills
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25036.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+  InternalOrderID: 20091780
+
+Time: 2025-12-18  09:46:08.315344
+  ActivityType: Fills
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+  InternalOrderID: 20092071
+
+Time: 2025-12-18  09:46:11.649324
+  ActivityType: Fills
+  OrderType: Limit
+  Quantity: 1
+  Price: 25084.2500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+  InternalOrderID: 20092082
+
+Time: 2025-12-18  09:46:12.005842
+  ActivityType: Fills
+  OrderType: Stop Limit
+  Quantity: 2
+  Price: 25082.2500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+  InternalOrderID: 20092081

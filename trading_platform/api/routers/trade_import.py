@@ -46,6 +46,8 @@ class ImportResultResponse(BaseModel):
     duplicates: int = 0
     errors: list[str] = []
     trades: list[ParsedTradeResponse] = []
+    rejected_trades: list[dict] = []
+    dropped_ghost_fills: list[dict] = []
     stats: dict = {}
 
 
@@ -86,6 +88,8 @@ async def import_preview(
             )
             for t in result.parsed_trades
         ],
+        rejected_trades=result.rejected_trades,
+        dropped_ghost_fills=result.dropped_ghost_fills,
     )
 
 
@@ -127,4 +131,6 @@ async def import_paste(
             )
             for t in result.parsed_trades
         ],
+        rejected_trades=result.rejected_trades,
+        dropped_ghost_fills=result.dropped_ghost_fills,
     )

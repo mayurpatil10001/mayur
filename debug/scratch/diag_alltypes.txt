@@ -1,0 +1,296 @@
+
+Type: Positions | Time: 2025-12-18  09:05:48.351861
+  OrderType: 
+  Quantity: 
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:05:48.359535
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25017.7500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:48.359542
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25017.7500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:48.359589
+  OrderType: Limit
+  Quantity: 1
+  Price: 25044.2500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:48.359599
+  OrderType: Limit
+  Quantity: 1
+  Price: 25044.2500000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:48.359611
+  OrderType: Limit
+  Quantity: 1
+  Price: 25050.5000000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:48.359618
+  OrderType: Limit
+  Quantity: 1
+  Price: 25050.5000000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Positions | Time: 2025-12-18  09:05:54.654217
+  OrderType: 
+  Quantity: 
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:05:56.740796
+  OrderType: Limit
+  Quantity: 1
+  Price: 25090.5000000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:56.740821
+  OrderType: Limit
+  Quantity: 1
+  Price: 25090.5000000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:56.740864
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:05:56.978945
+  OrderType: Limit
+  Quantity: 1
+  Price: 25090.5000000
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:05:56.979033
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:05:56.979045
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:05:56.979054
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+
+Type: Positions | Time: 2025-12-18  09:05:56.979059
+  OrderType: 
+  Quantity: 2
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Fills | Time: 2025-12-18  09:05:56.979061
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+
+Type: Positions | Time: 2025-12-18  09:05:56.979171
+  OrderType: 
+  Quantity: 
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:18:30.763031
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.102895
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.102945
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.102958
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Positions | Time: 2025-12-18  09:18:31.102970
+  OrderType: 
+  Quantity: 3
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Fills | Time: 2025-12-18  09:18:31.102976
+  OrderType: Market
+  Quantity: 3
+  Price: 
+  BuySell: Sell
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Positions | Time: 2025-12-18  09:18:31.103126
+  OrderType: 
+  Quantity: 
+  Price: 
+  BuySell: 
+  IsAutomated: N
+  Note: 
+
+Type: Orders | Time: 2025-12-18  09:18:31.125940
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25036.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.126242
+  OrderType: Limit
+  Quantity: 1
+  Price: 25029.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.126366
+  OrderType: Limit
+  Quantity: 1
+  Price: 25028.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.126484
+  OrderType: Limit
+  Quantity: 1
+  Price: 25021.2500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.334029
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25036.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.334066
+  OrderType: Stop Limit
+  Quantity: 3
+  Price: 25036.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418708
+  OrderType: Limit
+  Quantity: 1
+  Price: 25029.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418763
+  OrderType: Limit
+  Quantity: 1
+  Price: 25029.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418793
+  OrderType: Limit
+  Quantity: 1
+  Price: 25028.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418808
+  OrderType: Limit
+  Quantity: 1
+  Price: 25028.7500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418824
+  OrderType: Limit
+  Quantity: 1
+  Price: 25021.2500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)
+
+Type: Orders | Time: 2025-12-18  09:18:31.418896
+  OrderType: Limit
+  Quantity: 1
+  Price: 25021.2500000
+  BuySell: Buy
+  IsAutomated: Y
+  Note: AT_NQ_TM(D-R-2+last50)

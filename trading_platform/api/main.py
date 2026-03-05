@@ -1,12 +1,3 @@
-"""
-Main FastAPI application setup with routing and middleware configuration.
-
-This module sets up the FastAPI application with proper routing,
-dependency injection, middleware, and documentation.
-
-Requirements: 10.1, 10.4
-"""
-
 from fastapi import FastAPI, HTTPException, Request, Body, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -23,12 +14,14 @@ from .middleware import LoggingMiddleware, ErrorHandlingMiddleware, SecurityHead
 from .exceptions import TradingPlatformException
 
 
+from logging.handlers import RotatingFileHandler
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, config.LOG_LEVEL.upper()),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(config.LOG_FILE),
+        RotatingFileHandler(config.LOG_FILE, maxBytes=50*1024*1024, backupCount=5),
         logging.StreamHandler()
     ]
 )
@@ -39,44 +32,20 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown events."""
-    # Startup
-    logger.info("Starting Trading Optimization Platform API")
+    logger.info("Starting Trading Optimization Platform API (Streamlined)")
     
-    # Initialize database connection
+    # Validate paths without blocking
     try:
-        db_session = get_database_session()
-        logger.info("Database connection established")
+        if not config.validate_paths():
+            logger.warning("Some SierraChart paths are not accessible")
     except Exception as e:
-        logger.error(f"Failed to establish database connection: {e}")
-        raise
+        logger.error(f"Config validation error: {e}")
     
-    # Initialize service container
-    try:
-        service_container = get_service_container()
-        logger.info("Service container initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize service container: {e}")
-        raise
-    
-    # Validate configuration
-    if not config.validate_paths():
-        logger.warning("Some SierraChart paths are not accessible")
-    
-    logger.info("API startup completed successfully")
+    logger.info("API startup sequence completed (services on-demand)")
     
     yield
     
-    # Shutdown
     logger.info("Shutting down Trading Optimization Platform API")
-    
-    # Close database connections
-    try:
-        if 'db_session' in locals():
-            db_session.close()
-        logger.info("Database connections closed")
-    except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
-    
     logger.info("API shutdown completed")
 
 
@@ -450,199 +419,7 @@ def setup_routers(app: FastAPI) -> None:
 app = create_app()
 
 
-@app.post("/api/system/check-path")
-async def check_path(request: dict = Body(...)):
-    try:
-        import glob
-        import os
-        import re
-        import datetime
-        from trading_platform.services.settings import settings_service
-
-        path = request.get("path", "")
-        target_symbol = request.get("symbol", "").upper()
-        # Respect saved lookback days if available
-        settings = settings_service.get_settings()
-        try:
-            days_limit = int(settings.get("import_days", 30))
-        except:
-            days_limit = 30
-            
-        cutoff_time = (datetime.datetime.now() - datetime.timedelta(days=days_limit)).timestamp() if days_limit > 0 else 0
-        
-        if not path:
-            return {"exists": False, "files": [], "message": "No path provided"}
-            
-        clean_path = os.path.normpath(path)
-        if not os.path.exists(clean_path):
-            return {"exists": False, "files": [], "message": f"Path not found: {clean_path}"}
-            
-        if not os.path.isdir(clean_path):
-            return {"exists": True, "files": [], "message": "Path is not a directory"}
-            
-        all_files_raw = glob.glob(os.path.join(clean_path, "*.txt")) + \
-                        glob.glob(os.path.join(clean_path, "*.log")) + \
-                        glob.glob(os.path.join(clean_path, "*.data"))
-        
-        # Filter by date
-        all_files = [f for f in all_files_raw if os.path.getmtime(f) >= cutoff_time]
-        
-        if not all_files:
-            msg = f"No log files found in last {days_limit} days" if days_limit > 0 else "No log files found in directory"
-            return {"exists": True, "files": [], "count": 0, "accounts": [], "message": msg}
-
-        # Group files by account
-        account_files = {}
-        for f in all_files:
-            try:
-                fname = os.path.basename(f)
-                parts = fname.split('.')
-                if len(parts) > 1:
-                    account = parts[-2].upper()
-                    account = re.sub(r'_UTC$', '', account)
-                    if account not in account_files:
-                        account_files[account] = []
-                    account_files[account].append(f)
-            except: pass
-
-        # Filter accounts by target_symbol
-        detected_accounts = []
-        
-        for account, files in account_files.items():
-            # If no symbol filter, include all
-            if not target_symbol:
-                detected_accounts.append(account)
-                continue
-                
-            match_found = False
-            # 1. Filename match
-            for f in files:
-                if target_symbol in os.path.basename(f).upper():
-                    match_found = True
-                    break
-            if match_found:
-                detected_accounts.append(account)
-                continue
-                
-            # 2. Account name match
-            if account.upper().startswith(target_symbol):
-                detected_accounts.append(account)
-                continue
-                
-            # 3. Content Peek (Last 10 files)
-            try:
-                files.sort(key=os.path.getmtime, reverse=True)
-                recent_files = files[:10]
-                
-                found_in_history = False
-                for recent_file in recent_files:
-                    try:
-                        file_size = os.path.getsize(recent_file)
-                        if file_size > 0:
-                            data = b""
-                            with open(recent_file, "rb") as bf:
-                                # Read first 100KB
-                                data += bf.read(100 * 1024)
-                                # If file is large, also read the last 200KB where recent trades are
-                                if file_size > 300 * 1024:
-                                    bf.seek(file_size - (200 * 1024))
-                                    data += bf.read()
-                                elif file_size > 100 * 1024:
-                                    # Just read the rest
-                                    data += bf.read()
-                                
-                                # Check patterns - Case insensitive
-                                uppercase_data = data.upper()
-                                
-                                # pattern_a: match symbol + month code + year (e.g. NQH24)
-                                pattern_a = rb'\b' + target_symbol.encode() + rb'[FGHJKMNQUVXZ]\d{1,2}\b'
-                                # pattern_b: match Symbol: NQ or Contract: NQ
-                                pattern_b = rb'(?:SYMBOL|CONTRACT|SIMULATED)[:\s]+' + target_symbol.encode() + rb'\b'
-                                # pattern_c: just find the symbol string if it's a text log
-                                pattern_c = target_symbol.encode() + rb'\b'
-                                
-                                if re.search(pattern_a, uppercase_data) or \
-                                   re.search(pattern_b, uppercase_data) or \
-                                   re.search(pattern_c, uppercase_data):
-                                    found_in_history = True
-                                    break
-                    except: pass
-                
-                if found_in_history:
-                    detected_accounts.append(account)
-            except: pass
-
-        # Final Sort and Return
-        try:
-            all_logs = sorted(all_files, key=os.path.getmtime, reverse=True)
-            file_list = [os.path.basename(f) for f in all_logs[:5]]
-        except:
-            file_list = [os.path.basename(f) for f in all_files[:5]]
-        
-        return {
-            "exists": True, 
-            "files": file_list, 
-            "count": len(all_files),
-            "accounts": sorted(detected_accounts),
-            "message": f"Found {len(all_files)} files." + (f" Showing accounts with '{target_symbol}'." if target_symbol else "")
-        }
-        
-    except Exception as e:
-        print(f"Check Path Fatal Error: {e}")
-        return {"exists": False, "files": [], "message": f"Scan Failed: {str(e)}"}
-
-# --- Import Control Endpoints ---
-from trading_platform.services.binary_log_parser import importer, BinaryLogParser
-
-@app.post("/api/system/import-start")
-async def start_import(background_tasks: BackgroundTasks, request: dict = Body(...)):
-    if importer.running:
-        return {"message": "Import already running", "running": True}
-        
-    paths = request.get("paths", [])
-    symbol = request.get("symbol", None)
-    accounts = request.get("accounts", None) 
-    
-    from trading_platform.services.settings import settings_service
-    settings = settings_service.get_settings()
-    try:
-        days = int(request.get("days", settings.get("import_days", 30)))
-    except:
-        days = 30
-    
-    if not paths:
-        return {"message": "No paths provided, checking defaults...", "running": False}
-        
-    # Start background task with optional filters
-    background_tasks.add_task(importer.run_import, paths, symbol, accounts, days_lookback=days)
-    return {"message": f"Import started{' for ' + str(accounts) if accounts else ''} (Last {days} days)", "running": True}
-
-@app.post("/api/system/import-stop")
-async def stop_import():
-    importer.stop()
-    return {"message": "Stopping import...", "running": False}
-
-@app.get("/api/system/import-status")
-async def get_import_status():
-    return {
-        "running": importer.running,
-        "message": importer.message,
-        "progress": importer.progress,
-        "stats": f"Processed: {importer.stats.get('processed', 0)} | Found: {importer.stats.get('found', 0)}",
-        "details": importer.stats.get("summaries", {})
-    }
-
-
-@app.post("/api/system/purge-anomalies")
-async def purge_anomalies(request: dict = Body(...)):
-    account = request.get("account")
-    symbol = request.get("symbol")
-    if not account:
-        raise HTTPException(status_code=400, detail="Account required")
-    
-    # Enable purge_overnight to actually delete the identified overnight trades
-    res = importer.purge_anomalies(account, symbol, purge_overnight=True)
-    return {"message": "Data cleaned successfully", "removed": res}
+# System endpoints are handled in routers/system.py
 
 if __name__ == "__main__":
     import uvicorn
@@ -653,4 +430,5 @@ if __name__ == "__main__":
         port=config.API_PORT,
         reload=config.API_RELOAD,
         log_level=config.LOG_LEVEL.lower()
-    )
+    ) 
+ 

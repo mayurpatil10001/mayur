@@ -1,0 +1,453 @@
+--- V_SIM16 Dec 18 Position Math Tracing ---
+[OVERLIMIT] 19:13:26 | Side: SELL | Qty: 1 | POS: -6 -> -7 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24934.75 Ask: 24936.25 Last: 24937.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:13:26 | Side: SELL | Qty: 1 | POS: -7 -> -8 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24934.75 Ask: 24936.25 Last: 24937.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:14:07 | Side: SELL | Qty: 1 | POS: -8 -> -9 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24941.50 Ask: 24943.25 Last: 24943.25. Fill based on queue
+[OVERLIMIT] 19:14:07 | Side: SELL | Qty: 1 | POS: -9 -> -10 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24941.50 Ask: 24943.25 Last: 24943.25. Fill based on queue
+[OVERLIMIT] 19:16:30 | Side: SELL | Qty: 1 | POS: -10 -> -11 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24950.50 Ask: 24952.00 Last: 24951.75. Fill based on queue
+[OVERLIMIT] 19:16:30 | Side: SELL | Qty: 1 | POS: -11 -> -12 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24950.50 Ask: 24952.00 Last: 24951.75. Fill based on queue
+[NOTELESS] 19:17:13 | Side: SELL | Qty: 1 | POS: -12 -> -13 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24956.00 Ask: 24956.75 Last: 24955.50
+[NOTELESS] 19:17:13 | Side: SELL | Qty: 1 | POS: -13 -> -14 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24956.00 Ask: 24956.75 Last: 24955.50
+[OVERLIMIT] 19:46:17 | Side: SELL | Qty: 1 | POS: -14 -> -15 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24965.25 Ask: 24966.50 Last: 24966.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:46:17 | Side: SELL | Qty: 1 | POS: -15 -> -16 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24965.25 Ask: 24966.50 Last: 24966.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:46:58 | Side: SELL | Qty: 1 | POS: -16 -> -17 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.25 Ask: 24973.75 Last: 24973.75. Fill based on queue
+[OVERLIMIT] 19:46:58 | Side: SELL | Qty: 1 | POS: -17 -> -18 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.25 Ask: 24973.75 Last: 24973.75. Fill based on queue
+[OVERLIMIT] 19:48:59 | Side: SELL | Qty: 1 | POS: -18 -> -19 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.75 Ask: 24983.25 Last: 24983.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:48:59 | Side: SELL | Qty: 1 | POS: -19 -> -20 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.75 Ask: 24983.25 Last: 24983.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:54:06 | Side: SELL | Qty: 1 | POS: -20 -> -21 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.75 Ask: 24987.75 Last: 24986.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 19:54:06 | Side: SELL | Qty: 1 | POS: -21 -> -22 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.75 Ask: 24987.75 Last: 24986.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:05:02 | Side: SELL | Qty: 1 | POS: -22 -> -23 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.00 Ask: 24974.00 Last: 24972.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:05:02 | Side: SELL | Qty: 1 | POS: -23 -> -24 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.00 Ask: 24974.00 Last: 24972.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:06:16 | Side: SELL | Qty: 1 | POS: -24 -> -25 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24964.00 Ask: 24965.75 Last: 24964.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:06:16 | Side: SELL | Qty: 1 | POS: -25 -> -26 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24964.00 Ask: 24965.75 Last: 24964.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:06:35 | Side: SELL | Qty: 1 | POS: -26 -> -27 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.75 Ask: 24974.00 Last: 24972.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:06:35 | Side: SELL | Qty: 1 | POS: -27 -> -28 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.75 Ask: 24974.00 Last: 24972.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:12:02 | Side: SELL | Qty: 1 | POS: -28 -> -29 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24959.75 Ask: 24960.50 Last: 24960.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:12:02 | Side: SELL | Qty: 1 | POS: -29 -> -30 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24959.75 Ask: 24960.50 Last: 24960.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:13:43 | Side: SELL | Qty: 1 | POS: -30 -> -31 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24978.75 Ask: 24980.00 Last: 24980.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:13:43 | Side: SELL | Qty: 1 | POS: -31 -> -32 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24978.75 Ask: 24980.00 Last: 24980.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:40:47 | Side: SELL | Qty: 1 | POS: -32 -> -33 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.75 Ask: 24983.75 Last: 24983.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:40:47 | Side: SELL | Qty: 1 | POS: -33 -> -34 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.75 Ask: 24983.75 Last: 24983.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:47:10 | Side: SELL | Qty: 1 | POS: -34 -> -35 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24990.75 Ask: 24991.25 Last: 24991.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:47:10 | Side: SELL | Qty: 1 | POS: -35 -> -36 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24990.75 Ask: 24991.25 Last: 24991.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:49:55 | Side: SELL | Qty: 1 | POS: -36 -> -37 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24985.25 Ask: 24986.25 Last: 24984.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:49:55 | Side: SELL | Qty: 1 | POS: -37 -> -38 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24985.25 Ask: 24986.25 Last: 24984.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:51:15 | Side: SELL | Qty: 1 | POS: -38 -> -39 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.75 Ask: 24974.75 Last: 24975.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:51:15 | Side: SELL | Qty: 1 | POS: -39 -> -40 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.75 Ask: 24974.75 Last: 24975.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:54:01 | Side: SELL | Qty: 1 | POS: -40 -> -41 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24967.50 Ask: 24968.25 Last: 24967.75. Fill based on queue
+[OVERLIMIT] 20:54:01 | Side: SELL | Qty: 1 | POS: -41 -> -42 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24967.50 Ask: 24968.25 Last: 24967.75. Fill based on queue
+[OVERLIMIT] 20:54:16 | Side: SELL | Qty: 1 | POS: -42 -> -43 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.75 Last: 24957.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:54:16 | Side: SELL | Qty: 1 | POS: -43 -> -44 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.75 Last: 24957.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:55:11 | Side: SELL | Qty: 1 | POS: -44 -> -45 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24960.75 Ask: 24961.75 Last: 24961.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 20:55:11 | Side: SELL | Qty: 1 | POS: -45 -> -46 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24960.75 Ask: 24961.75 Last: 24961.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:06:02 | Side: SELL | Qty: 1 | POS: -46 -> -47 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.00 Last: 24956.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:06:02 | Side: SELL | Qty: 1 | POS: -47 -> -48 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.00 Last: 24956.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:06:31 | Side: SELL | Qty: 1 | POS: -48 -> -49 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:06:31 | Side: SELL | Qty: 1 | POS: -49 -> -50 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:12:03 | Side: SELL | Qty: 1 | POS: -50 -> -51 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25001.25 Ask: 25002.50 Last: 25002.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:12:03 | Side: SELL | Qty: 1 | POS: -51 -> -52 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25001.25 Ask: 25002.50 Last: 25002.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:18:03 | Side: SELL | Qty: 1 | POS: -52 -> -53 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25009.00 Ask: 25009.75 Last: 25009.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:18:03 | Side: SELL | Qty: 1 | POS: -53 -> -54 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25009.00 Ask: 25009.75 Last: 25009.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:18:31 | Side: SELL | Qty: 1 | POS: -54 -> -55 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25002.50 Ask: 25003.75 Last: 25002.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:18:31 | Side: SELL | Qty: 1 | POS: -55 -> -56 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25002.50 Ask: 25003.75 Last: 25002.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:33:14 | Side: SELL | Qty: 1 | POS: -56 -> -57 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24981.00 Ask: 24981.75 Last: 24982.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:33:14 | Side: SELL | Qty: 1 | POS: -57 -> -58 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24981.00 Ask: 24981.75 Last: 24982.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:35:16 | Side: SELL | Qty: 1 | POS: -58 -> -59 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24987.00 Ask: 24988.50 Last: 24989.25. Fill based on queue
+[OVERLIMIT] 21:35:16 | Side: SELL | Qty: 1 | POS: -59 -> -60 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24987.00 Ask: 24988.50 Last: 24989.25. Fill based on queue
+[OVERLIMIT] 21:37:36 | Side: SELL | Qty: 1 | POS: -60 -> -61 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.00 Ask: 24983.00 Last: 24982.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:37:36 | Side: SELL | Qty: 1 | POS: -61 -> -62 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.00 Ask: 24983.00 Last: 24982.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:45:24 | Side: SELL | Qty: 1 | POS: -62 -> -63 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.50 Ask: 24974.00 Last: 24973.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:45:24 | Side: SELL | Qty: 1 | POS: -63 -> -64 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24973.50 Ask: 24974.00 Last: 24973.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:48:54 | Side: SELL | Qty: 1 | POS: -64 -> -65 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.75 Ask: 24967.25 Last: 24966.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:48:54 | Side: SELL | Qty: 1 | POS: -65 -> -66 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.75 Ask: 24967.25 Last: 24966.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:49:45 | Side: SELL | Qty: 1 | POS: -66 -> -67 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.75 Ask: 24959.50 Last: 24959.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:49:45 | Side: SELL | Qty: 1 | POS: -67 -> -68 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.75 Ask: 24959.50 Last: 24959.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:53:03 | Side: SELL | Qty: 1 | POS: -68 -> -69 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:53:03 | Side: SELL | Qty: 1 | POS: -69 -> -70 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:54:19 | Side: SELL | Qty: 1 | POS: -70 -> -71 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24970.50 Ask: 24971.50 Last: 24971.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 21:54:19 | Side: SELL | Qty: 1 | POS: -71 -> -72 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24970.50 Ask: 24971.50 Last: 24971.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:01:37 | Side: SELL | Qty: 1 | POS: -72 -> -73 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24960.25 Ask: 24960.75 Last: 24960.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:01:37 | Side: SELL | Qty: 1 | POS: -73 -> -74 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24960.25 Ask: 24960.75 Last: 24960.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:04:42 | Side: SELL | Qty: 1 | POS: -74 -> -75 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.50 Ask: 24959.50 Last: 24959.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:04:42 | Side: SELL | Qty: 1 | POS: -75 -> -76 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.50 Ask: 24959.50 Last: 24959.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:06:10 | Side: SELL | Qty: 1 | POS: -76 -> -77 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24951.75 Ask: 24952.50 Last: 24952.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:06:10 | Side: SELL | Qty: 1 | POS: -77 -> -78 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24951.75 Ask: 24952.50 Last: 24952.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:06:23 | Side: SELL | Qty: 1 | POS: -78 -> -79 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24945.00 Ask: 24948.00 Last: 24944.75. Fill based on queue
+[OVERLIMIT] 22:06:23 | Side: SELL | Qty: 1 | POS: -79 -> -80 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24945.00 Ask: 24948.00 Last: 24944.75. Fill based on queue
+[OVERLIMIT] 22:08:03 | Side: SELL | Qty: 1 | POS: -80 -> -81 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24954.25 Ask: 24955.00 Last: 24955.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:08:03 | Side: SELL | Qty: 1 | POS: -81 -> -82 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24954.25 Ask: 24955.00 Last: 24955.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:48:00 | Side: SELL | Qty: 1 | POS: -82 -> -83 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24926.50 Ask: 24927.50 Last: 24926.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:48:00 | Side: SELL | Qty: 1 | POS: -83 -> -84 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24926.50 Ask: 24927.50 Last: 24926.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:51:21 | Side: SELL | Qty: 1 | POS: -84 -> -85 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24931.25 Ask: 24932.50 Last: 24932.50. Fill based on queue
+[OVERLIMIT] 22:51:21 | Side: SELL | Qty: 1 | POS: -85 -> -86 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24931.25 Ask: 24932.50 Last: 24932.50. Fill based on queue
+[OVERLIMIT] 22:51:42 | Side: SELL | Qty: 1 | POS: -86 -> -87 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24938.75 Ask: 24939.00 Last: 24938.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:51:42 | Side: SELL | Qty: 1 | POS: -87 -> -88 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24938.75 Ask: 24939.00 Last: 24938.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:58:35 | Side: SELL | Qty: 1 | POS: -88 -> -89 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24941.00 Ask: 24941.50 Last: 24941.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 22:58:35 | Side: SELL | Qty: 1 | POS: -89 -> -90 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24941.00 Ask: 24941.50 Last: 24941.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:19:16 | Side: SELL | Qty: 1 | POS: -90 -> -91 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.00 Last: 24957.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:19:16 | Side: SELL | Qty: 1 | POS: -91 -> -92 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.00 Ask: 24958.00 Last: 24957.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:22:24 | Side: SELL | Qty: 1 | POS: -92 -> -93 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.00 Ask: 24963.50 Last: 24963.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:22:24 | Side: SELL | Qty: 1 | POS: -93 -> -94 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.00 Ask: 24963.50 Last: 24963.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:33:37 | Side: SELL | Qty: 1 | POS: -94 -> -95 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24968.75 Ask: 24969.50 Last: 24969.50. Fill based on queue
+[OVERLIMIT] 23:33:37 | Side: SELL | Qty: 1 | POS: -95 -> -96 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24968.75 Ask: 24969.50 Last: 24969.50. Fill based on queue
+[OVERLIMIT] 23:37:35 | Side: SELL | Qty: 1 | POS: -96 -> -97 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.25 Ask: 24964.25 Last: 24963.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:37:35 | Side: SELL | Qty: 1 | POS: -97 -> -98 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.25 Ask: 24964.25 Last: 24963.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:42:26 | Side: SELL | Qty: 1 | POS: -98 -> -99 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24975.25 Ask: 24976.00 Last: 24975.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:42:26 | Side: SELL | Qty: 1 | POS: -99 -> -100 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24975.25 Ask: 24976.00 Last: 24975.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:42:48 | Side: SELL | Qty: 1 | POS: -100 -> -101 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24980.75 Ask: 24981.25 Last: 24981.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:42:48 | Side: SELL | Qty: 1 | POS: -101 -> -102 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24980.75 Ask: 24981.25 Last: 24981.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:44:02 | Side: SELL | Qty: 1 | POS: -102 -> -103 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.50 Ask: 24988.25 Last: 24989.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 23:44:02 | Side: SELL | Qty: 1 | POS: -103 -> -104 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.50 Ask: 24988.25 Last: 24989.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:02:02 | Side: SELL | Qty: 1 | POS: -104 -> -105 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24980.00 Ask: 24980.50 Last: 24980.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:02:02 | Side: SELL | Qty: 1 | POS: -105 -> -106 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24980.00 Ask: 24980.50 Last: 24980.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:14:43 | Side: SELL | Qty: 1 | POS: -106 -> -107 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.25 Ask: 24987.00 Last: 24987.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:14:43 | Side: SELL | Qty: 1 | POS: -107 -> -108 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.25 Ask: 24987.00 Last: 24987.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:24:02 | Side: SELL | Qty: 1 | POS: -108 -> -109 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.00 Ask: 24982.75 Last: 24983.00. Fill based on queue
+[OVERLIMIT] 00:24:02 | Side: SELL | Qty: 1 | POS: -109 -> -110 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24982.00 Ask: 24982.75 Last: 24983.00. Fill based on queue
+[OVERLIMIT] 00:25:10 | Side: SELL | Qty: 1 | POS: -110 -> -111 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.25 Ask: 24977.00 Last: 24976.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:25:10 | Side: SELL | Qty: 1 | POS: -111 -> -112 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.25 Ask: 24977.00 Last: 24976.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:27:47 | Side: SELL | Qty: 1 | POS: -112 -> -113 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.25 Ask: 24976.75 Last: 24976.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:27:47 | Side: SELL | Qty: 1 | POS: -113 -> -114 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.25 Ask: 24976.75 Last: 24976.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:42:04 | Side: SELL | Qty: 1 | POS: -114 -> -115 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24990.50 Ask: 24991.50 Last: 24991.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:42:04 | Side: SELL | Qty: 1 | POS: -115 -> -116 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24990.50 Ask: 24991.50 Last: 24991.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:46:20 | Side: SELL | Qty: 1 | POS: -116 -> -117 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.00 Ask: 24976.75 Last: 24976.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:46:20 | Side: SELL | Qty: 1 | POS: -117 -> -118 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.00 Ask: 24976.75 Last: 24976.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:56:12 | Side: SELL | Qty: 1 | POS: -118 -> -119 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.00 Ask: 24988.75 Last: 24988.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 00:56:12 | Side: SELL | Qty: 1 | POS: -119 -> -120 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.00 Ask: 24988.75 Last: 24988.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:00:21 | Side: SELL | Qty: 1 | POS: -120 -> -121 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24979.50 Ask: 24980.50 Last: 24979.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:00:21 | Side: SELL | Qty: 1 | POS: -121 -> -122 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24979.50 Ask: 24980.50 Last: 24979.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:16:33 | Side: SELL | Qty: 1 | POS: -122 -> -123 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.00 Ask: 24977.00 Last: 24975.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:16:33 | Side: SELL | Qty: 1 | POS: -123 -> -124 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24976.00 Ask: 24977.00 Last: 24975.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:19:17 | Side: SELL | Qty: 1 | POS: -124 -> -125 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24984.50 Ask: 24985.00 Last: 24985.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:19:17 | Side: SELL | Qty: 1 | POS: -125 -> -126 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24984.50 Ask: 24985.00 Last: 24985.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:25:19 | Side: SELL | Qty: 1 | POS: -126 -> -127 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.25 Ask: 24973.00 Last: 24971.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:25:19 | Side: SELL | Qty: 1 | POS: -127 -> -128 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.25 Ask: 24973.00 Last: 24971.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:27:34 | Side: SELL | Qty: 1 | POS: -128 -> -129 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24981.25 Ask: 24981.75 Last: 24981.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:27:34 | Side: SELL | Qty: 1 | POS: -129 -> -130 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24981.25 Ask: 24981.75 Last: 24981.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:46:58 | Side: SELL | Qty: 1 | POS: -130 -> -131 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24975.25 Ask: 24976.25 Last: 24975.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:46:58 | Side: SELL | Qty: 1 | POS: -131 -> -132 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24975.25 Ask: 24976.25 Last: 24975.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:48:36 | Side: SELL | Qty: 1 | POS: -132 -> -133 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24970.75 Ask: 24971.25 Last: 24971.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:48:36 | Side: SELL | Qty: 1 | POS: -133 -> -134 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24970.75 Ask: 24971.25 Last: 24971.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:48:52 | Side: SELL | Qty: 1 | POS: -134 -> -135 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.00 Ask: 24967.00 Last: 24965.50. Fill based on queue
+[OVERLIMIT] 01:48:52 | Side: SELL | Qty: 1 | POS: -135 -> -136 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.00 Ask: 24967.00 Last: 24965.50. Fill based on queue
+[OVERLIMIT] 01:50:08 | Side: SELL | Qty: 1 | POS: -136 -> -137 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.00 Ask: 24973.00 Last: 24973.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:50:08 | Side: SELL | Qty: 1 | POS: -137 -> -138 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.00 Ask: 24973.00 Last: 24973.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:54:07 | Side: SELL | Qty: 1 | POS: -138 -> -139 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24955.00 Ask: 24956.00 Last: 24955.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:54:07 | Side: SELL | Qty: 1 | POS: -139 -> -140 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24955.00 Ask: 24956.00 Last: 24955.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:57:27 | Side: SELL | Qty: 1 | POS: -140 -> -141 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 01:57:27 | Side: SELL | Qty: 1 | POS: -141 -> -142 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24969.00 Ask: 24969.50 Last: 24969.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:00:02 | Side: SELL | Qty: 1 | POS: -142 -> -143 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24984.50 Ask: 24985.75 Last: 24985.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:00:02 | Side: SELL | Qty: 1 | POS: -143 -> -144 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24984.50 Ask: 24985.75 Last: 24985.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:00:12 | Side: SELL | Qty: 1 | POS: -144 -> -145 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.75 Ask: 24990.00 Last: 24989.75. Fill based on queue
+[OVERLIMIT] 02:00:12 | Side: SELL | Qty: 1 | POS: -145 -> -146 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.75 Ask: 24990.00 Last: 24989.75. Fill based on queue
+[OVERLIMIT] 02:00:34 | Side: SELL | Qty: 1 | POS: -146 -> -147 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24994.50 Ask: 24995.50 Last: 24995.50. Fill based on queue
+[OVERLIMIT] 02:00:34 | Side: SELL | Qty: 1 | POS: -147 -> -148 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24994.50 Ask: 24995.50 Last: 24995.50. Fill based on queue
+[OVERLIMIT] 02:02:05 | Side: SELL | Qty: 1 | POS: -148 -> -149 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24997.75 Ask: 24998.25 Last: 24997.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:02:05 | Side: SELL | Qty: 1 | POS: -149 -> -150 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24997.75 Ask: 24998.25 Last: 24997.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:12:14 | Side: SELL | Qty: 1 | POS: -150 -> -151 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25019.75 Ask: 25020.50 Last: 25019.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:12:14 | Side: SELL | Qty: 1 | POS: -151 -> -152 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25019.75 Ask: 25020.50 Last: 25019.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:12:41 | Side: SELL | Qty: 1 | POS: -152 -> -153 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25024.50 Ask: 25025.25 Last: 25025.00. Fill based on queue
+[OVERLIMIT] 02:12:41 | Side: SELL | Qty: 1 | POS: -153 -> -154 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25024.50 Ask: 25025.25 Last: 25025.00. Fill based on queue
+[OVERLIMIT] 02:12:48 | Side: SELL | Qty: 1 | POS: -154 -> -155 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25019.75 Ask: 25020.50 Last: 25020.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:12:48 | Side: SELL | Qty: 1 | POS: -155 -> -156 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25019.75 Ask: 25020.50 Last: 25020.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:15:23 | Side: SELL | Qty: 1 | POS: -156 -> -157 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25025.50 Ask: 25026.00 Last: 25026.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:15:23 | Side: SELL | Qty: 1 | POS: -157 -> -158 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25025.50 Ask: 25026.00 Last: 25026.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:18:14 | Side: SELL | Qty: 1 | POS: -158 -> -159 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25030.00 Ask: 25030.75 Last: 25030.75. Fill based on queue
+[OVERLIMIT] 02:18:14 | Side: SELL | Qty: 1 | POS: -159 -> -160 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25030.00 Ask: 25030.75 Last: 25030.75. Fill based on queue
+[OVERLIMIT] 02:18:56 | Side: SELL | Qty: 1 | POS: -160 -> -161 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25026.25 Ask: 25027.00 Last: 25026.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:18:56 | Side: SELL | Qty: 1 | POS: -161 -> -162 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25026.25 Ask: 25027.00 Last: 25026.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:26:26 | Side: SELL | Qty: 1 | POS: -162 -> -163 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25038.00 Ask: 25039.00 Last: 25038.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 02:26:26 | Side: SELL | Qty: 1 | POS: -163 -> -164 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25038.00 Ask: 25039.00 Last: 25038.75. Text: Tag: AT_NQ_TM
+[NOTELESS] 02:26:26 | Side: SELL | Qty: 1 | POS: -164 -> -165 | Msg: Trade simulation fill. Bid: 25038.00 Ask: 25039.00 Last: 25038.75
+[NOTELESS] 03:05:08 | Side: SELL | Qty: 1 | POS: -165 -> -166 | Msg: Trade simulation fill. Bid: 25017.75 Ask: 25018.75 Last: 25017.75
+[NOTELESS] 03:23:35 | Side: SELL | Qty: 1 | POS: -166 -> -167 | Msg: Trade simulation fill. Bid: 25044.25 Ask: 25044.75 Last: 25044.50
+[NOTELESS] 03:43:04 | Side: SELL | Qty: 1 | POS: -167 -> -168 | Msg: Trade simulation fill. Bid: 25050.50 Ask: 25051.00 Last: 25050.25
+[NOTELESS] 04:05:56 | Side: SELL | Qty: 1 | POS: -168 -> -169 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25045.75 Ask: 25046.75 Last: 25046.50
+[NOTELESS] 04:05:56 | Side: SELL | Qty: 1 | POS: -169 -> -170 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25045.75 Ask: 25046.75 Last: 25046.50
+[OVERLIMIT] 04:18:31 | Side: SELL | Qty: 1 | POS: -170 -> -171 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25030.75 Ask: 25031.75 Last: 25031.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:18:31 | Side: SELL | Qty: 1 | POS: -171 -> -172 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25030.75 Ask: 25031.75 Last: 25031.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:18:46 | Side: SELL | Qty: 1 | POS: -172 -> -173 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25036.75 Ask: 25037.50 Last: 25037.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:18:46 | Side: SELL | Qty: 1 | POS: -173 -> -174 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25036.75 Ask: 25037.50 Last: 25037.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:46:08 | Side: SELL | Qty: 1 | POS: -174 -> -175 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25081.25 Ask: 25082.00 Last: 25081.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:46:08 | Side: SELL | Qty: 1 | POS: -175 -> -176 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25081.25 Ask: 25082.00 Last: 25081.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:46:11 | Side: SELL | Qty: 1 | POS: -176 -> -177 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.75 Ask: 25084.50 Last: 25084.50. Fill based on queue
+[OVERLIMIT] 04:46:11 | Side: SELL | Qty: 1 | POS: -177 -> -178 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.75 Ask: 25084.50 Last: 25084.50. Fill based on queue
+[OVERLIMIT] 04:46:12 | Side: SELL | Qty: 1 | POS: -178 -> -179 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25080.75 Ask: 25081.75 Last: 25082.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:46:12 | Side: SELL | Qty: 1 | POS: -179 -> -180 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25080.75 Ask: 25081.75 Last: 25082.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:52:27 | Side: SELL | Qty: 1 | POS: -180 -> -181 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.75 Ask: 25091.75 Last: 25092.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:52:27 | Side: SELL | Qty: 1 | POS: -181 -> -182 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.75 Ask: 25091.75 Last: 25092.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:52:46 | Side: SELL | Qty: 1 | POS: -182 -> -183 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25093.75 Ask: 25094.25 Last: 25094.50. Fill based on queue
+[OVERLIMIT] 04:52:46 | Side: SELL | Qty: 1 | POS: -183 -> -184 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25093.75 Ask: 25094.25 Last: 25094.50. Fill based on queue
+[OVERLIMIT] 04:54:47 | Side: SELL | Qty: 1 | POS: -184 -> -185 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.00 Ask: 25092.75 Last: 25092.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 04:54:47 | Side: SELL | Qty: 1 | POS: -185 -> -186 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.00 Ask: 25092.75 Last: 25092.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:00:00 | Side: SELL | Qty: 1 | POS: -186 -> -187 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.75 Ask: 25097.50 Last: 25097.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:00:00 | Side: SELL | Qty: 1 | POS: -187 -> -188 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.75 Ask: 25097.50 Last: 25097.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:03:31 | Side: SELL | Qty: 1 | POS: -188 -> -189 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.25 Ask: 25091.75 Last: 25091.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:03:31 | Side: SELL | Qty: 1 | POS: -189 -> -190 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.25 Ask: 25091.75 Last: 25091.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:15:39 | Side: SELL | Qty: 1 | POS: -190 -> -191 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25071.75 Ask: 25072.75 Last: 25071.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:15:39 | Side: SELL | Qty: 1 | POS: -191 -> -192 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25071.75 Ask: 25072.75 Last: 25071.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:23:44 | Side: SELL | Qty: 1 | POS: -192 -> -193 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25067.50 Ask: 25068.25 Last: 25069.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:23:44 | Side: SELL | Qty: 1 | POS: -193 -> -194 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25067.50 Ask: 25068.25 Last: 25069.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:23:51 | Side: SELL | Qty: 1 | POS: -194 -> -195 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25070.75 Ask: 25071.50 Last: 25071.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:23:51 | Side: SELL | Qty: 1 | POS: -195 -> -196 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25070.75 Ask: 25071.50 Last: 25071.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:30:00 | Side: SELL | Qty: 1 | POS: -196 -> -197 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25084.75 Ask: 25085.50 Last: 25085.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:30:00 | Side: SELL | Qty: 1 | POS: -197 -> -198 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25084.75 Ask: 25085.50 Last: 25085.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:31:24 | Side: SELL | Qty: 1 | POS: -198 -> -199 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25089.50 Ask: 25090.00 Last: 25089.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:31:24 | Side: SELL | Qty: 1 | POS: -199 -> -200 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25089.50 Ask: 25090.00 Last: 25089.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:32:34 | Side: SELL | Qty: 1 | POS: -200 -> -201 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25094.25 Ask: 25094.75 Last: 25094.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:32:34 | Side: SELL | Qty: 1 | POS: -201 -> -202 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25094.25 Ask: 25094.75 Last: 25094.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:35:30 | Side: SELL | Qty: 1 | POS: -202 -> -203 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25086.25 Ask: 25086.75 Last: 25086.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 05:35:30 | Side: SELL | Qty: 1 | POS: -203 -> -204 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25086.25 Ask: 25086.75 Last: 25086.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:09:15 | Side: SELL | Qty: 1 | POS: -204 -> -205 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25089.25 Ask: 25090.25 Last: 25089.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:09:15 | Side: SELL | Qty: 1 | POS: -205 -> -206 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25089.25 Ask: 25090.25 Last: 25089.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:13:02 | Side: SELL | Qty: 1 | POS: -206 -> -207 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25093.00 Ask: 25094.00 Last: 25093.00. Fill based on queue
+[OVERLIMIT] 06:13:02 | Side: SELL | Qty: 1 | POS: -207 -> -208 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25093.00 Ask: 25094.00 Last: 25093.00. Fill based on queue
+[OVERLIMIT] 06:13:53 | Side: SELL | Qty: 1 | POS: -208 -> -209 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.50 Ask: 25091.25 Last: 25090.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:13:53 | Side: SELL | Qty: 1 | POS: -209 -> -210 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.50 Ask: 25091.25 Last: 25090.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:25:20 | Side: SELL | Qty: 1 | POS: -210 -> -211 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25086.75 Ask: 25087.75 Last: 25086.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:25:20 | Side: SELL | Qty: 1 | POS: -211 -> -212 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25086.75 Ask: 25087.75 Last: 25086.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:25:47 | Side: SELL | Qty: 1 | POS: -212 -> -213 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.00 Ask: 25083.25 Last: 25083.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:25:47 | Side: SELL | Qty: 1 | POS: -213 -> -214 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.00 Ask: 25083.25 Last: 25083.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:25:53 | Side: SELL | Qty: 1 | POS: -214 -> -215 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25079.00 Ask: 25081.25 Last: 25079.00. Fill based on queue
+[OVERLIMIT] 06:25:53 | Side: SELL | Qty: 1 | POS: -215 -> -216 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25079.00 Ask: 25081.25 Last: 25079.00. Fill based on queue
+[OVERLIMIT] 06:26:59 | Side: SELL | Qty: 1 | POS: -216 -> -217 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25084.25 Ask: 25085.00 Last: 25085.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:26:59 | Side: SELL | Qty: 1 | POS: -217 -> -218 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25084.25 Ask: 25085.00 Last: 25085.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:34:18 | Side: SELL | Qty: 1 | POS: -218 -> -219 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25095.00 Ask: 25095.75 Last: 25095.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:34:18 | Side: SELL | Qty: 1 | POS: -219 -> -220 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25095.00 Ask: 25095.75 Last: 25095.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:35:11 | Side: SELL | Qty: 1 | POS: -220 -> -221 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25098.50 Ask: 25099.25 Last: 25099.25. Fill based on queue
+[OVERLIMIT] 06:35:11 | Side: SELL | Qty: 1 | POS: -221 -> -222 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25098.50 Ask: 25099.25 Last: 25099.25. Fill based on queue
+[OVERLIMIT] 06:37:32 | Side: SELL | Qty: 1 | POS: -222 -> -223 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.25 Ask: 25097.00 Last: 25096.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:37:32 | Side: SELL | Qty: 1 | POS: -223 -> -224 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.25 Ask: 25097.00 Last: 25096.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:39:29 | Side: SELL | Qty: 1 | POS: -224 -> -225 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.50 Ask: 25093.25 Last: 25093.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:39:29 | Side: SELL | Qty: 1 | POS: -225 -> -226 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.50 Ask: 25093.25 Last: 25093.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:43:20 | Side: SELL | Qty: 1 | POS: -226 -> -227 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25088.25 Ask: 25089.00 Last: 25089.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:43:20 | Side: SELL | Qty: 1 | POS: -227 -> -228 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25088.25 Ask: 25089.00 Last: 25089.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:43:42 | Side: SELL | Qty: 1 | POS: -228 -> -229 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.75 Ask: 25084.50 Last: 25084.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:43:42 | Side: SELL | Qty: 1 | POS: -229 -> -230 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.75 Ask: 25084.50 Last: 25084.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:46:23 | Side: SELL | Qty: 1 | POS: -230 -> -231 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.00 Ask: 25091.75 Last: 25091.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 06:46:23 | Side: SELL | Qty: 1 | POS: -231 -> -232 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.00 Ask: 25091.75 Last: 25091.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:00:15 | Side: SELL | Qty: 1 | POS: -232 -> -233 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25103.75 Ask: 25106.00 Last: 25106.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:00:15 | Side: SELL | Qty: 1 | POS: -233 -> -234 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25103.75 Ask: 25106.00 Last: 25106.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:01:56 | Side: SELL | Qty: 1 | POS: -234 -> -235 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.75 Ask: 25097.25 Last: 25096.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:01:56 | Side: SELL | Qty: 1 | POS: -235 -> -236 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.75 Ask: 25097.25 Last: 25096.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:04:10 | Side: SELL | Qty: 1 | POS: -236 -> -237 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25106.75 Ask: 25107.50 Last: 25107.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:04:10 | Side: SELL | Qty: 1 | POS: -237 -> -238 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25106.75 Ask: 25107.50 Last: 25107.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:05:05 | Side: SELL | Qty: 1 | POS: -238 -> -239 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25111.25 Ask: 25111.75 Last: 25111.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:05:05 | Side: SELL | Qty: 1 | POS: -239 -> -240 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25111.25 Ask: 25111.75 Last: 25111.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:05:52 | Side: SELL | Qty: 1 | POS: -240 -> -241 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25107.50 Ask: 25108.25 Last: 25107.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:05:52 | Side: SELL | Qty: 1 | POS: -241 -> -242 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25107.50 Ask: 25108.25 Last: 25107.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:37:30 | Side: SELL | Qty: 1 | POS: -242 -> -243 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25100.25 Ask: 25101.25 Last: 25101.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:37:30 | Side: SELL | Qty: 1 | POS: -243 -> -244 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25100.25 Ask: 25101.25 Last: 25101.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:43:40 | Side: SELL | Qty: 1 | POS: -244 -> -245 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25104.50 Ask: 25105.25 Last: 25104.75. Fill based on queue
+[OVERLIMIT] 07:43:40 | Side: SELL | Qty: 1 | POS: -245 -> -246 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25104.50 Ask: 25105.25 Last: 25104.75. Fill based on queue
+[OVERLIMIT] 07:45:02 | Side: SELL | Qty: 1 | POS: -246 -> -247 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25101.50 Ask: 25102.25 Last: 25101.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:45:02 | Side: SELL | Qty: 1 | POS: -247 -> -248 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25101.50 Ask: 25102.25 Last: 25101.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:51:54 | Side: SELL | Qty: 1 | POS: -248 -> -249 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.75 Ask: 25093.25 Last: 25093.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:51:54 | Side: SELL | Qty: 1 | POS: -249 -> -250 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.75 Ask: 25093.25 Last: 25093.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:52:35 | Side: SELL | Qty: 1 | POS: -250 -> -251 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25088.50 Ask: 25089.00 Last: 25089.00. Fill based on queue
+[OVERLIMIT] 07:52:35 | Side: SELL | Qty: 1 | POS: -251 -> -252 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25088.50 Ask: 25089.00 Last: 25089.00. Fill based on queue
+[OVERLIMIT] 07:53:08 | Side: SELL | Qty: 1 | POS: -252 -> -253 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.50 Ask: 25092.50 Last: 25092.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 07:53:08 | Side: SELL | Qty: 1 | POS: -253 -> -254 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.50 Ask: 25092.50 Last: 25092.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:10:23 | Side: SELL | Qty: 1 | POS: -254 -> -255 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.75 Ask: 25091.50 Last: 25091.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:10:23 | Side: SELL | Qty: 1 | POS: -255 -> -256 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25090.75 Ask: 25091.50 Last: 25091.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:10:30 | Side: SELL | Qty: 1 | POS: -256 -> -257 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25094.00 Ask: 25096.50 Last: 25096.75. Fill based on queue
+[OVERLIMIT] 08:10:30 | Side: SELL | Qty: 1 | POS: -257 -> -258 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25094.00 Ask: 25096.50 Last: 25096.75. Fill based on queue
+[OVERLIMIT] 08:11:15 | Side: SELL | Qty: 1 | POS: -258 -> -259 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.75 Ask: 25092.50 Last: 25091.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:11:15 | Side: SELL | Qty: 1 | POS: -259 -> -260 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.75 Ask: 25092.50 Last: 25091.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:12:20 | Side: SELL | Qty: 1 | POS: -260 -> -261 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25098.75 Ask: 25099.75 Last: 25099.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:12:20 | Side: SELL | Qty: 1 | POS: -261 -> -262 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25098.75 Ask: 25099.75 Last: 25099.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:13:19 | Side: SELL | Qty: 1 | POS: -262 -> -263 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25104.75 Ask: 25105.25 Last: 25105.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:13:19 | Side: SELL | Qty: 1 | POS: -263 -> -264 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25104.75 Ask: 25105.25 Last: 25105.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:15:10 | Side: SELL | Qty: 1 | POS: -264 -> -265 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25109.75 Ask: 25110.50 Last: 25110.50. Fill based on queue
+[OVERLIMIT] 08:15:10 | Side: SELL | Qty: 1 | POS: -265 -> -266 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25109.75 Ask: 25110.50 Last: 25110.50. Fill based on queue
+[OVERLIMIT] 08:17:35 | Side: SELL | Qty: 1 | POS: -266 -> -267 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25110.25 Ask: 25111.25 Last: 25110.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:17:35 | Side: SELL | Qty: 1 | POS: -267 -> -268 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25110.25 Ask: 25111.25 Last: 25110.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:20:59 | Side: SELL | Qty: 1 | POS: -268 -> -269 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25100.00 Ask: 25101.00 Last: 25100.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:20:59 | Side: SELL | Qty: 1 | POS: -269 -> -270 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25100.00 Ask: 25101.00 Last: 25100.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:24:10 | Side: SELL | Qty: 1 | POS: -270 -> -271 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25111.25 Ask: 25111.75 Last: 25111.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:24:10 | Side: SELL | Qty: 1 | POS: -271 -> -272 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25111.25 Ask: 25111.75 Last: 25111.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:37:27 | Side: SELL | Qty: 1 | POS: -272 -> -273 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25185.50 Ask: 25186.25 Last: 25185.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:37:27 | Side: SELL | Qty: 1 | POS: -273 -> -274 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25185.50 Ask: 25186.25 Last: 25185.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:38:07 | Side: SELL | Qty: 1 | POS: -274 -> -275 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25192.25 Ask: 25193.00 Last: 25192.25. Fill based on queue
+[OVERLIMIT] 08:38:07 | Side: SELL | Qty: 1 | POS: -275 -> -276 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25192.25 Ask: 25193.00 Last: 25192.25. Fill based on queue
+[OVERLIMIT] 08:38:30 | Side: SELL | Qty: 1 | POS: -276 -> -277 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25200.25 Ask: 25201.25 Last: 25201.00. Fill based on queue
+[OVERLIMIT] 08:38:30 | Side: SELL | Qty: 1 | POS: -277 -> -278 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25200.25 Ask: 25201.25 Last: 25201.00. Fill based on queue
+[OVERLIMIT] 08:38:56 | Side: SELL | Qty: 1 | POS: -278 -> -279 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25209.75 Ask: 25210.75 Last: 25209.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:38:56 | Side: SELL | Qty: 1 | POS: -279 -> -280 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25209.75 Ask: 25210.75 Last: 25209.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:39:41 | Side: SELL | Qty: 1 | POS: -280 -> -281 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25219.00 Last: 25218.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:39:41 | Side: SELL | Qty: 1 | POS: -281 -> -282 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25219.00 Last: 25218.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:40:11 | Side: SELL | Qty: 1 | POS: -282 -> -283 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25226.00 Ask: 25226.75 Last: 25226.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:40:11 | Side: SELL | Qty: 1 | POS: -283 -> -284 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25226.00 Ask: 25226.75 Last: 25226.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:40:17 | Side: SELL | Qty: 1 | POS: -284 -> -285 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25234.00 Ask: 25235.00 Last: 25234.75. Fill based on queue
+[OVERLIMIT] 08:40:17 | Side: SELL | Qty: 1 | POS: -285 -> -286 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25234.00 Ask: 25235.00 Last: 25234.75. Fill based on queue
+[OVERLIMIT] 08:40:38 | Side: SELL | Qty: 1 | POS: -286 -> -287 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25230.25 Ask: 25231.25 Last: 25230.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:40:38 | Side: SELL | Qty: 1 | POS: -287 -> -288 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25230.25 Ask: 25231.25 Last: 25230.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:43:01 | Side: SELL | Qty: 1 | POS: -288 -> -289 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25244.50 Ask: 25245.75 Last: 25245.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:43:01 | Side: SELL | Qty: 1 | POS: -289 -> -290 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25244.50 Ask: 25245.75 Last: 25245.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:44:18 | Side: SELL | Qty: 1 | POS: -290 -> -291 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25252.50 Ask: 25253.25 Last: 25253.25. Fill based on queue
+[OVERLIMIT] 08:44:18 | Side: SELL | Qty: 1 | POS: -291 -> -292 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25252.50 Ask: 25253.25 Last: 25253.25. Fill based on queue
+[OVERLIMIT] 08:44:35 | Side: SELL | Qty: 1 | POS: -292 -> -293 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25246.25 Ask: 25247.00 Last: 25246.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:44:35 | Side: SELL | Qty: 1 | POS: -293 -> -294 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25246.25 Ask: 25247.00 Last: 25246.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:52:48 | Side: SELL | Qty: 1 | POS: -294 -> -295 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25233.00 Ask: 25233.50 Last: 25233.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:52:48 | Side: SELL | Qty: 1 | POS: -295 -> -296 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25233.00 Ask: 25233.50 Last: 25233.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:53:19 | Side: SELL | Qty: 1 | POS: -296 -> -297 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25225.00 Ask: 25226.25 Last: 25225.00. Fill based on queue
+[OVERLIMIT] 08:53:19 | Side: SELL | Qty: 1 | POS: -297 -> -298 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25225.00 Ask: 25226.25 Last: 25225.00. Fill based on queue
+[OVERLIMIT] 08:53:49 | Side: SELL | Qty: 1 | POS: -298 -> -299 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25232.50 Ask: 25232.75 Last: 25232.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 08:53:49 | Side: SELL | Qty: 1 | POS: -299 -> -300 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25232.50 Ask: 25232.75 Last: 25232.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 09:17:06 | Side: SELL | Qty: 1 | POS: -300 -> -301 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25250.75 Ask: 25251.25 Last: 25251.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 09:17:06 | Side: SELL | Qty: 1 | POS: -301 -> -302 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25250.75 Ask: 25251.25 Last: 25251.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 09:25:23 | Side: SELL | Qty: 1 | POS: -302 -> -303 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25272.75 Ask: 25273.25 Last: 25274.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 09:25:23 | Side: SELL | Qty: 1 | POS: -303 -> -304 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25272.75 Ask: 25273.25 Last: 25274.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:24:04 | Side: SELL | Qty: 1 | POS: -304 -> -305 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25263.25 Ask: 25263.75 Last: 25263.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:24:04 | Side: SELL | Qty: 1 | POS: -305 -> -306 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25263.25 Ask: 25263.75 Last: 25263.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:24:48 | Side: SELL | Qty: 1 | POS: -306 -> -307 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25277.75 Ask: 25278.50 Last: 25278.25. Fill based on queue
+[OVERLIMIT] 10:24:48 | Side: SELL | Qty: 1 | POS: -307 -> -308 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25277.75 Ask: 25278.50 Last: 25278.25. Fill based on queue
+[OVERLIMIT] 10:26:14 | Side: SELL | Qty: 1 | POS: -308 -> -309 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25296.75 Ask: 25297.25 Last: 25296.50. Fill based on queue
+[OVERLIMIT] 10:26:14 | Side: SELL | Qty: 1 | POS: -309 -> -310 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25296.75 Ask: 25297.25 Last: 25296.50. Fill based on queue
+[NOTELESS] 10:29:45 | Side: SELL | Qty: 1 | POS: -310 -> -311 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25316.50 Ask: 25317.00 Last: 25316.50
+[NOTELESS] 10:29:45 | Side: SELL | Qty: 1 | POS: -311 -> -312 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25316.50 Ask: 25317.00 Last: 25316.50
+[OVERLIMIT] 10:55:11 | Side: SELL | Qty: 1 | POS: -312 -> -313 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25383.00 Ask: 25383.50 Last: 25383.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:55:11 | Side: SELL | Qty: 1 | POS: -313 -> -314 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25383.00 Ask: 25383.50 Last: 25383.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:57:10 | Side: SELL | Qty: 1 | POS: -314 -> -315 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25360.00 Ask: 25360.25 Last: 25359.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 10:57:10 | Side: SELL | Qty: 1 | POS: -315 -> -316 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25360.00 Ask: 25360.25 Last: 25359.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:06:07 | Side: SELL | Qty: 1 | POS: -316 -> -317 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25389.50 Ask: 25390.00 Last: 25389.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:06:07 | Side: SELL | Qty: 1 | POS: -317 -> -318 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25389.50 Ask: 25390.00 Last: 25389.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:11:49 | Side: SELL | Qty: 1 | POS: -318 -> -319 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25402.50 Ask: 25405.25 Last: 25405.50. Fill based on queue
+[OVERLIMIT] 11:11:49 | Side: SELL | Qty: 1 | POS: -319 -> -320 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25402.50 Ask: 25405.25 Last: 25405.50. Fill based on queue
+[OVERLIMIT] 11:14:10 | Side: SELL | Qty: 1 | POS: -320 -> -321 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25390.00 Ask: 25390.25 Last: 25390.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:14:10 | Side: SELL | Qty: 1 | POS: -321 -> -322 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25390.00 Ask: 25390.25 Last: 25390.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:36:04 | Side: SELL | Qty: 1 | POS: -322 -> -323 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25385.00 Ask: 25385.50 Last: 25385.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:36:04 | Side: SELL | Qty: 1 | POS: -323 -> -324 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25385.00 Ask: 25385.50 Last: 25385.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:36:47 | Side: SELL | Qty: 1 | POS: -324 -> -325 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25397.25 Ask: 25398.00 Last: 25397.00. Fill based on queue
+[OVERLIMIT] 11:36:47 | Side: SELL | Qty: 1 | POS: -325 -> -326 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25397.25 Ask: 25398.00 Last: 25397.00. Fill based on queue
+[OVERLIMIT] 11:39:44 | Side: SELL | Qty: 1 | POS: -326 -> -327 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25386.00 Ask: 25386.25 Last: 25385.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:39:44 | Side: SELL | Qty: 1 | POS: -327 -> -328 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25386.00 Ask: 25386.25 Last: 25385.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:51:05 | Side: SELL | Qty: 1 | POS: -328 -> -329 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25385.00 Ask: 25385.75 Last: 25384.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:51:05 | Side: SELL | Qty: 1 | POS: -329 -> -330 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25385.00 Ask: 25385.75 Last: 25384.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:52:34 | Side: SELL | Qty: 1 | POS: -330 -> -331 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25400.00 Ask: 25400.50 Last: 25400.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:52:34 | Side: SELL | Qty: 1 | POS: -331 -> -332 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25400.00 Ask: 25400.50 Last: 25400.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:54:13 | Side: SELL | Qty: 1 | POS: -332 -> -333 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25409.00 Ask: 25409.50 Last: 25409.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:54:13 | Side: SELL | Qty: 1 | POS: -333 -> -334 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25409.00 Ask: 25409.50 Last: 25409.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:56:43 | Side: SELL | Qty: 1 | POS: -334 -> -335 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25383.75 Ask: 25384.25 Last: 25383.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 11:56:43 | Side: SELL | Qty: 1 | POS: -335 -> -336 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25383.75 Ask: 25384.25 Last: 25383.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:00:17 | Side: SELL | Qty: 1 | POS: -336 -> -337 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25378.25 Ask: 25378.75 Last: 25377.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:00:17 | Side: SELL | Qty: 1 | POS: -337 -> -338 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25378.25 Ask: 25378.75 Last: 25377.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:01:52 | Side: SELL | Qty: 1 | POS: -338 -> -339 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25368.50 Ask: 25368.75 Last: 25368.50. Fill based on queue
+[OVERLIMIT] 12:01:52 | Side: SELL | Qty: 1 | POS: -339 -> -340 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25368.50 Ask: 25368.75 Last: 25368.50. Fill based on queue
+[OVERLIMIT] 12:04:12 | Side: SELL | Qty: 1 | POS: -340 -> -341 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25356.50 Ask: 25357.00 Last: 25356.75. Fill based on queue
+[OVERLIMIT] 12:04:12 | Side: SELL | Qty: 1 | POS: -341 -> -342 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25356.50 Ask: 25357.00 Last: 25356.75. Fill based on queue
+[OVERLIMIT] 12:08:18 | Side: SELL | Qty: 1 | POS: -342 -> -343 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25281.75 Ask: 25283.75 Last: 25280.25. Fill based on queue
+[OVERLIMIT] 12:08:18 | Side: SELL | Qty: 1 | POS: -343 -> -344 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25281.75 Ask: 25283.75 Last: 25280.25. Fill based on queue
+[OVERLIMIT] 12:08:19 | Side: SELL | Qty: 1 | POS: -344 -> -345 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25280.00 Ask: 25280.75 Last: 25280.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:08:19 | Side: SELL | Qty: 1 | POS: -345 -> -346 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25280.00 Ask: 25280.75 Last: 25280.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:08:58 | Side: SELL | Qty: 1 | POS: -346 -> -347 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25270.00 Ask: 25270.25 Last: 25270.25. Fill based on queue
+[OVERLIMIT] 12:08:58 | Side: SELL | Qty: 1 | POS: -347 -> -348 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25270.00 Ask: 25270.25 Last: 25270.25. Fill based on queue
+[OVERLIMIT] 12:09:34 | Side: SELL | Qty: 1 | POS: -348 -> -349 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25256.75 Ask: 25257.25 Last: 25257.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:09:34 | Side: SELL | Qty: 1 | POS: -349 -> -350 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25256.75 Ask: 25257.25 Last: 25257.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:10:01 | Side: SELL | Qty: 1 | POS: -350 -> -351 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25258.25 Ask: 25259.00 Last: 25259.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:10:01 | Side: SELL | Qty: 1 | POS: -351 -> -352 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25258.25 Ask: 25259.00 Last: 25259.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:50:59 | Side: SELL | Qty: 1 | POS: -352 -> -353 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25307.00 Ask: 25307.50 Last: 25307.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:50:59 | Side: SELL | Qty: 1 | POS: -353 -> -354 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25307.00 Ask: 25307.50 Last: 25307.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:58:30 | Side: SELL | Qty: 1 | POS: -354 -> -355 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25342.25 Ask: 25342.75 Last: 25342.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 12:58:30 | Side: SELL | Qty: 1 | POS: -355 -> -356 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25342.25 Ask: 25342.75 Last: 25342.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:03:18 | Side: SELL | Qty: 1 | POS: -356 -> -357 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25320.50 Ask: 25321.25 Last: 25320.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:03:18 | Side: SELL | Qty: 1 | POS: -357 -> -358 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25320.50 Ask: 25321.25 Last: 25320.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:10:05 | Side: SELL | Qty: 1 | POS: -358 -> -359 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25356.75 Ask: 25357.00 Last: 25357.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:10:05 | Side: SELL | Qty: 1 | POS: -359 -> -360 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25356.75 Ask: 25357.00 Last: 25357.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:43:34 | Side: SELL | Qty: 1 | POS: -360 -> -361 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25381.00 Ask: 25381.50 Last: 25381.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:43:34 | Side: SELL | Qty: 1 | POS: -361 -> -362 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25381.00 Ask: 25381.50 Last: 25381.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:44:59 | Side: SELL | Qty: 1 | POS: -362 -> -363 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25369.00 Ask: 25369.75 Last: 25369.50. Fill based on queue
+[OVERLIMIT] 13:44:59 | Side: SELL | Qty: 1 | POS: -363 -> -364 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25369.00 Ask: 25369.75 Last: 25369.50. Fill based on queue
+[OVERLIMIT] 13:46:49 | Side: SELL | Qty: 1 | POS: -364 -> -365 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25354.75 Ask: 25355.25 Last: 25354.75. Fill based on queue
+[OVERLIMIT] 13:46:49 | Side: SELL | Qty: 1 | POS: -365 -> -366 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25354.75 Ask: 25355.25 Last: 25354.75. Fill based on queue
+[OVERLIMIT] 13:47:59 | Side: SELL | Qty: 1 | POS: -366 -> -367 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25359.25 Ask: 25359.50 Last: 25359.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 13:47:59 | Side: SELL | Qty: 1 | POS: -367 -> -368 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25359.25 Ask: 25359.50 Last: 25359.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:30:43 | Side: SELL | Qty: 1 | POS: -368 -> -369 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25282.00 Ask: 25282.50 Last: 25282.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:30:43 | Side: SELL | Qty: 1 | POS: -369 -> -370 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25282.00 Ask: 25282.50 Last: 25282.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:32:03 | Side: SELL | Qty: 1 | POS: -370 -> -371 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25257.00 Ask: 25257.50 Last: 25257.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:32:03 | Side: SELL | Qty: 1 | POS: -371 -> -372 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25257.00 Ask: 25257.50 Last: 25257.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:41:58 | Side: SELL | Qty: 1 | POS: -372 -> -373 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25266.75 Ask: 25267.50 Last: 25267.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:41:58 | Side: SELL | Qty: 1 | POS: -373 -> -374 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25266.75 Ask: 25267.50 Last: 25267.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:44:10 | Side: SELL | Qty: 1 | POS: -374 -> -375 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25237.50 Ask: 25238.00 Last: 25237.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:44:10 | Side: SELL | Qty: 1 | POS: -375 -> -376 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25237.50 Ask: 25238.00 Last: 25237.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:45:58 | Side: SELL | Qty: 1 | POS: -376 -> -377 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25231.25 Ask: 25232.00 Last: 25231.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:45:58 | Side: SELL | Qty: 1 | POS: -377 -> -378 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25231.25 Ask: 25232.00 Last: 25231.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:50:37 | Side: SELL | Qty: 1 | POS: -378 -> -379 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25270.50 Ask: 25271.00 Last: 25271.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:50:37 | Side: SELL | Qty: 1 | POS: -379 -> -380 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25270.50 Ask: 25271.00 Last: 25271.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:51:00 | Side: SELL | Qty: 1 | POS: -380 -> -381 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25277.00 Ask: 25277.50 Last: 25277.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:51:00 | Side: SELL | Qty: 1 | POS: -381 -> -382 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25277.00 Ask: 25277.50 Last: 25277.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:52:06 | Side: SELL | Qty: 1 | POS: -382 -> -383 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25246.00 Ask: 25246.75 Last: 25242.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:52:06 | Side: SELL | Qty: 1 | POS: -383 -> -384 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25246.00 Ask: 25246.75 Last: 25242.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:54:59 | Side: SELL | Qty: 1 | POS: -384 -> -385 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25227.50 Ask: 25228.25 Last: 25228.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:54:59 | Side: SELL | Qty: 1 | POS: -385 -> -386 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25227.50 Ask: 25228.25 Last: 25228.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:55:09 | Side: SELL | Qty: 1 | POS: -386 -> -387 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25216.25 Ask: 25216.50 Last: 25216.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:55:09 | Side: SELL | Qty: 1 | POS: -387 -> -388 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25216.25 Ask: 25216.50 Last: 25216.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:55:18 | Side: SELL | Qty: 1 | POS: -388 -> -389 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25226.75 Ask: 25227.25 Last: 25227.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 14:55:18 | Side: SELL | Qty: 1 | POS: -389 -> -390 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25226.75 Ask: 25227.25 Last: 25227.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:12:02 | Side: SELL | Qty: 1 | POS: -390 -> -391 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25273.75 Ask: 25274.50 Last: 25274.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:12:02 | Side: SELL | Qty: 1 | POS: -391 -> -392 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25273.75 Ask: 25274.50 Last: 25274.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:13:19 | Side: SELL | Qty: 1 | POS: -392 -> -393 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25288.75 Ask: 25288.75 Last: 25288.75. Bid ask corrected. 
+[OVERLIMIT] 15:13:19 | Side: SELL | Qty: 1 | POS: -393 -> -394 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25288.75 Ask: 25288.75 Last: 25288.75. Bid ask corrected. 
+[OVERLIMIT] 15:16:00 | Side: SELL | Qty: 1 | POS: -394 -> -395 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25299.75 Ask: 25300.75 Last: 25300.25. Fill based on queue
+[OVERLIMIT] 15:16:00 | Side: SELL | Qty: 1 | POS: -395 -> -396 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25299.75 Ask: 25300.75 Last: 25300.25. Fill based on queue
+[OVERLIMIT] 15:16:18 | Side: SELL | Qty: 1 | POS: -396 -> -397 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25290.75 Ask: 25291.25 Last: 25290.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:16:18 | Side: SELL | Qty: 1 | POS: -397 -> -398 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25290.75 Ask: 25291.25 Last: 25290.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:24:01 | Side: SELL | Qty: 1 | POS: -398 -> -399 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25298.50 Ask: 25299.25 Last: 25299.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:24:01 | Side: SELL | Qty: 1 | POS: -399 -> -400 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25298.50 Ask: 25299.25 Last: 25299.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:25:10 | Side: SELL | Qty: 1 | POS: -400 -> -401 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25310.00 Ask: 25311.00 Last: 25312.75. Fill based on queue
+[OVERLIMIT] 15:25:10 | Side: SELL | Qty: 1 | POS: -401 -> -402 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25310.00 Ask: 25311.00 Last: 25312.75. Fill based on queue
+[OVERLIMIT] 15:25:56 | Side: SELL | Qty: 1 | POS: -402 -> -403 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25299.75 Ask: 25300.25 Last: 25299.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:25:56 | Side: SELL | Qty: 1 | POS: -403 -> -404 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25299.75 Ask: 25300.25 Last: 25299.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:34:01 | Side: SELL | Qty: 1 | POS: -404 -> -405 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25313.00 Ask: 25313.75 Last: 25313.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:34:01 | Side: SELL | Qty: 1 | POS: -405 -> -406 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25313.00 Ask: 25313.75 Last: 25313.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:35:00 | Side: SELL | Qty: 1 | POS: -406 -> -407 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25324.25 Ask: 25324.75 Last: 25324.50. Fill based on queue
+[OVERLIMIT] 15:35:00 | Side: SELL | Qty: 1 | POS: -407 -> -408 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25324.25 Ask: 25324.75 Last: 25324.50. Fill based on queue
+[OVERLIMIT] 15:35:29 | Side: SELL | Qty: 1 | POS: -408 -> -409 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25314.00 Ask: 25314.50 Last: 25314.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:35:29 | Side: SELL | Qty: 1 | POS: -409 -> -410 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25314.00 Ask: 25314.50 Last: 25314.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:54:08 | Side: SELL | Qty: 1 | POS: -410 -> -411 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25296.00 Ask: 25297.00 Last: 25296.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:54:08 | Side: SELL | Qty: 1 | POS: -411 -> -412 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25296.00 Ask: 25297.00 Last: 25296.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:55:00 | Side: SELL | Qty: 1 | POS: -412 -> -413 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25285.25 Ask: 25285.50 Last: 25285.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:55:00 | Side: SELL | Qty: 1 | POS: -413 -> -414 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25285.25 Ask: 25285.50 Last: 25285.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:58:23 | Side: SELL | Qty: 1 | POS: -414 -> -415 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25272.00 Ask: 25272.50 Last: 25272.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:58:23 | Side: SELL | Qty: 1 | POS: -415 -> -416 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25272.00 Ask: 25272.50 Last: 25272.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:59:47 | Side: SELL | Qty: 1 | POS: -416 -> -417 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25273.75 Ask: 25274.25 Last: 25274.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 15:59:47 | Side: SELL | Qty: 1 | POS: -417 -> -418 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25273.75 Ask: 25274.25 Last: 25274.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:09:02 | Side: SELL | Qty: 1 | POS: -418 -> -419 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25230.50 Ask: 25231.25 Last: 25230.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:09:02 | Side: SELL | Qty: 1 | POS: -419 -> -420 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25230.50 Ask: 25231.25 Last: 25230.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:12:54 | Side: SELL | Qty: 1 | POS: -420 -> -421 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25218.75 Last: 25218.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:12:54 | Side: SELL | Qty: 1 | POS: -421 -> -422 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25218.75 Last: 25218.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:24:27 | Side: SELL | Qty: 1 | POS: -422 -> -423 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25213.00 Ask: 25213.75 Last: 25213.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:24:27 | Side: SELL | Qty: 1 | POS: -423 -> -424 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25213.00 Ask: 25213.75 Last: 25213.50. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:41:28 | Side: SELL | Qty: 1 | POS: -424 -> -425 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25207.25 Ask: 25208.00 Last: 25207.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:41:28 | Side: SELL | Qty: 1 | POS: -425 -> -426 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25207.25 Ask: 25208.00 Last: 25207.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:52:07 | Side: SELL | Qty: 1 | POS: -426 -> -427 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25211.00 Ask: 25211.75 Last: 25211.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:52:07 | Side: SELL | Qty: 1 | POS: -427 -> -428 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25211.00 Ask: 25211.75 Last: 25211.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:55:05 | Side: SELL | Qty: 1 | POS: -428 -> -429 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.00 Ask: 25218.25 Last: 25218.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 16:55:05 | Side: SELL | Qty: 1 | POS: -429 -> -430 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.00 Ask: 25218.25 Last: 25218.00. Text: Tag: AT_NQ_TM
+[NOTELESS] 16:58:58 | Side: SELL | Qty: 1 | POS: -430 -> -431 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25218.75 Last: 25218.25
+[NOTELESS] 16:58:58 | Side: SELL | Qty: 1 | POS: -431 -> -432 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25218.25 Ask: 25218.75 Last: 25218.25
+[OVERLIMIT] 18:14:22 | Side: SELL | Qty: 1 | POS: -432 -> -433 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25228.75 Ask: 25229.75 Last: 25229.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:14:22 | Side: SELL | Qty: 1 | POS: -433 -> -434 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25228.75 Ask: 25229.75 Last: 25229.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:15:19 | Side: SELL | Qty: 1 | POS: -434 -> -435 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25235.75 Ask: 25236.50 Last: 25236.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:15:19 | Side: SELL | Qty: 1 | POS: -435 -> -436 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25235.75 Ask: 25236.50 Last: 25236.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:16:24 | Side: SELL | Qty: 1 | POS: -436 -> -437 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25242.25 Ask: 25243.25 Last: 25243.25. Fill based on queue
+[OVERLIMIT] 18:16:24 | Side: SELL | Qty: 1 | POS: -437 -> -438 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25242.25 Ask: 25243.25 Last: 25243.25. Fill based on queue
+[OVERLIMIT] 18:18:48 | Side: SELL | Qty: 1 | POS: -438 -> -439 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25235.00 Ask: 25235.75 Last: 25235.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:18:48 | Side: SELL | Qty: 1 | POS: -439 -> -440 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25235.00 Ask: 25235.75 Last: 25235.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:31:15 | Side: SELL | Qty: 1 | POS: -440 -> -441 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25227.75 Ask: 25228.75 Last: 25229.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:31:15 | Side: SELL | Qty: 1 | POS: -441 -> -442 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25227.75 Ask: 25228.75 Last: 25229.25. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:37:41 | Side: SELL | Qty: 1 | POS: -442 -> -443 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25233.50 Ask: 25234.00 Last: 25233.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:37:41 | Side: SELL | Qty: 1 | POS: -443 -> -444 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25233.50 Ask: 25234.00 Last: 25233.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:40:14 | Side: SELL | Qty: 1 | POS: -444 -> -445 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25237.75 Ask: 25239.25 Last: 25239.25. Fill based on queue
+[OVERLIMIT] 18:40:14 | Side: SELL | Qty: 1 | POS: -445 -> -446 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25237.75 Ask: 25239.25 Last: 25239.25. Fill based on queue
+[OVERLIMIT] 18:40:25 | Side: SELL | Qty: 1 | POS: -446 -> -447 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25229.00 Ask: 25230.00 Last: 25229.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:40:25 | Side: SELL | Qty: 1 | POS: -447 -> -448 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25229.00 Ask: 25230.00 Last: 25229.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:51:04 | Side: SELL | Qty: 1 | POS: -448 -> -449 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25242.75 Ask: 25243.50 Last: 25243.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:51:04 | Side: SELL | Qty: 1 | POS: -449 -> -450 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25242.75 Ask: 25243.50 Last: 25243.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:51:57 | Side: SELL | Qty: 1 | POS: -450 -> -451 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25248.00 Ask: 25249.25 Last: 25249.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:51:57 | Side: SELL | Qty: 1 | POS: -451 -> -452 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25248.00 Ask: 25249.25 Last: 25249.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:52:30 | Side: SELL | Qty: 1 | POS: -452 -> -453 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25244.50 Ask: 25245.25 Last: 25243.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:52:30 | Side: SELL | Qty: 1 | POS: -453 -> -454 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25244.50 Ask: 25245.25 Last: 25243.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:58:23 | Side: SELL | Qty: 1 | POS: -454 -> -455 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25248.75 Ask: 25249.75 Last: 25250.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:58:23 | Side: SELL | Qty: 1 | POS: -455 -> -456 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25248.75 Ask: 25249.75 Last: 25250.00. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:58:37 | Side: SELL | Qty: 1 | POS: -456 -> -457 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25255.00 Ask: 25257.00 Last: 25256.75. Text: Tag: AT_NQ_TM
+[OVERLIMIT] 18:58:37 | Side: SELL | Qty: 1 | POS: -457 -> -458 | Msg: Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25255.00 Ask: 25257.00 Last: 25256.75. Text: Tag: AT_NQ_TM

@@ -1,0 +1,10 @@
+
+Target: 2025-12-18  09:05:56.979061
+  ActivityType: Fills
+  OrderType: Market
+  Quantity: 2
+  Price: 
+  BuySell: Buy
+  IsAutomated: Y
+  Note: 
+  InternalOrderID: 20091637

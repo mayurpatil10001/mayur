@@ -55,7 +55,8 @@ const DiscoveryExplorer: React.FC = () => {
             const headers: HeadersInit = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const url = `/api/v1/analytics/recommendations/discovery/${symbol}?min_persistence=${minPersistence}&logic=${selectionLogic}&winners_only=${viewMode === 'matrix'}&min_avg_profit=12.0`;
+            const API_BASE = `http://${window.location.hostname}:8000`;
+            const url = `${API_BASE}/api/v1/analytics/recommendations/discovery/${symbol}?min_persistence=${minPersistence}&logic=${selectionLogic}&winners_only=${viewMode === 'matrix'}`;
             const response = await fetch(url, { headers });
             const data = await response.json();
             if (data.status === 'success') {
@@ -91,7 +92,8 @@ const DiscoveryExplorer: React.FC = () => {
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
             const selections = selectedEdges.map(i => edges[i]);
-            const response = await fetch(`/api/v1/analytics/recommendations/backtest/portfolio`, {
+            const API_BASE = `http://${window.location.hostname}:8000`;
+            const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/backtest/portfolio`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ symbol, edges: selections })
@@ -115,7 +117,8 @@ const DiscoveryExplorer: React.FC = () => {
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
             const selections = selectedEdges.map(i => edges[i]);
-            const response = await fetch(`/api/v1/analytics/recommendations/validation/walk-forward/${symbol}`, {
+            const API_BASE = `http://${window.location.hostname}:8000`;
+            const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/validation/walk-forward/${symbol}`, {
                 method: 'POST',
                 headers: { ...headers, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -573,8 +576,10 @@ const DiscoveryExplorer: React.FC = () => {
                                         config={{ responsive: true, displayModeBar: false }}
                                     />
                                 </div>
-                                <div className="logic-hint">
-                                    <p><strong>Note:</strong> The Walk-Forward re-calculates the best edges month-by-month using only data that was available *at that time* using <strong>{selectionLogic.toUpperCase()}</strong> selection logic.</p>
+                                <div className="logic-hint" style={{ marginTop: '15px', padding: '15px', borderLeft: '4px solid #2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)' }}>
+                                    <p style={{ marginBottom: '10px' }}><strong>Note 1 (Timing):</strong> Uses <strong>Calendar Months</strong>. The engine trains on the past month(s) and tests on the next, sliding forward 1 month at a time to ensure no look-ahead bias.</p>
+                                    <p style={{ marginBottom: '10px' }}><strong>Note 2 (Selection Logic):</strong> Manual bin selections (Account/Day/Hour) define your <strong>Allowed Universe</strong>. However, an edge is only "traded" in the next month if it <i>also</i> passes the <strong>{selectionLogic.toUpperCase()}</strong> threshold during its specific training window. This simulates a real trader who only sticks with their picks as long as they remain consistent.</p>
+                                    <p><strong>Note 3 (Highest Persistence & PnL):</strong> For every unique Time/Day slot, the engine selects the single best account based on <strong>Full Window Consistency</strong> (must be active and green across the entire training period). If scores are tied, it selects the account with the <b>highest Profit</b>. Minimum 5 trades required per window to filter out noise.</p>
                                 </div>
                             </div>
                         )}

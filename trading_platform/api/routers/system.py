@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Dict, Any, Optional
@@ -10,8 +10,158 @@ from pathlib import Path
 from ..dependencies import get_database_session
 from ...services.settings import settings_service
 from ...services.market_data_service import market_data_service
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+import sqlite3
+
+NY_TZ = ZoneInfo("America/New_York")
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+@router.post("/audit-trades")
+async def audit_trades(
+    account: str = Body(...),
+    date: str = Body(...),
+    raw_text: str = Body(...)
+):
+    """
+    Compares DB trades with copy-pasted SC data.
+    """
+    db_path = "trading_platform.db"
+    
+    # 1. Fetch from DB (Capture wider range to handle TZ shifts, then filter in Python)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    # Fetch +/- 1 day to be absolutely sure we catch any TZ edge cases
+    c.execute("""
+        SELECT side, quantity as qty, entry_price, exit_price, profit_loss as pnl, entry_time, exit_time
+        FROM processed_trades
+        WHERE account_name = ? COLLATE NOCASE 
+          AND entry_time >= date(?, '-1 day') 
+          AND entry_time <= date(?, '+2 days')
+        ORDER BY entry_time ASC
+    """, (account, date, date))
+    
+    # Filter by converted NY date in Python for precision
+    db_trades = []
+    for r in c.fetchall():
+        try:
+            dt_utc = datetime.fromisoformat(r['entry_time'].replace('Z', ''))
+            # Some entries might not have Z but are UTC
+            if dt_utc.tzinfo is None:
+                dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+            ny_date = dt_utc.astimezone(NY_TZ).date().isoformat()
+            if ny_date == date:
+                db_trades.append(dict(r))
+        except: continue
+    conn.close()
+
+    # 2. Parse Raw Text (SC Tab-separated)
+    lines = raw_text.strip().split('\n')
+    if not lines:
+        return {"error": "Empty data"}
+
+    header = lines[0].split('\t')
+    def find_idx(keywords):
+        for i, h in enumerate(header):
+            if any(k.lower() in h.lower() for k in keywords): return i
+        return -1
+
+    cols = {
+        'side': find_idx(['side', 'buy/sell']),
+        'qty': find_idx(['quantity', 'trade quant', 'quant']),
+        'entry_dt': find_idx(['entry date time', 'entrydatetime']),
+        'exit_dt': find_idx(['exit date time', 'exitdatetime']),
+        'entry_px': find_idx(['entry price', 'entryprice']),
+        'exit_px': find_idx(['exit price', 'exitprice']),
+        'pnl': find_idx(['profit/loss', 'p/l', 'profit']),
+    }
+
+    sc_trades = []
+    start_row = 1 if any(k in lines[0].lower() for k in ['side', 'entry', 'price']) else 0
+    for line in lines[start_row:]:
+        parts = line.split('\t')
+        if len(parts) < 5: continue
+        try:
+            raw_side = parts[cols['side']].upper() if cols['side'] != -1 else "LONG"
+            side = "LONG" if "BUY" in raw_side or "LONG" in raw_side else "SHORT"
+            qty = int(float(parts[cols['qty']].replace(',', ''))) if cols['qty'] != -1 else 1
+            en_px = float(parts[cols['entry_px']].replace(',', '')) if cols['entry_px'] != -1 else 0
+            ex_px = float(parts[cols['exit_px']].replace(',', '')) if cols['exit_px'] != -1 else 0
+            pnl = float(parts[cols['pnl']].replace('$', '').replace(',', '')) if cols['pnl'] != -1 else 0.0
+            en_dt = parts[cols['entry_dt']] if cols['entry_dt'] != -1 else ""
+            ex_dt = parts[cols['exit_dt']] if cols['exit_dt'] != -1 else ""
+            
+            sc_trades.append({
+                'side': side, 'qty': qty, 'entry_price': en_px, 'exit_price': ex_px,
+                'pnl': pnl, 'entry_time': en_dt, 'exit_time': ex_dt
+            })
+        except: continue
+
+    # 3. Match: entry+exit both on time and price (within tolerance) = match
+    matched_count = 0
+    db_only = []
+    sc_only = sc_trades.copy()
+    entry_exit_sec = 90  # allow 90s for entry/exit time match (TZ and rounding)
+    price_tol = 2.0     # $2 for entry/exit price
+
+    for dt in db_trades:
+        try:
+            en_utc = datetime.fromisoformat(dt['entry_time'].replace('Z', ''))
+            if en_utc.tzinfo is None:
+                en_utc = en_utc.replace(tzinfo=timezone.utc)
+            ex_utc = datetime.fromisoformat(dt['exit_time'].replace('Z', ''))
+            if ex_utc.tzinfo is None:
+                ex_utc = ex_utc.replace(tzinfo=timezone.utc)
+            ny_en = en_utc.astimezone(NY_TZ).replace(tzinfo=None)
+            ny_ex = ex_utc.astimezone(NY_TZ).replace(tzinfo=None)
+
+            found_idx_sc = -1
+            best_err = float('inf')
+            for i, st in enumerate(sc_only):
+                try:
+                    st_en = datetime.fromisoformat(st['entry_time'].replace(' ', 'T'))
+                    st_ex = (datetime.fromisoformat(st['exit_time'].replace(' ', 'T'))
+                             if (st.get('exit_time') and str(st['exit_time']).strip()) else st_en)
+                    if st['side'] != dt['side']:
+                        continue
+                    entry_diff = abs((ny_en - st_en).total_seconds())
+                    exit_diff = abs((ny_ex - st_ex).total_seconds())
+                    if entry_diff > entry_exit_sec or exit_diff > entry_exit_sec:
+                        continue
+                    if abs(st['entry_price'] - dt['entry_price']) > price_tol or abs(st['exit_price'] - dt['exit_price']) > price_tol:
+                        continue
+                    err = entry_diff + exit_diff
+                    if err < best_err:
+                        best_err = err
+                        found_idx_sc = i
+                except Exception:
+                    continue
+
+            if found_idx_sc != -1:
+                sc_only.pop(found_idx_sc)
+                matched_count += 1
+            else:
+                db_only.append(dt)
+        except Exception:
+            db_only.append(dt)
+
+    return {
+        "summary": {
+            "db_count": len(db_trades),
+            "sc_count": len(sc_trades),
+            "matched": matched_count,
+            "db_pnl": sum(t['pnl'] for t in db_trades),
+            "sc_pnl": sum(t['pnl'] for t in sc_trades),
+            "db_qty": sum(t['qty'] for t in db_trades),
+            "sc_qty": sum(t['qty'] for t in sc_trades)
+        },
+        "discrepancies": {
+            "db_only": db_only[:20], # Sample
+            "sc_only": sc_only[:20]  # Sample
+        }
+    }
 
 
 @router.get("/status")
@@ -51,15 +201,17 @@ async def get_system_status(db: Session = Depends(get_database_session)) -> List
     # Check trades table
     try:
         start_time = time.time()
-        result = db.execute(text("SELECT COUNT(*) FROM processed_trades"))
-        trades_count = result.scalar()
+        # Use a faster check instead of full COUNT(*)
+        result = db.execute(text("SELECT 1 FROM processed_trades LIMIT 1"))
+        has_trades = result.scalar() is not None
         response_time = int((time.time() - start_time) * 1000)
         
         status_list.append({
-            "component": f"Trades Table ({trades_count:,} records)",
-            "status": "online" if response_time < 200 else "warning",
+            "component": "Trades Table",
+            "status": "online" if has_trades else "warning",
             "lastUpdate": "just now",
-            "responseTime": response_time
+            "responseTime": response_time,
+            "note": "Table accessible"
         })
     except Exception:
         status_list.append({
@@ -72,13 +224,14 @@ async def get_system_status(db: Session = Depends(get_database_session)) -> List
     # Check accounts
     try:
         start_time = time.time()
-        result = db.execute(text("SELECT COUNT(DISTINCT account_name) FROM processed_trades"))
-        accounts_count = result.scalar()
+        # Use a faster check for accounts
+        result = db.execute(text("SELECT account_name FROM processed_trades LIMIT 1"))
+        has_accounts = result.scalar() is not None
         response_time = int((time.time() - start_time) * 1000)
         
         status_list.append({
-            "component": f"Accounts ({accounts_count} active)",
-            "status": "online",
+            "component": "Accounts",
+            "status": "online" if has_accounts else "warning",
             "lastUpdate": "just now",
             "responseTime": response_time
         })
@@ -109,14 +262,29 @@ async def health_check(db: Session = Depends(get_database_session)) -> Dict[str,
 async def restart_backend():
     """Triggers a backend restart by touching main.py"""
     try:
-        # Navigate from /routers/system.py -> /api/main.py
-        main_py = Path(__file__).parent.parent / "main.py"
-        if main_py.exists():
-            # Update mtime to trigger uvicorn reload
-            os.utime(main_py, None)
+        # Trigger reload by touching main.py
+        # We look for main.py relative to the current working directory or via package structure
+        paths_to_try = [
+            Path("trading_platform/api/main.py"),
+            Path(__file__).parent.parent / "main.py",
+            Path("api/main.py")
+        ]
+        
+        main_py = None
+        for p in paths_to_try:
+            if p.exists():
+                main_py = p
+                break
+                
+        if main_py:
+            # Update mtime. On Windows, sometimes appending a space/newline is more reliable for dev-watchers
+            # than just utime if the watcher is using content-hashes instead of mtime.
+            # But here we stick to utime but with an explicit open/close to be sure.
+            with open(main_py, 'a') as f:
+                os.utime(main_py, None)
             return {"status": "restarting", "message": "Backend restart triggered. Service will reload in a few seconds."}
         else:
-            raise HTTPException(status_code=500, detail="Could not locate main.py")
+            raise HTTPException(status_code=500, detail="Could not locate main.py to trigger reload")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -241,12 +409,14 @@ async def remove_cluster(
         cursor = conn.cursor()
         if symbol:
             cursor.execute("DELETE FROM processed_trades WHERE account_name = ? AND symbol = ?", (account, symbol))
+            cursor.execute("DELETE FROM pending_fills WHERE account_name = ? AND symbol = ?", (account, symbol))
         else:
             cursor.execute("DELETE FROM processed_trades WHERE account_name = ?", (account,))
+            cursor.execute("DELETE FROM pending_fills WHERE account_name = ?", (account,))
         
         deleted = cursor.rowcount
         conn.commit()
-        return {"status": "success", "message": f"Deleted {deleted} trades", "count": deleted}
+        return {"status": "success", "message": f"Deleted {deleted} trades and cleared pending state", "count": deleted}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -260,7 +430,8 @@ async def get_import_status():
         "running": importer.running,
         "message": importer.message,
         "stats": importer.stats,
-        "progress": importer.progress
+        "progress": importer.progress,
+        "finish_time": getattr(importer, 'finish_time', None)
     }
 
 @router.get("/settings")
@@ -314,6 +485,158 @@ async def get_vix_data(limit: int = Query(100, ge=1, le=5000)):
             })
         return {"status": "success", "count": len(data), "data": data}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.post("/import-start")
+async def start_import(background_tasks: BackgroundTasks, request: dict = Body(...)):
+    from trading_platform.services.binary_log_parser import importer
+    if importer.running:
+        return {"message": "Import already running", "running": True}
+        
+    paths = request.get("paths", [])
+    symbol = request.get("symbol", None)
+    accounts = request.get("accounts", None) 
+    
+    from trading_platform.services.settings import settings_service
+    settings = settings_service.get_settings()
+    try:
+        days = int(request.get("days", settings.get("import_days", 2000)))
+    except:
+        days = 2000
+    
+    if not paths:
+        return {"message": "No paths provided", "running": False}
+        
+    background_tasks.add_task(importer.run_import, paths, symbol, accounts, days_lookback=days)
+    return {"message": f"Import started{' for ' + str(accounts) if accounts else ''} (Last {days} days)", "running": True}
+
+@router.post("/import-stop")
+async def stop_import():
+    from trading_platform.services.binary_log_parser import importer
+    importer.stop()
+    return {"message": "Stopping import...", "running": False}
+
+@router.post("/check-path")
+async def check_path(request: dict = Body(...)):
+    try:
+        import glob
+        import os
+        import re
+        import datetime
+        from trading_platform.services.settings import settings_service
+
+        path = request.get("path", "")
+        target_symbol = request.get("symbol", "").upper()
+        settings = settings_service.get_settings()
+        try:
+            days_limit = int(settings.get("import_days", 2000))
+        except:
+            days_limit = 2000
+            
+        cutoff_time = (datetime.datetime.now() - datetime.timedelta(days=days_limit)).timestamp() if days_limit > 0 else 0
+        
+        if not path:
+            return {"exists": False, "files": [], "message": "No path provided"}
+            
+        clean_path = os.path.normpath(path)
+        if not os.path.exists(clean_path):
+            return {"exists": False, "files": [], "message": f"Path not found: {clean_path}"}
+            
+        all_files_raw = glob.glob(os.path.join(clean_path, "*.txt")) + \
+                        glob.glob(os.path.join(clean_path, "*.log")) + \
+                        glob.glob(os.path.join(clean_path, "*.data"))
+        
+        all_files = [f for f in all_files_raw if os.path.getmtime(f) >= cutoff_time]
+        
+        if not all_files:
+            return {"exists": True, "files": [], "count": 0, "accounts": [], "message": "No recent files found"}
+
+        account_files = {}
+        for f in all_files:
+            try:
+                fname = os.path.basename(f)
+                parts = fname.split('.')
+                if len(parts) > 1:
+                    account = parts[-2].upper()
+                    account = re.sub(r'_UTC$', '', account)
+                    if account not in account_files:
+                        account_files[account] = []
+                    account_files[account].append(f)
+            except: pass
+
+        detected_accounts = []
+        for account, files in account_files.items():
+            if not target_symbol:
+                detected_accounts.append(account)
+                continue
+                
+            # Priority 1: Smart Match (Symbol in filename or start of account name)
+            if any(target_symbol in os.path.basename(f).upper() for f in files) or account.upper().startswith(target_symbol):
+                detected_accounts.append(account)
+            # Priority 2: NQ Catch-all (Exclude obvious ES/CL/FDAX prefixes)
+            elif target_symbol == "NQ" and not any(account.upper().startswith(s) for s in ["ES-", "ES_", "CL-", "CL_", "FDAX-", "FDAX_"]):
+                detected_accounts.append(account)
+
+        # Final Fallback: If we found files but NO accounts matched the symbol filter,
+        # show ALL accounts so the user can see what's in the folder and choose manually.
+        if target_symbol and not detected_accounts and all_files:
+            detected_accounts = sorted(list(account_files.keys()))
+
+        return {
+            "exists": True, 
+            "count": len(all_files),
+            "accounts": detected_accounts,
+            "message": f"Found {len(all_files)} files."
+        }
+        
+    except Exception as e:
+        return {"exists": False, "files": [], "message": f"Scan Failed: {str(e)}"}
+
+@router.post("/purge-anomalies")
+async def purge_anomalies_endpoint(request: dict = Body(...)):
+    from trading_platform.services.binary_log_parser import importer
+    account = request.get("account")
+    symbol = request.get("symbol")
+    if not account:
+        raise HTTPException(status_code=400, detail="Account required")
+    
+    res = importer.purge_anomalies(account, symbol, purge_overnight=True)
+    return {"message": "Data cleaned successfully", "removed": res}
+
+@router.post("/wipe-db")
+async def wipe_database():
+    """Wipes all trade data from the database."""
+    import sqlite3
+    db_path = Path("trading_platform.db")
+    if not db_path.exists():
+        return {"status": "success", "message": "Database file not found, nothing to wipe"}
+        
+    conn = sqlite3.connect(str(db_path))
+    try:
+        cursor = conn.cursor()
+        tables_to_wipe = [
+            'processed_trades', 'pending_fills', 'position_state', 
+            'temporal_performance', 'performance_metrics', 'trades',
+            'walk_forward_results', 'monte_carlo_results', 'data_import_log'
+        ]
+        total_deleted = 0
+        for table in tables_to_wipe:
+            try:
+                cursor.execute(f"DELETE FROM {table}")
+                total_deleted += cursor.rowcount
+            except: pass # Table might not exist or be empty
+            
+        conn.commit()
+        # VACUUM must be run outside of a transaction
+        conn.isolation_level = None
+        conn.execute("VACUUM")
+        
+        return {"status": "success", "message": "Database wiped successfully.", "deleted_count": total_deleted}
+    except Exception as e:
+        try: conn.rollback()
+        except: pass
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

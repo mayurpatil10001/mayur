@@ -1,0 +1,107 @@
+==============================================================================================================
+CROSS-ACCOUNT GHOST FILL RESEARCH
+Sampling 5 recent files per account, 8 accounts
+==============================================================================================================
+
+Analyzing V_SIM16...
+  Files: 5
+  Fills (with ghost filter): 743
+  Fills (no ghost filter):   776
+  Ghost fills removed:       33
+  Sessions (no ghost): 4 total, 3 imbalanced
+  Sessions (w/ ghost): 4 total, 3 imbalanced
+
+Analyzing TM_10...
+  Files: 5
+  Fills (with ghost filter): 0
+  Fills (no ghost filter):   2083
+  Ghost fills removed:       2083
+  Sessions (no ghost): 0 total, 0 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing 3Q_SIM14...
+  Files: 5
+  Fills (with ghost filter): 496
+  Fills (no ghost filter):   724
+  Ghost fills removed:       228
+  Sessions (no ghost): 4 total, 4 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing 3Q_SIM15...
+  Files: 5
+  Fills (with ghost filter): 130
+  Fills (no ghost filter):   164
+  Ghost fills removed:       34
+  Sessions (no ghost): 4 total, 3 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing IPS_TM_10...
+  Files: 5
+  Fills (with ghost filter): 1303
+  Fills (no ghost filter):   1496
+  Ghost fills removed:       193
+  Sessions (no ghost): 4 total, 4 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing TS_4...
+  Files: 5
+  Fills (with ghost filter): 1008
+  Fills (no ghost filter):   1080
+  Ghost fills removed:       72
+  Sessions (no ghost): 4 total, 4 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing PB_1...
+  Files: 5
+  Fills (with ghost filter): 665
+  Fills (no ghost filter):   844
+  Ghost fills removed:       179
+  Sessions (no ghost): 4 total, 4 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+Analyzing TM_2...
+  Files: 5
+  Fills (with ghost filter): 0
+  Fills (no ghost filter):   1990
+  Ghost fills removed:       1990
+  Sessions (no ghost): 0 total, 0 imbalanced
+  Sessions (w/ ghost): 4 total, 4 imbalanced
+
+==============================================================================================================
+SUMMARY TABLE
+==============================================================================================================
+         Account | Files | Fills(filt) | Fills(all) | Ghosts | Sess(filt) | Imbal(filt) | Sess(all) | Imbal(all)
+--------------------------------------------------------------------------------------------------------------
+         V_SIM16 |     5 |         743 |        776 |     33 |          4 |           3 |         4 |          3
+           TM_10 |     5 |           0 |       2083 |   2083 |          0 |           0 |         4 |          4
+        3Q_SIM14 |     5 |         496 |        724 |    228 |          4 |           4 |         4 |          4
+        3Q_SIM15 |     5 |         130 |        164 |     34 |          4 |           3 |         4 |          4
+       IPS_TM_10 |     5 |        1303 |       1496 |    193 |          4 |           4 |         4 |          4
+            TS_4 |     5 |        1008 |       1080 |     72 |          4 |           4 |         4 |          4
+            PB_1 |     5 |         665 |        844 |    179 |          4 |           4 |         4 |          4
+            TM_2 |     5 |           0 |       1990 |   1990 |          0 |           0 |         4 |          4
+
+==============================================================================================================
+GHOST FILL MESSAGE ANALYSIS (all accounts combined)
+==============================================================================================================
+Ghost fills with 'Trading Evaluator/Trade simulation' msg: 4555
+Ghost fills WITHOUT evaluator msg: 0
+
+Ghost fill side breakdown (by contracts):
+  SELL: 5491 contracts
+  BUY: 4485 contracts
+
+Ghost fill message patterns:
+  4555x  Has "Trading Evaluator" in msg
+
+==============================================================================================================
+KEY QUESTION: Does removing ghost filter fix session balance?
+==============================================================================================================
+           V_SIM16: Imbalanced sessions: 3 (with filter) -> 3 (without filter)  [+0% improvement]
+             TM_10: Imbalanced sessions: 0 (with filter) -> 4 (without filter)  [+0% improvement]
+          3Q_SIM14: Imbalanced sessions: 4 (with filter) -> 4 (without filter)  [+0% improvement]
+          3Q_SIM15: Imbalanced sessions: 3 (with filter) -> 4 (without filter)  [-33% improvement]
+         IPS_TM_10: Imbalanced sessions: 4 (with filter) -> 4 (without filter)  [+0% improvement]
+              TS_4: Imbalanced sessions: 4 (with filter) -> 4 (without filter)  [+0% improvement]
+              PB_1: Imbalanced sessions: 4 (with filter) -> 4 (without filter)  [+0% improvement]
+              TM_2: Imbalanced sessions: 0 (with filter) -> 4 (without filter)  [+0% improvement]

@@ -1,0 +1,78 @@
+18:00:04.861    | SELL  | CLOSE  | 1    | 24997.75 |                                     | FIFO_1_EXIT(1)                      | 2          | No    
+18:25:16.774    | BUY   | CLOSE  | 1    | 24946.75 |                                     | FIFO_3_EXIT(1)                      | -2         | No    
+18:25:47.323    | BUY   | CLOSE  | 1    | 24937.50 |                                     | FIFO_4_EXIT(1)                      | -1         | No    
+18:31:17.874    | SELL  | CLOSE  | 1    | 24964.75 |                                     | FIFO_6_EXIT(1)                      | 2          | No    
+18:36:51.824    | SELL  | CLOSE  | 1    | 24965.75 |                                     | FIFO_8_EXIT(1)                      | 2          | No    
+18:41:58.090    | SELL  | CLOSE  | 1    | 24973.00 |                                     | FIFO_9_EXIT(1)                      | 1          | No    
+19:01:42.504    | BUY   | CLOSE  | 1    | 24921.50 |                                     | FIFO_11_EXIT(1)                     | -2         | No    
+19:01:51.397    | BUY   | CLOSE  | 1    | 24914.00 |                                     | FIFO_12_EXIT(1)                     | -1         | No    
+19:14:07.628    | SELL  | CLOSE  | 1    | 24943.25 |                                     | FIFO_14_EXIT(1)                     | 2          | No    
+19:16:30.482    | SELL  | CLOSE  | 1    | 24952.00 |                                     | FIFO_15_EXIT(1)                     | 1          | No    
+19:46:58.998    | SELL  | CLOSE  | 1    | 24973.75 |                                     | FIFO_17_EXIT(1)                     | 2          | No    
+19:48:59.020    | SELL  | CLOSE  | 1    | 24982.75 |                                     | FIFO_18_EXIT(1)                     | 1          | No    
+20:06:16.209    | BUY   | CLOSE  | 1    | 24965.75 |                                     | FIFO_20_EXIT(1)                     | -2         | No    
+20:47:10.924    | SELL  | CLOSE  | 1    | 24990.75 |                                     | FIFO_23_EXIT(1)                     | 2          | No    
+20:54:01.114    | BUY   | CLOSE  | 1    | 24967.50 |                                     | FIFO_25_EXIT(1)                     | -2         | No    
+20:54:16.672    | BUY   | CLOSE  | 1    | 24958.75 |                                     | FIFO_26_EXIT(1)                     | -1         | No    
+21:18:03.952    | SELL  | CLOSE  | 1    | 25009.00 |                                     | FIFO_29_EXIT(1)                     | 2          | No    
+21:35:16.627    | SELL  | CLOSE  | 1    | 24988.50 |                                     | FIFO_31_EXIT(1)                     | 2          | No    
+21:48:54.322    | BUY   | CLOSE  | 1    | 24967.25 |                                     | FIFO_33_EXIT(1)                     | -2         | No    
+21:49:45.702    | BUY   | CLOSE  | 1    | 24959.50 |                                     | FIFO_34_EXIT(1)                     | -1         | No    
+22:06:10.392    | BUY   | CLOSE  | 1    | 24952.50 |                                     | FIFO_37_EXIT(1)                     | -2         | No    
+22:06:23.995    | BUY   | CLOSE  | 1    | 24945.00 |                                     | FIFO_38_EXIT(1)                     | -1         | No    
+22:51:21.626    | SELL  | CLOSE  | 1    | 24932.50 |                                     | FIFO_40_EXIT(1)                     | 2          | No    
+22:51:42.989    | SELL  | CLOSE  | 1    | 24938.75 |                                     | FIFO_41_EXIT(1)                     | 1          | No    
+23:22:24.967    | SELL  | CLOSE  | 1    | 24963.00 |                                     | FIFO_43_EXIT(1)                     | 2          | No    
+23:33:37.091    | SELL  | CLOSE  | 1    | 24969.50 |                                     | FIFO_44_EXIT(1)                     | 1          | No    
+23:42:48.713    | SELL  | CLOSE  | 1    | 24980.75 |                                     | FIFO_46_EXIT(1)                     | 2          | No    
+23:44:02.651    | SELL  | CLOSE  | 1    | 24986.50 |                                     | FIFO_47_EXIT(1)                     | 1          | No    
+00:24:02.432    | BUY   | CLOSE  | 1    | 24982.25 | SC_1_EXIT(1)                        | FIFO_49_EXIT(1)                     | -2         | No    
+00:25:10.443    | BUY   | CLOSE  | 1    | 24977.00 | SC_2_EXIT(1)                        | FIFO_50_EXIT(1)                     | -1         | No    
+01:48:36.914    | BUY   | CLOSE  | 1    | 24971.25 | SC_8_EXIT(1)                        | FIFO_56_EXIT(1)                     | -2         | No    
+01:48:52.753    | BUY   | CLOSE  | 1    | 24966.00 | SC_9_EXIT(1)                        | FIFO_57_EXIT(1)                     | -1         | No    
+02:00:12.235    | SELL  | CLOSE  | 1    | 24990.00 | SC_12_EXIT(1)                       | FIFO_60_EXIT(1)                     | 2          | No    
+02:00:34.898    | SELL  | CLOSE  | 1    | 24995.25 | SC_13_EXIT(1)                       | FIFO_61_EXIT(1)                     | 1          | No    
+02:12:41.605    | SELL  | CLOSE  | 1    | 25025.25 | SC_15_EXIT(1)                       | FIFO_63_EXIT(1)                     | 2          | No    
+02:18:14.172    | SELL  | CLOSE  | 1    | 25030.75 | SC_17_EXIT(1)                       | FIFO_65_EXIT(1)                     | 2          | No    
+04:46:11.649    | SELL  | CLOSE  | 1    | 25084.25 | SC_20_EXIT(1)                       | FIFO_68_EXIT(1)                     | 5          | No    
+04:52:46.568    | SELL  | CLOSE  | 1    | 25094.25 | SC_23_EXIT(1)                       | FIFO_70_EXIT(1)                     | 5          | No    
+05:23:44.231    | BUY   | OPEN   | 1    | 25068.25 | SC_32_ENTRY(1)                      | FIFO_74_ENTRY(1)                    | 1          | No    
+05:31:24.074    | SELL  | CLOSE  | 1    | 25089.50 | SC_30_EXIT(1)                       | FIFO_74_EXIT(1)                     | 5          | No    
+05:32:34.960    | SELL  | CLOSE  | 1    | 25094.25 | SC_31_EXIT(1)                       | FIFO_75_EXIT(1)                     | 4          | No    
+06:13:02.735    | SELL  | CLOSE  | 1    | 25094.00 | SC_33_EXIT(1)                       | FIFO_77_EXIT(1)                     | 5          | No    
+06:25:47.807    | BUY   | OPEN   | 1    | 25083.25 | SC_40_ENTRY(1)                      | FIFO_80_ENTRY(1)                    | 1          | No    
+06:25:53.431    | BUY   | OPEN   | 1    | 25079.00 | SC_41_ENTRY(1)                      | FIFO_81_ENTRY(1)                    | 2          | No    
+06:35:11.641    | SELL  | CLOSE  | 1    | 25099.25 | SC_38_EXIT(1)                       | FIFO_80_EXIT(1)                     | 5          | No    
+06:43:20.057    | BUY   | OPEN   | 1    | 25089.00 | SC_45_ENTRY(1)                      | FIFO_84_ENTRY(1)                    | 1          | No    
+06:43:42.101    | BUY   | OPEN   | 1    | 25084.50 | SC_46_ENTRY(1)                      | FIFO_85_ENTRY(1)                    | 2          | No    
+07:05:05.035    | SELL  | CLOSE  | 1    | 25111.25 | SC_46_EXIT(1)                       | FIFO_87_EXIT(1)                     | 5          | No    
+07:43:40.336    | SELL  | CLOSE  | 1    | 25105.25 | SC_49_EXIT(1)                       | FIFO_89_EXIT(1)                     | 5          | No    
+07:52:35.110    | BUY   | OPEN   | 1    | 25088.50 | SC_56_ENTRY(1)                      | FIFO_92_ENTRY(1)                    | 1          | No    
+08:10:30.505    | SELL  | CLOSE  | 1    | 25096.50 | SC_54_EXIT(1)                       | FIFO_92_EXIT(1)                     | 5          | No    
+08:13:19.360    | SELL  | CLOSE  | 1    | 25104.75 | SC_57_EXIT(1)                       | FIFO_94_EXIT(1)                     | 5          | No    
+08:15:10.770    | SELL  | CLOSE  | 1    | 25110.50 | SC_58_EXIT(1)                       | FIFO_95_EXIT(1)                     | 4          | No    
+08:38:07.502    | SELL  | CLOSE  | 1    | 25193.00 | SC_62_EXIT(1)                       | FIFO_98_EXIT(1)                     | 5          | No    
+08:38:30.382    | SELL  | CLOSE  | 1    | 25201.25 | SC_63_EXIT(1)                       | FIFO_99_EXIT(1)                     | 4          | No    
+08:40:11.564    | SELL  | CLOSE  | 1    | 25226.00 | SC_65_EXIT(1)                       | FIFO_101_EXIT(1)                    | 5          | No    
+08:40:17.563    | SELL  | CLOSE  | 1    | 25235.00 | SC_66_EXIT(1)                       | FIFO_102_EXIT(1)                    | 4          | No    
+08:44:18.457    | SELL  | CLOSE  | 1    | 25253.25 | SC_68_EXIT(1)                       | FIFO_104_EXIT(1)                    | 5          | No    
+08:53:19.954    | BUY   | OPEN   | 1    | 25225.00 | SC_74_ENTRY(1)                      | FIFO_107_ENTRY(1)                   | 1          | No    
+10:24:48.641    | SELL  | CLOSE  | 1    | 25278.50 | SC_75_EXIT(1)                       | FIFO_109_EXIT(1)                    | 5          | No    
+10:26:14.350    | SELL  | CLOSE  | 1    | 25297.25 | SC_76_EXIT(1)                       | FIFO_110_EXIT(1)                    | 4          | No    
+11:11:49.857    | SELL  | CLOSE  | 1    | 25405.25 | SC_80_EXIT(1)                       | FIFO_113_EXIT(1)                    | 5          | No    
+11:36:47.733    | SELL  | CLOSE  | 1    | 25398.00 | SC_83_EXIT(1)                       | FIFO_115_EXIT(1)                    | 5          | No    
+12:01:52.307    | BUY   | OPEN   | 1    | 25368.50 | SC_93_ENTRY(1)                      | FIFO_120_ENTRY(1)                   | 1          | No    
+12:04:12.786    | BUY   | OPEN   | 1    | 25356.50 | SC_94_ENTRY(1)                      | FIFO_121_ENTRY(1)                   | 2          | No    
+12:08:58.919    | BUY   | OPEN   | 1    | 25270.00 | SC_96_ENTRY(1)                      | FIFO_123_ENTRY(1)                   | 1          | No    
+12:09:34.444    | BUY   | OPEN   | 1    | 25257.25 | SC_97_ENTRY(1)                      | FIFO_124_ENTRY(1)                   | 2          | No    
+13:44:59.553    | BUY   | OPEN   | 1    | 25369.25 | SC_103_ENTRY(1)                     | FIFO_128_ENTRY(1)                   | 1          | No    
+13:46:49.187    | BUY   | OPEN   | 1    | 25354.75 | SC_104_ENTRY(1)                     | FIFO_129_ENTRY(1)                   | 2          | No    
+14:55:09.088    | BUY   | OPEN   | 1    | 25216.50 | SC_115_ENTRY(1)                     | FIFO_135_ENTRY(1)                   | 1          | No    
+15:13:19.755    | SELL  | CLOSE  | 1    | 25288.75 | SC_113_EXIT(1)                      | FIFO_135_EXIT(1)                    | 5          | No    
+15:16:00.816    | SELL  | CLOSE  | 1    | 25300.75 | SC_114_EXIT(1)                      | FIFO_136_EXIT(1)                    | 4          | No    
+15:25:10.416    | SELL  | CLOSE  | 1    | 25311.00 | SC_116_EXIT(1)                      | FIFO_138_EXIT(1)                    | 5          | No    
+15:35:00.217    | SELL  | CLOSE  | 1    | 25324.75 | SC_119_EXIT(1)                      | FIFO_140_EXIT(1)                    | 5          | No    
+15:55:00.342    | BUY   | OPEN   | 1    | 25285.50 | SC_125_ENTRY(1)                     | FIFO_143_ENTRY(1)                   | 1          | No    
+15:58:23.826    | BUY   | OPEN   | 1    | 25272.50 | SC_126_ENTRY(1)                     | FIFO_144_ENTRY(1)                   | 2          | No    
+16:55:05.800    | SELL  | CLOSE  | 1    | 25218.00 | SC_129_EXIT(1)                      | FIFO_147_EXIT(1)                    | 5          | No    
+16:58:58.352    | SELL  | GHOST  | 2    | 25218.25 | SC_130_EXIT(1), SC_131_EXIT(1)      |                                     | 5          | Yes   

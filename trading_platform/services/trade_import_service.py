@@ -13,9 +13,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
-
+from ..utils.timezone_utils import to_ny
+from .binary_log_parser import SYMBOL_METADATA
 
 logger = logging.getLogger(__name__)
+
+
+def _base_symbol(sym: str) -> str:
+    s = sym.upper()
+    for base in list(SYMBOL_METADATA.keys()) + ["NQ", "ES", "CL"]:
+        if s.startswith(base):
+            return base
+    return s[:2] if len(s) >= 2 else s
 
 
 # ──────────────────────────────────────────────────────────────
@@ -64,6 +73,8 @@ class ImportResult:
     duplicates: int = 0
     errors: List[str] = field(default_factory=list)
     parsed_trades: List[ParsedTrade] = field(default_factory=list)
+    rejected_trades: List[Dict[str, Any]] = field(default_factory=list)
+    dropped_ghost_fills: List[Dict[str, Any]] = field(default_factory=list)
     stats: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -95,6 +106,110 @@ class TradeImportService:
     def __init__(self, db_path: str = "trading_platform.db"):
         self.db_path = db_path
 
+    def _pairs_by_open_close(self, fills: List[Dict]) -> Tuple[List[Dict], int]:
+        """
+        Pair Open with Close by ParentInternalOrderID when available; else FIFO.
+        SC-exact when ParentInternalOrderID is populated; FIFO fallback when empty.
+        Returns (trades, unpaired_count).
+        """
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for f in fills:
+            key = (f['account_name'], f['symbol'])
+            groups[key].append(f)
+        all_trades = []
+        unpaired = 0
+        for (acc, sym), group in groups.items():
+            group.sort(key=lambda x: (x.get('ts_val', 0), x.get('offset', 0)))
+            base_sym = _base_symbol(sym)
+            meta = SYMBOL_METADATA.get(base_sym, {"multiplier": 1, "comm": 4.20})
+            multiplier = meta["multiplier"]
+            comm_per_leg = meta["comm"] / 2.0
+            opens = {}  # internal_order_id -> list of {fill, qty_left}
+            opens_fifo = []  # [(fill, qty_left), ...] for FIFO when parent empty
+            for f in group:
+                oc = (f.get("open_close") or "").upper()
+                oid = (f.get("internal_order_id") or "").strip()
+                parent = (f.get("parent_order_id") or "").strip()
+                if oc == "OPEN" and oid:
+                    if oid not in opens:
+                        opens[oid] = []
+                    entry = {"fill": f, "qty_left": f["quantity"]}
+                    opens[oid].append(entry)
+                    opens_fifo.append(entry)
+                elif oc == "CLOSE":
+                    close_qty = f["quantity"]
+                    matched = False
+                    if parent and parent in opens and opens[parent]:
+                        entry_list = opens[parent]
+                        while close_qty > 0 and entry_list:
+                            o = entry_list[0]
+                            match_qty = min(close_qty, o["qty_left"])
+                            if match_qty <= 0:
+                                entry_list.pop(0)
+                                continue
+                            of = o["fill"]
+                            pnl = (f["price"] - of["price"]) * match_qty * multiplier if of["side"] in ("BUY", "LONG") else (of["price"] - f["price"]) * match_qty * multiplier
+                            total_comm = round(match_qty * (comm_per_leg * 2), 2)
+                            side = "LONG" if of["side"] in ("BUY", "LONG") else "SHORT"
+                            all_trades.append({
+                                "account": acc, "symbol": base_sym, "side": side,
+                                "entry_time": of["timestamp"], "exit_time": f["timestamp"],
+                                "entry_price": of["price"], "exit_price": f["price"],
+                                "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
+                                "commission": total_comm
+                            })
+                            o["qty_left"] -= match_qty
+                            close_qty -= match_qty
+                            if o["qty_left"] <= 0:
+                                entry_list.pop(0)
+                            matched = True
+                        if not opens[parent]:
+                            del opens[parent]
+                    if close_qty > 0 and opens_fifo:
+                        f_side = (f.get("side") or "").upper()
+                        want_open_side = "SELL" if f_side in ("BUY", "LONG") else "BUY"
+                        i = 0
+                        while close_qty > 0 and i < len(opens_fifo):
+                            o = opens_fifo[i]
+                            of = o["fill"]
+                            if o["qty_left"] <= 0:
+                                i += 1
+                                continue
+                            of_side = (of.get("side") or "").upper()
+                            if of_side != want_open_side:
+                                i += 1
+                                continue
+                            match_qty = min(close_qty, o["qty_left"])
+                            if match_qty <= 0:
+                                i += 1
+                                continue
+                            pnl = (f["price"] - of["price"]) * match_qty * multiplier if of_side in ("BUY", "LONG") else (of["price"] - f["price"]) * match_qty * multiplier
+                            total_comm = round(match_qty * (comm_per_leg * 2), 2)
+                            side = "LONG" if of_side in ("BUY", "LONG") else "SHORT"
+                            all_trades.append({
+                                "account": acc, "symbol": base_sym, "side": side,
+                                "entry_time": of["timestamp"], "exit_time": f["timestamp"],
+                                "entry_price": of["price"], "exit_price": f["price"],
+                                "quantity": int(match_qty), "profit_loss": round(pnl - total_comm, 2),
+                                "commission": total_comm
+                            })
+                            o["qty_left"] -= match_qty
+                            close_qty -= match_qty
+                            matched = True
+                            if o["qty_left"] <= 0:
+                                opens_fifo.pop(i)
+                            else:
+                                i += 1
+                        if close_qty > 0:
+                            unpaired += close_qty
+                    elif close_qty > 0 and not matched:
+                        unpaired += close_qty
+            opens_fifo[:] = [o for o in opens_fifo if o["qty_left"] > 0]
+            unpaired += sum(o["qty_left"] for o in opens_fifo)
+            unpaired += sum(sum(x["qty_left"] for x in v) for v in opens.values())
+        return all_trades, int(unpaired)
+
     # ── public API ──────────────────────────────────────────
     def preview(self, raw_text: str) -> ImportResult:
         """Parse the text and return a preview (no DB writes)."""
@@ -115,6 +230,14 @@ class TradeImportService:
                 try:
                     trade = self._parse_line(line, col_map)
                     if trade:
+                        # Detect potential Ghost Trades (from Sierra aggregation bug)
+                        # but DO NOT reject them. We want them in the DB for reconciliation.
+                        max_q = getattr(trade, 'max_open_quantity', 0)
+                        if max_q > 3:
+                            warning_msg = f"Sierra Aggregation Detected: {trade.account_name} has Max Qty {max_q} at {trade.entry_datetime}. This is likely a lumped trade."
+                            if warning_msg not in result.errors:
+                                result.errors.append(warning_msg)
+
                         # Check duplicate status
                         is_dup = self._is_duplicate(conn, trade)
                         if is_dup:
@@ -124,8 +247,8 @@ class TradeImportService:
                             
                         result.parsed_trades.append(trade)
                         result.total_parsed += 1
-                except Exception as exc:
-                    result.errors.append(f"Line {idx}: {exc}")
+                except Exception as e:
+                    result.errors.append(f"Line {idx}: {e}")
         finally:
             conn.close()
 
@@ -134,11 +257,14 @@ class TradeImportService:
     def import_trades(self, raw_text: str) -> ImportResult:
         """Parse, deduplicate, and insert trades."""
         # Detect Format
-        # Search first few lines for "Fills" keyword
         lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        header_lower = (lines[0] if lines else "").lower()
         for line in lines[:5]:
             if line.startswith("Fills"):
-                 return self._import_activity_log(raw_text)
+                return self._import_activity_log(raw_text)
+        # ALLTradeActivityLogExport: ActivityType, OpenClose columns
+        if "activitytype" in header_lower and "openclose" in header_lower:
+            return self._import_activity_log(raw_text)
 
         result = self.preview(raw_text)
         if not result.parsed_trades:
@@ -173,21 +299,14 @@ class TradeImportService:
             
             conn.commit()
             
-            # Run Purge Anomalies on affected accounts
-            from .binary_log_parser import BinaryLogParser
-            parser = BinaryLogParser(self.db_path)
-            # Purge creates stats
-            # We want to aggregate stats for touched accounts
-            # purge_anomalies returns breakdown dict
-            params_symbol = [trade.base_symbol] if result.parsed_trades else [] # Only if single symbol? user can paste mix. Best run global on account.
-            
-            # Create a breakdown aggregator
+            # AUTO-PURGE DISABLED: We no longer automatically delete trades after import.
+            # This allows users to see their data first. If they want to clean it, 
+            # they can use the 'Purge' functionality in the UI.
             full_stats = {}
-            for acc in touched_accounts:
-                breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
-                full_stats.update(breakdown)
+            # for acc in touched_accounts:
+            #     breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
+            #     full_stats.update(breakdown)
                 
-            # Attach to result (need to add stats field to ImportResult dataclass first)
             result.stats = full_stats
 
         except Exception as exc:
@@ -205,95 +324,220 @@ class TradeImportService:
 
     def _import_activity_log(self, text: str) -> ImportResult:
         """Special handler for raw Activity Log (Fills) paste."""
-        # This uses BinaryLogParser logic
         from .binary_log_parser import BinaryLogParser
+        import re
+        from datetime import datetime
+        
         parser = BinaryLogParser(self.db_path)
         
-        fills = []
-        lines = text.split('\n')
-        current_fill_time = None
-        
-        # Regex for Fills line: Fills [TAB] Time [TAB] TransTime [TAB] ID [TAB] Type [TAB] Qty
-        # Regex for Filled line: Filled [TAB] Account [TAB] Side [TAB] Price [TAB] Qty [TAB] Info...
-        
-        for line in lines:
-            parts = re.split(r'\t|\s{2,}', line.strip())
-            if not parts: continue
-            
-            if parts[0] == 'Fills':
-                # Grab time
-                if len(parts) > 1:
-                    try:
-                        current_fill_time = parts[1] # Keep as string for now, parser expects string or datetime?
-                        # Binary parser expects 'timestamp' key as string usually
-                    except: pass
-                    
-            elif parts[0] == 'Filled' and len(parts) >= 5:
-                # Account, Side, Price, Qty
-                acc = parts[1]
-                side = parts[2]
-                try:
-                    price = float(parts[3])
-                    qty = int(parts[4])
-                except: continue
-                
-                # Try to extract symbol from the line
-                # Look for typical symbol patterns: CLH26, ESH26, MnQ...
-                # Heuristic: Uppercase letters followed by H/M/U/Z and a digit
-                sym_match = re.search(r'\b([A-Z]+[HMUZ]\d{1,2})\b', line)
-                symbol = sym_match.group(1) if sym_match else "UNKNOWN"
-                
-                if current_fill_time:
-                    ts_val = 0
-                    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
-                        try:
-                            dt = datetime.strptime(current_fill_time, fmt)
-                            ts_val = dt.timestamp()
-                            break
-                        except: continue
-                    
-                    fills.append({
-                        "timestamp": current_fill_time,
-                        "ts_val": ts_val,
-                        "account_name": acc,
-                        "side": side.upper(),
-                        "price": price,
-                        "quantity": qty,
-                        "symbol": symbol,
-                        "order_id": "PASTE",
-                        "source": "PASTE",
-                        "offset": 0
-                    })
-
-        # Pair to trades
-        # We need to sort by time
-        fills.sort(key=lambda x: x['timestamp'])
-        
-        trades, unpaired_count = parser._pairs_to_trades(fills)
-        
-        # Convert to ParsedTrade objects
         result = ImportResult()
+        fills = []
+        lines_text = [l for l in text.replace('\r\n', '\n').split('\n') if l.strip()]
+        if not lines_text:
+            return result
+            
+        header_fields = [f.strip().lower() for f in lines_text[0].split('\t')]
+        # Detect any common header indicators
+        has_header = any(h in header_fields for h in [
+            "datetime", "time", "dt_entry", "dtentry", 
+            "tradeaccount", "account", "acc",
+            "symbol", "ticker", "instrument",
+            "fillprice", "price", "avgprice"
+        ])
+        data_lines = lines_text[1:] if has_header else lines_text
         
-        # Add Unpaired Stats
+        if not has_header:
+            # Matches standard SC Activity Log copy-paste: 14 columns
+            header_fields = ["activity_type", "dt_entry", "dt_proc", "order_id", "order_type", "order_qty", "order_status", "account", "side", "price1", "price2", "fill_price", "fill_qty", "note"]
+            
+        def find_idx(patterns):
+            # Try patterns in order (most specific first) so "fillprice" matches before "price"
+            for p in patterns:
+                for i, field in enumerate(header_fields):
+                    if p in field:
+                        return i
+            return None
+
+        col_map = {
+            "datetime": find_idx(["datetime", "time", "dt_entry", "dtentry", "timestamp"]),
+            "account": find_idx(["tradeaccount", "account", "acc", "name"]),
+            "side": find_idx(["buysell", "side", "direction"]),  # omit "type" - matches "activitytype"
+            "fillprice": find_idx(["fillprice", "fill_price", "avgprice", "avgfill", "price"]),
+            "filledquan": find_idx(["filledquantity", "filledquan", "fill_qty", "quantity", "qty", "amount"]),
+            "orderstatus": find_idx(["order_status", "orderstatus", "status"]),
+            "symbol": find_idx(["symbol", "ticker", "instrument", "contract"]),
+            "note": find_idx(["note", "text", "tag", "description"]),
+            "openclose": find_idx(["openclose", "open_close"]),
+            "internalorderid": find_idx(["internalorderid", "internal_order_id", "order_id"]),
+            "parentorderid": find_idx(["parentinternalorderid", "parent_internal_order_id"]),
+            "activitytype": find_idx(["activitytype", "activity_type"]),
+        }
+        
+        for idx, line in enumerate(data_lines):
+            # Support both tabs and multiple spaces as delimiters
+            parts = line.split('\t')
+            if len(parts) < 3 and '  ' in line:
+                parts = [p.strip() for p in re.split(r'  +', line) if p.strip()]
+            
+            if len(parts) < 3:
+                 continue
+
+            # Dynamic Column Mapping for Activity Log (if no header)
+            # Sierra Chart Activity Logs vary between 11, 12, and 14 columns.
+            current_col_map = col_map.copy()
+            if not has_header and parts[0].strip() == "Fills":
+                if 10 <= len(parts) <= 12:
+                    # 11/12 column layout: [0]Type, [4]OrderType, [6]Status, [7]Account, [8]Side, [9]FillPrice, [10]FillQty, [11]Note
+                    current_col_map["orderstatus"] = 6
+                    current_col_map["account"] = 7
+                    current_col_map["side"] = 8
+                    current_col_map["fillprice"] = 9
+                    current_col_map["filledquan"] = 10
+                    current_col_map["note"] = 11 if len(parts) > 11 else 10
+                elif len(parts) >= 13:
+                    # 14 column layout: [11]FillPrice, [12]FillQty, [13]Note
+                    current_col_map["fillprice"] = 11
+                    current_col_map["filledquan"] = 12
+                    current_col_map["note"] = 13 if len(parts) > 13 else 12
+            
+            try:
+                def get_field(key): 
+                    idx = current_col_map.get(key)
+                    return parts[idx].strip() if idx is not None and idx < len(parts) else ""
+                
+                # Filter for FILLED status
+                status = get_field("orderstatus").upper()
+                if status != "FILLED":
+                    continue
+                # Filter ActivityType: only Fills (ALLTradeActivityLogExport has ActivityType column)
+                at_val = get_field("activitytype")
+                if at_val and at_val.lower() != "fills":
+                    continue
+                # No header: enforce "Fills" prefix
+                if not has_header:
+                    if parts[0].strip() != "Fills" and "Fills" not in parts[0]:
+                        continue
+                
+                
+                dt_str = get_field("datetime")
+                acc = get_field("account")
+                side = get_field("side").upper()
+                # Robust Side Detection: If 'side' column is empty or non-standard, scan entire row
+                if side not in ("BUY", "SELL", "LONG", "SHORT"):
+                    found_side = None
+                    for p_raw in parts:
+                        p_up = p_raw.strip().upper()
+                        if p_up in ("BUY", "SELL", "LONG", "SHORT"):
+                            found_side = p_up
+                            break
+                    if found_side: 
+                        side = found_side
+                
+                price_str = get_field("fillprice")
+                qty_str = get_field("filledquan")
+                note_str = get_field("note")
+
+                if not dt_str or not side or not price_str or not qty_str: continue
+                
+                try: 
+                    price = float(price_str)
+                    qty = int(float(qty_str))
+                except ValueError: 
+                    continue
+                if qty <= 0: continue
+                
+                # Ultimate Symbol Extraction
+                symbol = get_field("symbol") # Try detected column first
+                if not symbol or symbol == "" or symbol.upper() == "UNKNOWN":
+                    # Fallback: Scan all fields in the row 
+                    for p_raw in parts:
+                        p_clean = p_raw.strip()
+                        # Try contract pattern NQH26
+                        m = re.search(r'\b([A-Z]{1,3}[HMUZ]\d{1,2})\b', p_clean, re.I)
+                        if m:
+                            symbol = m.group(1).upper()
+                            break
+                        # Try AT_ pattern
+                        m = re.search(r'AT_([A-Z]+)', p_clean, re.I)
+                        if m:
+                            symbol = m.group(1).upper()
+                            break
+                if not symbol: symbol = "UNKNOWN"
+                        
+                ts_val = 0
+                parsed_dt = None
+                for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+                    try:
+                        parsed_dt = datetime.strptime(dt_str, fmt)
+                        ts_val = parsed_dt.timestamp()
+                        break
+                    except ValueError: continue
+                if not parsed_dt: continue
+                    
+                openclose = get_field("openclose").strip()
+                internal_oid = get_field("internalorderid") or get_field("parentorderid") or ""
+                parent_oid = get_field("parentorderid") or internal_oid
+                fills.append({
+                    "timestamp": parsed_dt.isoformat(), "ts_val": ts_val, "account_name": acc.upper(), "side": side,
+                    "price": price, "quantity": qty, "symbol": symbol.upper(), "order_id": internal_oid or "PASTE",
+                    "source": "PASTE", "offset": idx,
+                    "open_close": openclose.upper() if openclose else "",
+                    "internal_order_id": internal_oid, "parent_order_id": parent_oid,
+                })
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to parse Fills line {idx}: {e}")
+
+        if not fills:
+            return result
+
+        # --- RESET STUCK POSITIONS ---
+        # Before processing a manual paste, we clear any 'ghost' pending fills 
+        # to ensure we don't carry forward errors from previous failed attempts.
+        unique_accs = list(set(f['account_name'] for f in fills))
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            for acc_name in unique_accs:
+                cursor.execute("DELETE FROM pending_fills WHERE account_name = ?", (acc_name,))
+            conn.commit()
+        finally:
+            conn.close()
+
+        fills.sort(key=lambda x: (x['timestamp'], x['offset']))
+
+        # Use Open/Close pairing when available (SC-exact matching)
+        fills_with_oc = [f for f in fills if f.get('open_close') in ('OPEN', 'CLOSE')]
+        if len(fills_with_oc) >= 2 and len(fills_with_oc) >= len(fills) * 0.5:
+            trades, unpaired_count = self._pairs_by_open_close(fills_with_oc)
+            position_warnings = {}
+        else:
+            # Strip Open/Close keys for FIFO (binary parser expects plain fills)
+            for f in fills:
+                f.pop('open_close', None)
+                f.pop('internal_order_id', None)
+                f.pop('parent_order_id', None)
+            trades, unpaired_count, position_warnings = parser._pairs_to_trades(fills)
+        dropped_ghost_fills = getattr(parser, 'ghost_list', [])
+        
         if unpaired_count > 0:
             result.stats['unpaired'] = {
                 "count": unpaired_count,
-                # Estimate commission from unpaired: approx $2.10 per leg per side.
-                # Actually, best to just show count.
                 "commission_impact": round(unpaired_count * 2.10, 2)
             }
         
-        # Convert dict trades to ParsedTrade
         parsed_objs = []
         for t in trades:
-            # t has: account, symbol, side, entry_time, exit_time, entry_price, exit_price, quantity, profit_loss, commission
             try:
+                entry_utc = datetime.fromisoformat(t['entry_time']) if isinstance(t['entry_time'], str) else t['entry_time']
+                exit_utc = datetime.fromisoformat(t['exit_time']) if isinstance(t['exit_time'], str) else t['exit_time']
+                
                 pt = ParsedTrade(
                     symbol=t['symbol'],
-                    trade_type=t['side'], # Long/Short/Buy/Sell? _pairs_to_trades returns LONG/SHORT
-                    entry_datetime=datetime.fromisoformat(t['entry_time']) if isinstance(t['entry_time'], str) else t['entry_time'],
+                    trade_type=t['side'],
+                    entry_datetime=to_ny(entry_utc),
                     entry_price=t['entry_price'],
-                    exit_datetime=datetime.fromisoformat(t['exit_time']) if isinstance(t['exit_time'], str) else t['exit_time'],
+                    exit_datetime=to_ny(exit_utc),
                     exit_price=t['exit_price'],
                     quantity=t['quantity'],
                     max_open_quantity=0, max_closed_quantity=0,
@@ -301,30 +545,56 @@ class TradeImportService:
                     cumulative_pnl=0,
                     commission=t['commission'],
                     flat_to_flat_pnl=0,
-                    note=t['account'], # Store account in note
+                    note=t['account'],
                     flat_to_flat_max_profit=0, flat_to_flat_max_loss=0,
                     max_open_profit=0, max_open_loss=0,
                     entry_efficiency="", exit_efficiency="", total_efficiency="",
                     high_while_open=0, low_while_open=0,
                     open_position_quantity=0, close_position_quantity=0,
                     duration="",
-                    account_name=t['account'],
-                    base_symbol=t['symbol']
+                    account_name=t['account'].upper(),
+                    base_symbol=t['symbol'].upper()
                 )
                 parsed_objs.append(pt)
             except Exception as e:
                 result.errors.append(f"Conversion error: {e}")
 
         result.parsed_trades = parsed_objs
-        result.total_parsed = len(parsed_objs)
+        result.total_parsed = len(fills) # Count raw fills seen
+        result.stats['fills_count'] = len(fills)
+        result.stats['trades_closed'] = len(parsed_objs)
+
+        if not parsed_objs and unpaired_count > 0:
+            result.errors.append(f"Parsed {len(fills)} fills, but they haven't formed any closed trades yet (Stored as {unpaired_count} unpaired executions in memory).")
+
+        result.dropped_ghost_fills = dropped_ghost_fills
         
-        # Insert them
         conn = sqlite3.connect(self.db_path)
         touched = set()
         try:
+            # AUTO-CLEANUP: If importing high-integrity Fills, overwrite any existing trades in this specific window.
+            if parsed_objs:
+                min_t = min(pt.entry_datetime for pt in parsed_objs).isoformat()
+                max_t = max(pt.exit_datetime for pt in parsed_objs).isoformat()
+                unique_accs = list(set(pt.account_name for pt in parsed_objs))
+                
+                cursor = conn.cursor()
+                total_wiped = 0
+                for acc_name in unique_accs:
+                    cursor.execute(
+                        "DELETE FROM processed_trades WHERE account_name = ? AND entry_time >= ? AND exit_time <= ?",
+                        (acc_name, min_t, max_t)
+                    )
+                    total_wiped += cursor.rowcount
+                
+                if total_wiped > 0:
+                    import logging
+                    logging.getLogger(__name__).info(f"Auto-cleaned {total_wiped} overlapping trades to prevent double-counting.")
+                    result.stats['auto_cleaned_count'] = total_wiped
+
             for pt in parsed_objs:
                 touched.add(pt.account_name)
-                # Check dupes
+                # Ensure _is_duplicate is accessible via self
                 if self._is_duplicate(conn, pt):
                     result.duplicates += 1
                 else:
@@ -332,17 +602,18 @@ class TradeImportService:
                     result.new_trades += 1
             conn.commit()
             
-            # Run Purge
+            # AUTO-PURGE DISABLED: We no longer automatically delete trades after import.
             full_stats = {}
-            for acc in touched:
-                breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
-                full_stats.update(breakdown)
-            result.stats = full_stats
+            # for acc in touched:
+            #     breakdown = parser.purge_anomalies(account=acc, purge_overnight=True)
+            #     full_stats.update(breakdown)
+            result.stats.update(full_stats)
             
         finally:
             conn.close()
             
         return result
+
 
     # ── parsing helpers ─────────────────────────────────────
 
@@ -469,12 +740,12 @@ class TradeImportService:
         # Derive account name
         sc_account = get_field("account")
         if sc_account:
-             trade.account_name = sc_account
+             trade.account_name = sc_account.upper()
         else:
-             trade.account_name = self._extract_account_name(trade.note)
+             trade.account_name = self._extract_account_name(trade.note).upper()
 
         # Derive base symbol
-        trade.base_symbol = self._extract_base_symbol(trade.symbol)
+        trade.base_symbol = self._extract_base_symbol(trade.symbol).upper()
         
         # Smart Naming: If the account name starts with the symbol (e.g. CL_PB1) and it's redundant, strip it
         # But be careful not to strip if it's just a coincidence. 
@@ -541,7 +812,7 @@ class TradeImportService:
         The Note field IS the account/permutation identifier.
         We use the full Note value as the account name.
         """
-        return note.strip() if note else "UNKNOWN"
+        return note.strip().upper() if note else "UNKNOWN"
 
     @staticmethod
     def _extract_base_symbol(symbol: str) -> str:
@@ -565,7 +836,7 @@ class TradeImportService:
             return "CL"
         # Generic fallback — letters before digits
         match = re.match(r'([A-Z]+)', s)
-        return match.group(1) if match else s
+        return match.group(1).upper() if match else s.upper()
 
     # ── dedup / DB helpers ──────────────────────────────────
 
@@ -601,6 +872,9 @@ class TradeImportService:
         # Deterministic trade_id
         trade_id = TradeImportService._generate_trade_id(trade)
 
+        # Convert entry time to NY for session stats
+        entry_ny = to_ny(trade.entry_datetime)
+        
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -614,8 +888,8 @@ class TradeImportService:
             """,
             (
                 trade_id,
-                trade.account_name,
-                trade.base_symbol,
+                trade.account_name.upper(),
+                trade.base_symbol.upper(),
                 trade.entry_datetime.isoformat(),
                 trade.exit_datetime.isoformat(),
                 trade.entry_price,
@@ -625,7 +899,7 @@ class TradeImportService:
                 trade.profit_loss,
                 trade.commission,
                 duration_minutes,
-                trade.entry_datetime.hour,
-                trade.entry_datetime.weekday(),
+                entry_ny.hour,
+                entry_ny.weekday(),
             ),
         )

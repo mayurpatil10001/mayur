@@ -10,6 +10,6 @@ timeout /t 2 /nobreak >nul
 
 REM Start the API server
 echo Starting API server on port 8000...
-python -m uvicorn trading_platform.api.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn trading_platform.api.main:app --host 0.0.0.0 --port 8000
 
 pause

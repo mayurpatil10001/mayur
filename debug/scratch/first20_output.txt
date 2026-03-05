@@ -1,0 +1,24 @@
+First 20 fills after ghost removal:
+    1: 2025-12-18T00:01:42.504 | SELL  1 | Pre:  0 Post: -1 | OID:36779254.1   | Note:AT_NQ_TM(D-R-2+last50)
+    2: 2025-12-18T00:01:51.397 | SELL  1 | Pre: -1 Post: -2 | OID:36779255.1   | Note:AT_NQ_TM(D-R-2+last50)
+    3: 2025-12-18T00:02:52.930 | BUY   1 | Pre: -2 Post: -1 | OID:36779322.1   | Note:AT_NQ_TM(D-R-2+last50)
+    4: 2025-12-18T00:13:26.339 | BUY   3 | Pre: -1 Post:  2 | OID:36779472.1   | Note:AT_NQ_TM(D-R-2+last50)
+    5: 2025-12-18T00:14:07.628 | BUY   1 | Pre:  2 Post:  3 | OID:36779474.1   | Note:AT_NQ_TM(D-R-2+last50)
+    6: 2025-12-18T00:16:30.482 | BUY   1 | Pre:  3 Post:  4 | OID:36779475.1   | Note:AT_NQ_TM(D-R-2+last50) !!!
+    7: 2025-12-18T00:46:17.400 | BUY   3 | Pre:  4 Post:  7 | OID:36779942.1   | Note:AT_NQ_TM(D-R-2+last50) !!!
+    8: 2025-12-18T00:46:58.998 | BUY   1 | Pre:  7 Post:  8 | OID:36779944.1   | Note:AT_NQ_TM(D-R-2+last50) !!!
+    9: 2025-12-18T00:48:59.020 | SELL  1 | Pre:  8 Post:  7 | OID:36779945.1   | Note:AT_NQ_TM(D-R-2+last50) !!!
+   10: 2025-12-18T00:54:06.275 | SELL  1 | Pre:  7 Post:  6 | OID:36779959.1   | Note:AT_NQ_TM(D-R-2+last50) !!!
+   11: 2025-12-18T01:05:02.889 | SELL  3 | Pre:  6 Post:  3 | OID:36780080.1   | Note:AT_NQ_TM(D-R-2+last50)
+   12: 2025-12-18T01:06:16.209 | SELL  1 | Pre:  3 Post:  2 | OID:36780086.1   | Note:AT_NQ_TM(D-R-2+last50)
+   13: 2025-12-18T01:06:35.336 | SELL  2 | Pre:  2 Post:  0 | OID:36780085.1   | Note:AT_NQ_TM(D-R-2+last50)
+   14: 2025-12-18T01:12:02.407 | SELL  3 | Pre:  0 Post: -3 | OID:36780187.1   | Note:AT_NQ_TM(D-R-2+last50)
+   15: 2025-12-18T01:13:43.217 | BUY   3 | Pre: -3 Post:  0 | OID:36780192.1   | Note:AT_NQ_TM(D-R-2+last50)
+   16: 2025-12-18T01:40:47.958 | BUY   3 | Pre:  0 Post:  3 | OID:36780353.1   | Note:AT_NQ_TM(D-R-2+last50)
+   17: 2025-12-18T01:47:10.923 | SELL  1 | Pre:  3 Post:  2 | OID:36780355.1   | Note:AT_NQ_TM(D-R-2+last50)
+   18: 2025-12-18T01:49:55.228 | SELL  2 | Pre:  2 Post:  0 | OID:36780354.1   | Note:AT_NQ_TM(D-R-2+last50)
+   19: 2025-12-18T01:51:15.369 | BUY   3 | Pre:  0 Post:  3 | OID:36780405.1   | Note:AT_NQ_TM(D-R-2+last50)
+   20: 2025-12-18T01:54:01.114 | SELL  1 | Pre:  3 Post:  2 | OID:36780408.1   | Note:AT_NQ_TM(D-R-2+last50)
+
+Total fills: 228
+Fills where |pos| > 3 (raw count): 138

@@ -39,13 +39,10 @@ const Analytics: React.FC = () => {
         const accountItems = result.data.items;
         setAvailableAccounts(accountItems);
 
-        // Find first account for default symbol (CL)
-        const clAccounts = accountItems.filter((a: any) => a.symbol === 'CL');
-        if (clAccounts.length > 0 && !selectedAccount) {
-          setSelectedAccount(clAccounts[0].name);
-        } else if (accountItems.length > 0 && !selectedAccount) {
-          setSelectedAccount(accountItems[0].name);
-          setSelectedSymbol(accountItems[0].symbol);
+        if (accountItems.length > 0 && !selectedAccount) {
+          const firstAcc = accountItems[0];
+          setSelectedAccount(firstAcc.name);
+          setSelectedSymbol(firstAcc.symbol);
         }
       }
     } catch (error) {
@@ -100,7 +97,7 @@ const Analytics: React.FC = () => {
       console.error('[ANALYTICS] Temporal analysis error:', error);
     });
 
-    dispatch(fetchAccountCorrelation([accountName, 'CL_TM_2'])).then((result) => {
+    dispatch(fetchAccountCorrelation([accountName, '3Q_SIM14'])).then((result) => {
       console.log('[ANALYTICS] Correlation result:', result);
     }).catch((error) => {
       console.error('[ANALYTICS] Correlation error:', error);
@@ -309,14 +306,12 @@ const Analytics: React.FC = () => {
           <div className="refresh-section">
             <button
               onClick={() => {
-                console.log('[ANALYTICS] Refresh button clicked');
-                dispatch(fetchTemporalAnalysis({ accountName: 'CL_3' })).then((result) => {
-                  console.log('[ANALYTICS] Refresh temporal result:', result);
-                });
-                dispatch(fetchAccountCorrelation(['CL_3', 'CL_TM_2'])).then((result) => {
-                  console.log('[ANALYTICS] Refresh correlation result:', result);
-                });
-                fetchPerformanceMetrics('CL_3');
+                if (selectedAccount) {
+                  console.log('[ANALYTICS] Refresh button clicked for:', selectedAccount);
+                  dispatch(fetchTemporalAnalysis({ accountName: selectedAccount }));
+                  dispatch(fetchAccountCorrelation([selectedAccount, '3Q_SIM14']));
+                  fetchPerformanceMetrics(selectedAccount);
+                }
               }}
               disabled={isLoadingTemporal || isLoadingCorrelation || isLoadingPerformance}
             >

@@ -11,6 +11,13 @@ taskkill /f /im uvicorn.exe >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000') do taskkill /f /pid %%a >nul 2>&1
 echo ✅ Backend cleanup complete
 
+REM Rotate logs
+if exist "trading_platform.log" (
+    echo [1.5/3] Archiving previous log...
+    move /y "trading_platform.log" "trading_platform.log.old" >nul 2>&1
+    echo ✅ Previous log archived to trading_platform.log.old
+)
+
 timeout /t 1 /nobreak >nul
 
 REM Activate virtual environment
@@ -41,4 +48,4 @@ echo API Documentation: http://localhost:8000/docs
 echo Health Check: http://localhost:8000/health
 echo.
 
-uvicorn trading_platform.api.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn trading_platform.api.main:app --host 0.0.0.0 --port 8000

@@ -1,7 +1,3 @@
-"""
-Configuration settings for the Trading Optimization Platform.
-"""
-
 from pathlib import Path
 from typing import List
 import os

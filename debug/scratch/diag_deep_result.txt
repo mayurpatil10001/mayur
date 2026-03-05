@@ -1,0 +1,979 @@
+====================================================================================================
+Q1: DO TRAILING STOP FILLS CONSISTENTLY LACK TAG 0x82 NOTES?
+====================================================================================================
+Total V_SIM16 log files: 389
+
+Ghost fills across 20 files: 114
+
+Ghost fill order type breakdown:
+  Unknown: 114
+
+All ghost fill details (114 total):
+  [ 0] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 10:05:23  SELL  qty=3  px=25186.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25186.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 1] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 11:48:53  SELL  qty=1  px=24952.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24952.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 2] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 14:48:14  SELL  qty=3  px=25072.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25072.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 3] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 14:48:24  SELL  qty=1  px=25105.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25105.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 4] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 14:57:13  SELL  qty=1  px=25113.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25113.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 5] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 15:00:50  BUY   qty=3  px=25092.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25091.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 6] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 15:55:06  BUY   qty=1  px=25002.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25001.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 7] TradeActivityLog_2026-02-04_UT  NY=2026-02-04 16:34:08  SELL  qty=1  px=25155.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25155.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 8] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 04:02:04  BUY   qty=3  px=25036.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25035.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [ 9] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 05:39:06  BUY   qty=1  px=25035.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25034.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [10] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 09:34:29  BUY   qty=3  px=24747.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24746.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [11] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 09:40:57  BUY   qty=1  px=24915.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24914.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [12] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 09:56:59  BUY   qty=1  px=24802.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24801.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [13] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 10:17:59  BUY   qty=1  px=24625.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24624.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [14] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 11:08:33  SELL  qty=1  px=24564.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24564.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [15] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 11:51:08  SELL  qty=3  px=24807.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24808.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [16] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 12:25:26  SELL  qty=1  px=24836.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24836.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [17] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 14:36:05  BUY   qty=1  px=24731.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24731.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [18] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 15:30:41  BUY   qty=3  px=24649.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24648.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [19] TradeActivityLog_2026-02-05_UT  NY=2026-02-05 15:57:03  SELL  qty=3  px=24645.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24645.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [20] TradeActivityLog_2026-02-06_UT  NY=2026-02-05 19:24:02  BUY   qty=1  px=24340.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24337.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [21] TradeActivityLog_2026-02-06_UT  NY=2026-02-05 19:25:09  BUY   qty=1  px=24358.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24357.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [22] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 02:15:02  BUY   qty=3  px=24528.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24526.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [23] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 07:16:20  BUY   qty=1  px=24801.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24800.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [24] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 08:39:47  BUY   qty=1  px=24841.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24838.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [25] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 09:33:41  SELL  qty=3  px=24779.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24779.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [26] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 09:35:34  SELL  qty=1  px=24852.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24853.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [27] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 10:51:01  BUY   qty=3  px=24864.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24863.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [28] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 12:05:25  SELL  qty=1  px=25036.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25036.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [29] TradeActivityLog_2026-02-06_UT  NY=2026-02-06 14:22:39  BUY   qty=1  px=25092.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25092.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [30] TradeActivityLog_2026-02-09_UT  NY=2026-02-09 09:37:57  BUY   qty=1  px=25084.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25083.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [31] TradeActivityLog_2026-02-09_UT  NY=2026-02-09 09:39:10  BUY   qty=1  px=25096.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25096.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [32] TradeActivityLog_2026-02-10_UT  NY=2026-02-10 09:30:19  BUY   qty=3  px=25378.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25377.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [33] TradeActivityLog_2026-02-11_UT  NY=2026-02-10 23:48:01  SELL  qty=1  px=25303.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25303.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [34] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 12:26:54  SELL  qty=1  px=25290.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25290.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [35] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 12:42:57  BUY   qty=3  px=25296.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25295.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [36] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 13:02:16  BUY   qty=1  px=25255.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25254.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [37] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 14:12:26  SELL  qty=1  px=25295.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25295.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [38] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 15:39:46  SELL  qty=1  px=25302.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25302.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [39] TradeActivityLog_2026-02-11_UT  NY=2026-02-11 16:00:08  BUY   qty=1  px=25284.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25284.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [40] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 09:30:07  BUY   qty=1  px=25355.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25354.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [41] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 10:35:00  SELL  qty=1  px=25176.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25177.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [42] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 11:37:04  SELL  qty=1  px=24896.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24896.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [43] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 11:50:58  BUY   qty=2  px=24862.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24861.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [44] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 13:07:15  SELL  qty=1  px=24875.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24875.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [45] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 15:55:05  SELL  qty=1  px=24774.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24774.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [46] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 15:56:58  SELL  qty=2  px=24754.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24753.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [47] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 18:12:00  BUY   qty=1  px=24845.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24844.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [48] TradeActivityLog_2026-02-12_UT  NY=2026-02-12 18:35:58  BUY   qty=1  px=24812.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24811.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [49] TradeActivityLog_2026-02-13_UT  NY=2026-02-12 20:06:38  BUY   qty=3  px=24797.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24797.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [50] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 04:03:46  BUY   qty=3  px=24737.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24736.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [51] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 06:19:18  BUY   qty=1  px=24694.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24693.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [52] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 08:31:03  SELL  qty=3  px=24790.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24790.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [53] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 08:32:59  BUY   qty=1  px=24734.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24733.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [54] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 09:50:59  BUY   qty=1  px=24716.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24715.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [55] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 11:08:56  BUY   qty=1  px=24884.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24883.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [56] TradeActivityLog_2026-02-13_UT  NY=2026-02-13 15:29:06  BUY   qty=1  px=24764.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24763.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [57] TradeActivityLog_2026-02-16_UT  NY=2026-02-16 00:57:09  BUY   qty=1  px=24806.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24805.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [58] TradeActivityLog_2026-02-16_UT  NY=2026-02-16 09:00:52  BUY   qty=1  px=24838.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24838.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [59] TradeActivityLog_2026-02-16_UT  NY=2026-02-16 09:01:46  SELL  qty=1  px=24834.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24834.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [60] TradeActivityLog_2026-02-16_UT  NY=2026-02-16 09:10:08  SELL  qty=1  px=24807.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24807.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [61] TradeActivityLog_2026-02-16_UT  NY=2026-02-16 12:07:26  SELL  qty=1  px=24720.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24720.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [62] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 08:52:28  SELL  qty=3  px=24695.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24694.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [63] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 08:53:43  SELL  qty=1  px=24669.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24669.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [64] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 08:55:41  BUY   qty=1  px=24643.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24643.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [65] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 09:31:03  BUY   qty=1  px=24615.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24614.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [66] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 09:59:02  SELL  qty=3  px=24493.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24495.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [67] TradeActivityLog_2026-02-17_UT  NY=2026-02-17 14:53:07  BUY   qty=1  px=24832.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24831.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [68] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 09:39:02  BUY   qty=3  px=24819.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24819.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [69] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 09:59:05  SELL  qty=1  px=24943.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24943.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [70] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 10:56:07  BUY   qty=1  px=25097.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25097.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [71] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 13:42:31  SELL  qty=1  px=25030.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25029.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [72] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 13:51:12  SELL  qty=3  px=25022.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25022.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [73] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 13:54:03  BUY   qty=1  px=25004.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25004.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [74] TradeActivityLog_2026-02-18_UT  NY=2026-02-18 14:00:04  BUY   qty=3  px=25019.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25017.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [75] TradeActivityLog_2026-02-19_UT  NY=2026-02-19 11:29:01  BUY   qty=1  px=24886.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24884.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [76] TradeActivityLog_2026-02-19_UT  NY=2026-02-19 13:36:52  SELL  qty=3  px=24772.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24773.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [77] TradeActivityLog_2026-02-19_UT  NY=2026-02-19 14:29:42  BUY   qty=1  px=24810.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24809.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [78] TradeActivityLog_2026-02-19_UT  NY=2026-02-19 16:44:50  BUY   qty=1  px=24829.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24829.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [79] TradeActivityLog_2026-02-20_UT  NY=2026-02-20 10:43:37  SELL  qty=1  px=25037.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25037.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [80] TradeActivityLog_2026-02-20_UT  NY=2026-02-20 13:33:39  SELL  qty=1  px=25054.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25054.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [81] TradeActivityLog_2026-02-20_UT  NY=2026-02-20 13:35:58  SELL  qty=2  px=24980.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24980.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [82] TradeActivityLog_2026-02-20_UT  NY=2026-02-20 14:27:57  BUY   qty=3  px=25050.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25049.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [83] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 07:03:54  SELL  qty=1  px=24923.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24922.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [84] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 09:30:22  BUY   qty=3  px=25004.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25004.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [85] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 09:30:44  SELL  qty=1  px=25017.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25017.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [86] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 10:53:20  BUY   qty=1  px=24789.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24788.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [87] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 12:41:11  BUY   qty=1  px=24706.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24704.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [88] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 13:07:39  SELL  qty=1  px=24768.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24768.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [89] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 15:58:56  SELL  qty=1  px=24741.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24741.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [90] TradeActivityLog_2026-02-23_UT  NY=2026-02-23 16:53:57  BUY   qty=3  px=24784.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24784.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [91] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 07:00:05  SELL  qty=1  px=24837.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24837.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [92] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 09:38:20  BUY   qty=3  px=24777.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24777.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [93] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 09:39:47  SELL  qty=1  px=24794.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24794.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [94] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 09:44:56  SELL  qty=3  px=24917.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24917.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [95] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 10:21:37  SELL  qty=1  px=24923.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24923.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [96] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 10:26:58  BUY   qty=3  px=24979.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24979.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [97] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 10:35:56  SELL  qty=3  px=24990.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24990.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [98] TradeActivityLog_2026-02-24_UT  NY=2026-02-24 11:21:04  BUY   qty=3  px=24999.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24998.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [99] TradeActivityLog_2026-02-25_UT  NY=2026-02-24 22:41:53  BUY   qty=1  px=25054.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25053.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [100] TradeActivityLog_2026-02-25_UT  NY=2026-02-24 22:42:01  BUY   qty=3  px=25053.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25052.75'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [101] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 02:42:06  SELL  qty=3  px=25033.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25032.50'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [102] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 09:30:04  BUY   qty=1  px=25181.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25180.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [103] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 09:30:14  SELL  qty=1  px=25191.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25191.25'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [104] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 09:30:51  BUY   qty=1  px=25214.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25212.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [105] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 09:39:43  SELL  qty=1  px=25249.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25248.75'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [106] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 16:31:28  SELL  qty=3  px=25422.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25423.00'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [107] TradeActivityLog_2026-02-25_UT  NY=2026-02-25 16:31:41  SELL  qty=2  px=25400.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25401.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [108] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 05:09:15  SELL  qty=3  px=25381.25
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25381.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [109] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 09:28:12  BUY   qty=1  px=25353.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25353.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [110] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 10:15:03  SELL  qty=3  px=25047.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25047.25'
+       tags=[104, 105, 106, 107, 108, 109, 112, 113, 114, 115, 116, 118, 120, 122, 124, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [111] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 10:15:16  BUY   qty=1  px=25034.50
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25034.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [112] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 10:16:13  BUY   qty=1  px=25017.75
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25017.00'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+  [113] TradeActivityLog_2026-02-26_UT  NY=2026-02-26 10:17:08  BUY   qty=1  px=25010.00
+       note=''
+       msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 25009.50'
+       tags=[104, 105, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 120, 122, 124, 125, 126, 127, 128, 131, 133, 137, 139, 156, 160, 199, 100, 101]
+
+====================================================================================================
+Q2: CORRECT GHOST COUNT FOR 2025-12-18
+====================================================================================================
+Ghost fill RECORDS: 3
+Ghost fill CONTRACTS: 4
+Parser reported ghosts removed: 6
+  [0] NY=2025-12-17 19:17:13  SELL  qty=1  px=24955.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid'
+  [1] NY=2025-12-18 04:05:56  BUY   qty=2  px=25046.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid'
+  [2] NY=2025-12-18 10:29:45  SELL  qty=1  px=25316.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation fill. Bid'
+
+====================================================================================================
+Q3: CONTEXT AROUND EACH GHOST FILL (5 before, 5 after)
+====================================================================================================
+
+--- Ghost #0 at index 6 ---
+  [  1]   ok  NY=2025-12-17 19:01:51  SELL  qty=1  px=24912.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  2]   ok  NY=2025-12-17 19:02:52  BUY   qty=1  px=24919.50  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  3]   ok  NY=2025-12-17 19:13:26  BUY   qty=3  px=24937.00  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  4]   ok  NY=2025-12-17 19:14:07  BUY   qty=1  px=24943.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  5]   ok  NY=2025-12-17 19:16:30  BUY   qty=1  px=24951.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  6] GHOST NY=2025-12-17 19:17:13  SELL  qty=1  px=24955.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation' <<< GHOST
+  [  7]   ok  NY=2025-12-17 19:46:17  BUY   qty=3  px=24966.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  8]   ok  NY=2025-12-17 19:46:58  BUY   qty=1  px=24973.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [  9]   ok  NY=2025-12-17 19:48:59  SELL  qty=1  px=24983.00  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 10]   ok  NY=2025-12-17 19:54:06  SELL  qty=1  px=24986.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 11]   ok  NY=2025-12-17 20:05:02  SELL  qty=3  px=24972.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+
+--- Ghost #1 at index 86 ---
+  [ 81]   ok  NY=2025-12-18 02:26:26  BUY   qty=3  px=25038.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 82]   ok  NY=2025-12-18 02:26:26  BUY   qty=3  px=25038.75  note='Tag: AT_NQ_TM(D-R-2+last50)'  msg='Trade simulation fill. Bid: 25038.00 Ask: 25039.00'
+  [ 83]   ok  NY=2025-12-18 03:05:08  SELL  qty=3  px=25017.75  note='Tag: AT_NQ_TM(D-R-2+last50)'  msg='Trade simulation fill. Bid: 25017.75 Ask: 25018.75'
+  [ 84]   ok  NY=2025-12-18 03:23:35  SELL  qty=1  px=25044.50  note='Tag: AT_NQ_TM(D-R-2+last50)'  msg='Trade simulation fill. Bid: 25044.25 Ask: 25044.75'
+  [ 85]   ok  NY=2025-12-18 03:43:04  SELL  qty=1  px=25050.25  note='Tag: AT_NQ_TM(D-R-2+last50)'  msg='Trade simulation fill. Bid: 25050.50 Ask: 25051.00'
+  [ 86] GHOST NY=2025-12-18 04:05:56  BUY   qty=2  px=25046.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation' <<< GHOST
+  [ 87]   ok  NY=2025-12-18 04:18:31  SELL  qty=3  px=25031.00  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 88]   ok  NY=2025-12-18 04:18:46  BUY   qty=3  px=25037.50  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 89]   ok  NY=2025-12-18 04:46:08  BUY   qty=3  px=25081.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 90]   ok  NY=2025-12-18 04:46:11  BUY   qty=1  px=25084.50  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [ 91]   ok  NY=2025-12-18 04:46:12  BUY   qty=2  px=25082.00  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+
+--- Ghost #2 at index 157 ---
+  [152]   ok  NY=2025-12-18 09:17:06  BUY   qty=3  px=25251.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [153]   ok  NY=2025-12-18 09:25:23  BUY   qty=3  px=25274.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [154]   ok  NY=2025-12-18 10:24:04  BUY   qty=3  px=25263.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [155]   ok  NY=2025-12-18 10:24:48  BUY   qty=1  px=25278.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [156]   ok  NY=2025-12-18 10:26:14  SELL  qty=1  px=25296.50  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [157] GHOST NY=2025-12-18 10:29:45  SELL  qty=1  px=25316.50  note=''  msg='Trading Evaluator (Filled). Info: Trade simulation' <<< GHOST
+  [158]   ok  NY=2025-12-18 10:55:11  SELL  qty=3  px=25383.25  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [159]   ok  NY=2025-12-18 10:57:10  SELL  qty=3  px=25359.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [160]   ok  NY=2025-12-18 11:06:07  SELL  qty=3  px=25389.75  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [161]   ok  NY=2025-12-18 11:11:49  BUY   qty=1  px=25405.50  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+  [162]   ok  NY=2025-12-18 11:14:10  SELL  qty=2  px=25390.00  note='AT_NQ_TM(D-R-2+last50)'  msg='Trading Evaluator (Filled). Info: Trade simulation'
+
+====================================================================================================
+Q4: SESSION-BY-SESSION FIFO (ALL V_SIM16 FILES)
+====================================================================================================
+Total fills across ALL files (no ghost filter): 43715
+Total sessions found: 225
+
+Session summary (showing sessions with fills):
+Session Date | Fills | Buys | Sells |  Net
+--------------------------------------------------
+  2024-06-17 |     5 |    2 |    5 |   -3 *** IMBALANCED
+  2025-04-03 |   140 |  141 |  143 |   -2 *** IMBALANCED
+  2025-04-04 |   200 |  193 |  191 |   +2 *** IMBALANCED
+  2025-04-07 |   224 |  211 |  227 |  -16 *** IMBALANCED
+  2025-04-08 |   206 |  187 |  209 |  -22 *** IMBALANCED
+  2025-04-09 |   192 |  191 |  181 |  +10 *** IMBALANCED
+  2025-04-10 |   220 |  196 |  248 |  -52 *** IMBALANCED
+  2025-04-11 |   211 |  202 |  204 |   -2 *** IMBALANCED
+  2025-04-14 |   238 |  209 |  258 |  -49 *** IMBALANCED
+  2025-04-15 |   194 |  180 |  227 |  -47 *** IMBALANCED
+  2025-04-16 |   200 |  165 |  231 |  -66 *** IMBALANCED
+  2025-04-17 |   215 |  199 |  238 |  -39 *** IMBALANCED
+  2025-04-21 |   201 |  163 |  217 |  -54 *** IMBALANCED
+  2025-04-22 |   236 |  186 |  271 |  -85 *** IMBALANCED
+  2025-04-23 |   239 |  217 |  234 |  -17 *** IMBALANCED
+  2025-04-24 |   245 |  210 |  260 |  -50 *** IMBALANCED
+  2025-04-25 |   221 |  185 |  227 |  -42 *** IMBALANCED
+  2025-04-28 |   213 |  191 |  227 |  -36 *** IMBALANCED
+  2025-04-29 |   239 |  200 |  276 |  -76 *** IMBALANCED
+  2025-04-30 |   233 |  195 |  273 |  -78 *** IMBALANCED
+  2025-05-01 |   216 |  189 |  251 |  -62 *** IMBALANCED
+  2025-05-02 |   217 |  166 |  272 | -106 *** IMBALANCED
+  2025-05-05 |   219 |  209 |  252 |  -43 *** IMBALANCED
+  2025-05-06 |   237 |  210 |  248 |  -38 *** IMBALANCED
+  2025-05-07 |   222 |  201 |  237 |  -36 *** IMBALANCED
+  2025-05-08 |   221 |  222 |  244 |  -22 *** IMBALANCED
+  2025-05-09 |   187 |  167 |  217 |  -50 *** IMBALANCED
+  2025-05-12 |   222 |  215 |  225 |  -10 *** IMBALANCED
+  2025-05-13 |   213 |  204 |  214 |  -10 *** IMBALANCED
+  2025-05-14 |   150 |  126 |  180 |  -54 *** IMBALANCED
+  2025-05-15 |   197 |  149 |  221 |  -72 *** IMBALANCED
+  2025-05-16 |   186 |  158 |  220 |  -62 *** IMBALANCED
+  2025-05-19 |   185 |  141 |  209 |  -68 *** IMBALANCED
+  2025-05-20 |   219 |  187 |  247 |  -60 *** IMBALANCED
+  2025-05-21 |   215 |  211 |  215 |   -4 *** IMBALANCED
+  2025-05-22 |   218 |  205 |  223 |  -18 *** IMBALANCED
+  2025-05-23 |   195 |  178 |  206 |  -28 *** IMBALANCED
+  2025-05-26 |   137 |  144 |  123 |  +21 *** IMBALANCED
+  2025-05-27 |   214 |  194 |  255 |  -61 *** IMBALANCED
+  2025-05-28 |   174 |  138 |  222 |  -84 *** IMBALANCED
+  2025-05-29 |   213 |  191 |  239 |  -48 *** IMBALANCED
+  2025-05-30 |   189 |  177 |  207 |  -30 *** IMBALANCED
+  2025-06-02 |   221 |  192 |  248 |  -56 *** IMBALANCED
+  2025-06-03 |   179 |  148 |  212 |  -64 *** IMBALANCED
+  2025-06-04 |   210 |  193 |  241 |  -48 *** IMBALANCED
+  2025-06-05 |   180 |  171 |  189 |  -18 *** IMBALANCED
+  2025-06-06 |   203 |  174 |  238 |  -64 *** IMBALANCED
+  2025-06-09 |   191 |  151 |  233 |  -82 *** IMBALANCED
+  2025-06-10 |   194 |  177 |  203 |  -26 *** IMBALANCED
+  2025-06-11 |   227 |  247 |  202 |  +45 *** IMBALANCED
+  2025-06-12 |   217 |  187 |  225 |  -38 *** IMBALANCED
+  2025-06-13 |   195 |  185 |  201 |  -16 *** IMBALANCED
+  2025-06-16 |   137 |  111 |  165 |  -54 *** IMBALANCED
+  2025-06-17 |   194 |  163 |  205 |  -42 *** IMBALANCED
+  2025-06-18 |   217 |  163 |  257 |  -94 *** IMBALANCED
+  2025-06-19 |   167 |  133 |  191 |  -58 *** IMBALANCED
+  2025-06-20 |   205 |  189 |  200 |  -11 *** IMBALANCED
+  2025-06-23 |   248 |  221 |  257 |  -36 *** IMBALANCED
+  2025-06-24 |   194 |  166 |  212 |  -46 *** IMBALANCED
+  2025-06-25 |   191 |  153 |  245 |  -92 *** IMBALANCED
+  2025-06-26 |   155 |  130 |  202 |  -72 *** IMBALANCED
+  2025-06-27 |   168 |  134 |  191 |  -57 *** IMBALANCED
+  2025-06-30 |   203 |  178 |  204 |  -26 *** IMBALANCED
+  2025-07-01 |   227 |  227 |  229 |   -2 *** IMBALANCED
+  2025-07-02 |   194 |  154 |  249 |  -95 *** IMBALANCED
+  2025-07-03 |   159 |  121 |  173 |  -52 *** IMBALANCED
+  2025-07-04 |   151 |  153 |  171 |  -18 *** IMBALANCED
+  2025-07-07 |   209 |  199 |  237 |  -38 *** IMBALANCED
+  2025-07-08 |   214 |  181 |  265 |  -84 *** IMBALANCED
+  2025-07-09 |   202 |  174 |  226 |  -52 *** IMBALANCED
+  2025-07-10 |   172 |  128 |  202 |  -74 *** IMBALANCED
+  2025-07-11 |   238 |  219 |  245 |  -26 *** IMBALANCED
+  2025-07-14 |   167 |  143 |  217 |  -74 *** IMBALANCED
+  2025-07-15 |   181 |  153 |  197 |  -44 *** IMBALANCED
+  2025-07-16 |   187 |  169 |  215 |  -46 *** IMBALANCED
+  2025-07-17 |   181 |  154 |  228 |  -74 *** IMBALANCED
+  2025-07-18 |   173 |  126 |  210 |  -84 *** IMBALANCED
+  2025-07-21 |   202 |  164 |  234 |  -70 *** IMBALANCED
+  2025-07-22 |   208 |  169 |  247 |  -78 *** IMBALANCED
+  2025-07-23 |   198 |  160 |  220 |  -60 *** IMBALANCED
+  2025-07-24 |   172 |  154 |  188 |  -34 *** IMBALANCED
+  2025-07-25 |   167 |  157 |  185 |  -28 *** IMBALANCED
+  2025-07-28 |   202 |  143 |  245 | -102 *** IMBALANCED
+  2025-07-29 |   183 |  142 |  230 |  -88 *** IMBALANCED
+  2025-07-30 |   190 |  174 |  200 |  -26 *** IMBALANCED
+  2025-07-31 |   200 |  152 |  226 |  -74 *** IMBALANCED
+  2025-08-01 |   172 |  129 |  224 |  -95 *** IMBALANCED
+  2025-08-04 |   185 |  167 |  211 |  -44 *** IMBALANCED
+  2025-08-05 |   168 |  153 |  175 |  -22 *** IMBALANCED
+  2025-08-06 |   210 |  183 |  237 |  -54 *** IMBALANCED
+  2025-08-07 |   186 |  201 |  179 |  +22 *** IMBALANCED
+  2025-08-08 |   171 |  131 |  185 |  -54 *** IMBALANCED
+  2025-08-11 |   159 |  117 |  219 | -102 *** IMBALANCED
+  2025-08-12 |   221 |  190 |  242 |  -52 *** IMBALANCED
+  2025-08-13 |   204 |  175 |  223 |  -48 *** IMBALANCED
+  2025-08-14 |   172 |  151 |  187 |  -36 *** IMBALANCED
+  2025-08-15 |   184 |  191 |  169 |  +22 *** IMBALANCED
+  2025-08-18 |   170 |  140 |  205 |  -65 *** IMBALANCED
+  2025-08-19 |   191 |  158 |  223 |  -65 *** IMBALANCED
+  2025-08-20 |   210 |  184 |  242 |  -58 *** IMBALANCED
+  2025-08-21 |   219 |  211 |  241 |  -30 *** IMBALANCED
+  2025-08-22 |   202 |  199 |  205 |   -6 *** IMBALANCED
+  2025-08-25 |   199 |  171 |  235 |  -64 *** IMBALANCED
+  2025-08-26 |   206 |  185 |  210 |  -25 *** IMBALANCED
+  2025-08-27 |   178 |  116 |  210 |  -94 *** IMBALANCED
+  2025-08-28 |   172 |  151 |  187 |  -36 *** IMBALANCED
+  2025-08-29 |   171 |  139 |  213 |  -74 *** IMBALANCED
+  2025-09-01 |   172 |  146 |  196 |  -50 *** IMBALANCED
+  2025-09-02 |   215 |  180 |  258 |  -78 *** IMBALANCED
+  2025-09-03 |   218 |  156 |  270 | -114 *** IMBALANCED
+  2025-09-04 |   214 |  171 |  247 |  -76 *** IMBALANCED
+  2025-09-05 |   195 |  165 |  222 |  -57 *** IMBALANCED
+  2025-09-08 |   218 |  201 |  241 |  -40 *** IMBALANCED
+  2025-09-09 |   197 |  171 |  225 |  -54 *** IMBALANCED
+  2025-09-10 |   183 |  151 |  231 |  -80 *** IMBALANCED
+  2025-09-11 |   191 |  169 |  212 |  -43 *** IMBALANCED
+  2025-09-12 |   171 |  119 |  199 |  -80 *** IMBALANCED
+  2025-09-15 |   163 |  165 |  159 |   +6 *** IMBALANCED
+  2025-09-16 |   139 |  125 |  178 |  -53 *** IMBALANCED
+  2025-09-17 |   186 |  160 |  206 |  -46 *** IMBALANCED
+  2025-09-18 |   202 |  161 |  223 |  -62 *** IMBALANCED
+  2025-09-19 |   197 |  164 |  212 |  -48 *** IMBALANCED
+  2025-09-22 |   183 |  140 |  236 |  -96 *** IMBALANCED
+  2025-09-23 |   217 |  180 |  262 |  -82 *** IMBALANCED
+  2025-09-24 |   189 |  127 |  230 | -103 *** IMBALANCED
+  2025-09-25 |     3 |    3 |    3 |   +0
+  2025-10-06 |    72 |   48 |   90 |  -42 *** IMBALANCED
+  2025-10-07 |   202 |  166 |  236 |  -70 *** IMBALANCED
+  2025-10-08 |   209 |  168 |  248 |  -80 *** IMBALANCED
+  2025-10-09 |   204 |  166 |  242 |  -76 *** IMBALANCED
+  2025-10-10 |   175 |  121 |  217 |  -96 *** IMBALANCED
+  2025-10-13 |   180 |  158 |  188 |  -30 *** IMBALANCED
+  2025-10-14 |   231 |  169 |  261 |  -92 *** IMBALANCED
+  2025-10-15 |   204 |  185 |  220 |  -35 *** IMBALANCED
+  2025-10-16 |   194 |  193 |  206 |  -13 *** IMBALANCED
+  2025-10-17 |   212 |  185 |  255 |  -70 *** IMBALANCED
+  2025-10-20 |   193 |  152 |  241 |  -89 *** IMBALANCED
+  2025-10-21 |   206 |  186 |  237 |  -51 *** IMBALANCED
+  2025-10-22 |   205 |  183 |  214 |  -31 *** IMBALANCED
+  2025-10-23 |   223 |  169 |  282 | -113 *** IMBALANCED
+  2025-10-24 |   187 |  152 |  210 |  -58 *** IMBALANCED
+  2025-10-27 |   179 |  163 |  199 |  -36 *** IMBALANCED
+  2025-10-28 |   200 |  213 |  217 |   -4 *** IMBALANCED
+  2025-10-29 |   204 |  181 |  245 |  -64 *** IMBALANCED
+  2025-10-30 |   253 |  228 |  268 |  -40 *** IMBALANCED
+  2025-10-31 |   208 |  152 |  257 | -105 *** IMBALANCED
+  2025-11-03 |   246 |  193 |  295 | -102 *** IMBALANCED
+  2025-11-04 |   196 |  161 |  237 |  -76 *** IMBALANCED
+  2025-11-05 |   230 |  197 |  247 |  -50 *** IMBALANCED
+  2025-11-06 |   226 |  181 |  266 |  -85 *** IMBALANCED
+  2025-11-07 |   100 |   97 |   96 |   +1 *** IMBALANCED
+  2025-11-13 |     1 |    0 |    3 |   -3 *** IMBALANCED
+  2025-11-14 |    20 |   10 |   27 |  -17 *** IMBALANCED
+  2025-11-17 |   211 |  179 |  235 |  -56 *** IMBALANCED
+  2025-11-18 |   237 |  209 |  257 |  -48 *** IMBALANCED
+  2025-11-19 |   210 |  189 |  233 |  -44 *** IMBALANCED
+  2025-11-20 |   201 |  178 |  227 |  -49 *** IMBALANCED
+  2025-11-21 |   212 |  208 |  208 |   +0
+  2025-11-24 |   215 |  189 |  236 |  -47 *** IMBALANCED
+  2025-11-25 |   200 |  177 |  219 |  -42 *** IMBALANCED
+  2025-11-26 |   205 |  189 |  233 |  -44 *** IMBALANCED
+  2025-11-27 |   144 |  113 |  181 |  -68 *** IMBALANCED
+  2025-11-28 |    76 |   75 |   80 |   -5 *** IMBALANCED
+  2025-12-01 |   216 |  144 |  290 | -146 *** IMBALANCED
+  2025-12-02 |   225 |  171 |  247 |  -76 *** IMBALANCED
+  2025-12-03 |   182 |  130 |  230 | -100 *** IMBALANCED
+  2025-12-04 |   191 |  142 |  248 | -106 *** IMBALANCED
+  2025-12-05 |   169 |  135 |  200 |  -65 *** IMBALANCED
+  2025-12-08 |   162 |  120 |  195 |  -75 *** IMBALANCED
+  2025-12-09 |   194 |  159 |  242 |  -83 *** IMBALANCED
+  2025-12-10 |   204 |  207 |  209 |   -2 *** IMBALANCED
+  2025-12-11 |   203 |  186 |  204 |  -18 *** IMBALANCED
+  2025-12-12 |   177 |  158 |  188 |  -30 *** IMBALANCED
+  2025-12-15 |   204 |  188 |  231 |  -43 *** IMBALANCED
+  2025-12-16 |   217 |  183 |  218 |  -35 *** IMBALANCED
+  2025-12-17 |   161 |  148 |  205 |  -57 *** IMBALANCED
+  2025-12-18 |   233 |  206 |  257 |  -51 *** IMBALANCED
+  2025-12-19 |   187 |  181 |  209 |  -28 *** IMBALANCED
+  2025-12-22 |   182 |  175 |  179 |   -4 *** IMBALANCED
+  2025-12-23 |   164 |  135 |  201 |  -66 *** IMBALANCED
+  2025-12-24 |   138 |  105 |  159 |  -54 *** IMBALANCED
+  2025-12-26 |   156 |  123 |  191 |  -68 *** IMBALANCED
+  2025-12-29 |   203 |  169 |  211 |  -42 *** IMBALANCED
+  2025-12-30 |   216 |  177 |  239 |  -62 *** IMBALANCED
+  2025-12-31 |   198 |  160 |  224 |  -64 *** IMBALANCED
+  2026-01-02 |   159 |  140 |  187 |  -47 *** IMBALANCED
+  2026-01-05 |   223 |  185 |  256 |  -71 *** IMBALANCED
+  2026-01-06 |   180 |  150 |  213 |  -63 *** IMBALANCED
+  2026-01-07 |   182 |  139 |  222 |  -83 *** IMBALANCED
+  2026-01-08 |   200 |  178 |  224 |  -46 *** IMBALANCED
+  2026-01-09 |   221 |  194 |  248 |  -54 *** IMBALANCED
+  2026-01-12 |   188 |  149 |  243 |  -94 *** IMBALANCED
+  2026-01-13 |   217 |  169 |  255 |  -86 *** IMBALANCED
+  2026-01-14 |   202 |  198 |  216 |  -18 *** IMBALANCED
+  2026-01-15 |   219 |  184 |  259 |  -75 *** IMBALANCED
+  2026-01-16 |   179 |  148 |  200 |  -52 *** IMBALANCED
+  2026-01-19 |   184 |  171 |  213 |  -42 *** IMBALANCED
+  2026-01-20 |   271 |  233 |  319 |  -86 *** IMBALANCED
+  2026-01-21 |   222 |  167 |  265 |  -98 *** IMBALANCED
+  2026-01-22 |   207 |  197 |  235 |  -38 *** IMBALANCED
+  2026-01-23 |   133 |   93 |  174 |  -81 *** IMBALANCED
+  2026-01-26 |   238 |  193 |  274 |  -81 *** IMBALANCED
+  2026-01-27 |   223 |  170 |  262 |  -92 *** IMBALANCED
+  2026-01-28 |   196 |  167 |  243 |  -76 *** IMBALANCED
+  2026-01-29 |   212 |  169 |  245 |  -76 *** IMBALANCED
+  2026-01-30 |   222 |  187 |  219 |  -32 *** IMBALANCED
+  2026-02-02 |   203 |  189 |  216 |  -27 *** IMBALANCED
+  2026-02-03 |   227 |  191 |  279 |  -88 *** IMBALANCED
+  2026-02-04 |   248 |  206 |  289 |  -83 *** IMBALANCED
+  2026-02-05 |   205 |  179 |  235 |  -56 *** IMBALANCED
+  2026-02-06 |   218 |  165 |  253 |  -88 *** IMBALANCED
+  2026-02-09 |   228 |  207 |  249 |  -42 *** IMBALANCED
+  2026-02-10 |   194 |  158 |  232 |  -74 *** IMBALANCED
+  2026-02-11 |   197 |  167 |  241 |  -74 *** IMBALANCED
+  2026-02-12 |   224 |  203 |  233 |  -30 *** IMBALANCED
+  2026-02-13 |   210 |  197 |  211 |  -14 *** IMBALANCED
+  2026-02-16 |   158 |  159 |  148 |  +11 *** IMBALANCED
+  2026-02-17 |   232 |  215 |  251 |  -36 *** IMBALANCED
+  2026-02-18 |   202 |  195 |  203 |   -8 *** IMBALANCED
+  2026-02-19 |   253 |  215 |  279 |  -64 *** IMBALANCED
+  2026-02-20 |   225 |  206 |  256 |  -50 *** IMBALANCED
+  2026-02-23 |   190 |  172 |  220 |  -48 *** IMBALANCED
+  2026-02-24 |   183 |  178 |  178 |   +0
+  2026-02-25 |   200 |  181 |  219 |  -38 *** IMBALANCED
+  2026-02-26 |   193 |  158 |  235 |  -77 *** IMBALANCED
+
+Sessions with non-zero net position: 222
+  2024-06-17: net=-3 (5 fills)
+  2025-04-03: net=-2 (140 fills)
+  2025-04-04: net=+2 (200 fills)
+  2025-04-07: net=-16 (224 fills)
+  2025-04-08: net=-22 (206 fills)
+  2025-04-09: net=+10 (192 fills)
+  2025-04-10: net=-52 (220 fills)
+  2025-04-11: net=-2 (211 fills)
+  2025-04-14: net=-49 (238 fills)
+  2025-04-15: net=-47 (194 fills)
+  2025-04-16: net=-66 (200 fills)
+  2025-04-17: net=-39 (215 fills)
+  2025-04-21: net=-54 (201 fills)
+  2025-04-22: net=-85 (236 fills)
+  2025-04-23: net=-17 (239 fills)
+  2025-04-24: net=-50 (245 fills)
+  2025-04-25: net=-42 (221 fills)
+  2025-04-28: net=-36 (213 fills)
+  2025-04-29: net=-76 (239 fills)
+  2025-04-30: net=-78 (233 fills)
+  2025-05-01: net=-62 (216 fills)
+  2025-05-02: net=-106 (217 fills)
+  2025-05-05: net=-43 (219 fills)
+  2025-05-06: net=-38 (237 fills)
+  2025-05-07: net=-36 (222 fills)
+  2025-05-08: net=-22 (221 fills)
+  2025-05-09: net=-50 (187 fills)
+  2025-05-12: net=-10 (222 fills)
+  2025-05-13: net=-10 (213 fills)
+  2025-05-14: net=-54 (150 fills)
+  2025-05-15: net=-72 (197 fills)
+  2025-05-16: net=-62 (186 fills)
+  2025-05-19: net=-68 (185 fills)
+  2025-05-20: net=-60 (219 fills)
+  2025-05-21: net=-4 (215 fills)
+  2025-05-22: net=-18 (218 fills)
+  2025-05-23: net=-28 (195 fills)
+  2025-05-26: net=+21 (137 fills)
+  2025-05-27: net=-61 (214 fills)
+  2025-05-28: net=-84 (174 fills)
+  2025-05-29: net=-48 (213 fills)
+  2025-05-30: net=-30 (189 fills)
+  2025-06-02: net=-56 (221 fills)
+  2025-06-03: net=-64 (179 fills)
+  2025-06-04: net=-48 (210 fills)
+  2025-06-05: net=-18 (180 fills)
+  2025-06-06: net=-64 (203 fills)
+  2025-06-09: net=-82 (191 fills)
+  2025-06-10: net=-26 (194 fills)
+  2025-06-11: net=+45 (227 fills)
+  2025-06-12: net=-38 (217 fills)
+  2025-06-13: net=-16 (195 fills)
+  2025-06-16: net=-54 (137 fills)
+  2025-06-17: net=-42 (194 fills)
+  2025-06-18: net=-94 (217 fills)
+  2025-06-19: net=-58 (167 fills)
+  2025-06-20: net=-11 (205 fills)
+  2025-06-23: net=-36 (248 fills)
+  2025-06-24: net=-46 (194 fills)
+  2025-06-25: net=-92 (191 fills)
+  2025-06-26: net=-72 (155 fills)
+  2025-06-27: net=-57 (168 fills)
+  2025-06-30: net=-26 (203 fills)
+  2025-07-01: net=-2 (227 fills)
+  2025-07-02: net=-95 (194 fills)
+  2025-07-03: net=-52 (159 fills)
+  2025-07-04: net=-18 (151 fills)
+  2025-07-07: net=-38 (209 fills)
+  2025-07-08: net=-84 (214 fills)
+  2025-07-09: net=-52 (202 fills)
+  2025-07-10: net=-74 (172 fills)
+  2025-07-11: net=-26 (238 fills)
+  2025-07-14: net=-74 (167 fills)
+  2025-07-15: net=-44 (181 fills)
+  2025-07-16: net=-46 (187 fills)
+  2025-07-17: net=-74 (181 fills)
+  2025-07-18: net=-84 (173 fills)
+  2025-07-21: net=-70 (202 fills)
+  2025-07-22: net=-78 (208 fills)
+  2025-07-23: net=-60 (198 fills)
+  2025-07-24: net=-34 (172 fills)
+  2025-07-25: net=-28 (167 fills)
+  2025-07-28: net=-102 (202 fills)
+  2025-07-29: net=-88 (183 fills)
+  2025-07-30: net=-26 (190 fills)
+  2025-07-31: net=-74 (200 fills)
+  2025-08-01: net=-95 (172 fills)
+  2025-08-04: net=-44 (185 fills)
+  2025-08-05: net=-22 (168 fills)
+  2025-08-06: net=-54 (210 fills)
+  2025-08-07: net=+22 (186 fills)
+  2025-08-08: net=-54 (171 fills)
+  2025-08-11: net=-102 (159 fills)
+  2025-08-12: net=-52 (221 fills)
+  2025-08-13: net=-48 (204 fills)
+  2025-08-14: net=-36 (172 fills)
+  2025-08-15: net=+22 (184 fills)
+  2025-08-18: net=-65 (170 fills)
+  2025-08-19: net=-65 (191 fills)
+  2025-08-20: net=-58 (210 fills)
+  2025-08-21: net=-30 (219 fills)
+  2025-08-22: net=-6 (202 fills)
+  2025-08-25: net=-64 (199 fills)
+  2025-08-26: net=-25 (206 fills)
+  2025-08-27: net=-94 (178 fills)
+  2025-08-28: net=-36 (172 fills)
+  2025-08-29: net=-74 (171 fills)
+  2025-09-01: net=-50 (172 fills)
+  2025-09-02: net=-78 (215 fills)
+  2025-09-03: net=-114 (218 fills)
+  2025-09-04: net=-76 (214 fills)
+  2025-09-05: net=-57 (195 fills)
+  2025-09-08: net=-40 (218 fills)
+  2025-09-09: net=-54 (197 fills)
+  2025-09-10: net=-80 (183 fills)
+  2025-09-11: net=-43 (191 fills)
+  2025-09-12: net=-80 (171 fills)
+  2025-09-15: net=+6 (163 fills)
+  2025-09-16: net=-53 (139 fills)
+  2025-09-17: net=-46 (186 fills)
+  2025-09-18: net=-62 (202 fills)
+  2025-09-19: net=-48 (197 fills)
+  2025-09-22: net=-96 (183 fills)
+  2025-09-23: net=-82 (217 fills)
+  2025-09-24: net=-103 (189 fills)
+  2025-10-06: net=-42 (72 fills)
+  2025-10-07: net=-70 (202 fills)
+  2025-10-08: net=-80 (209 fills)
+  2025-10-09: net=-76 (204 fills)
+  2025-10-10: net=-96 (175 fills)
+  2025-10-13: net=-30 (180 fills)
+  2025-10-14: net=-92 (231 fills)
+  2025-10-15: net=-35 (204 fills)
+  2025-10-16: net=-13 (194 fills)
+  2025-10-17: net=-70 (212 fills)
+  2025-10-20: net=-89 (193 fills)
+  2025-10-21: net=-51 (206 fills)
+  2025-10-22: net=-31 (205 fills)
+  2025-10-23: net=-113 (223 fills)
+  2025-10-24: net=-58 (187 fills)
+  2025-10-27: net=-36 (179 fills)
+  2025-10-28: net=-4 (200 fills)
+  2025-10-29: net=-64 (204 fills)
+  2025-10-30: net=-40 (253 fills)
+  2025-10-31: net=-105 (208 fills)
+  2025-11-03: net=-102 (246 fills)
+  2025-11-04: net=-76 (196 fills)
+  2025-11-05: net=-50 (230 fills)
+  2025-11-06: net=-85 (226 fills)
+  2025-11-07: net=+1 (100 fills)
+  2025-11-13: net=-3 (1 fills)
+  2025-11-14: net=-17 (20 fills)
+  2025-11-17: net=-56 (211 fills)
+  2025-11-18: net=-48 (237 fills)
+  2025-11-19: net=-44 (210 fills)
+  2025-11-20: net=-49 (201 fills)
+  2025-11-24: net=-47 (215 fills)
+  2025-11-25: net=-42 (200 fills)
+  2025-11-26: net=-44 (205 fills)
+  2025-11-27: net=-68 (144 fills)
+  2025-11-28: net=-5 (76 fills)
+  2025-12-01: net=-146 (216 fills)
+  2025-12-02: net=-76 (225 fills)
+  2025-12-03: net=-100 (182 fills)
+  2025-12-04: net=-106 (191 fills)
+  2025-12-05: net=-65 (169 fills)
+  2025-12-08: net=-75 (162 fills)
+  2025-12-09: net=-83 (194 fills)
+  2025-12-10: net=-2 (204 fills)
+  2025-12-11: net=-18 (203 fills)
+  2025-12-12: net=-30 (177 fills)
+  2025-12-15: net=-43 (204 fills)
+  2025-12-16: net=-35 (217 fills)
+  2025-12-17: net=-57 (161 fills)
+  2025-12-18: net=-51 (233 fills)
+  2025-12-19: net=-28 (187 fills)
+  2025-12-22: net=-4 (182 fills)
+  2025-12-23: net=-66 (164 fills)
+  2025-12-24: net=-54 (138 fills)
+  2025-12-26: net=-68 (156 fills)
+  2025-12-29: net=-42 (203 fills)
+  2025-12-30: net=-62 (216 fills)
+  2025-12-31: net=-64 (198 fills)
+  2026-01-02: net=-47 (159 fills)
+  2026-01-05: net=-71 (223 fills)
+  2026-01-06: net=-63 (180 fills)
+  2026-01-07: net=-83 (182 fills)
+  2026-01-08: net=-46 (200 fills)
+  2026-01-09: net=-54 (221 fills)
+  2026-01-12: net=-94 (188 fills)
+  2026-01-13: net=-86 (217 fills)
+  2026-01-14: net=-18 (202 fills)
+  2026-01-15: net=-75 (219 fills)
+  2026-01-16: net=-52 (179 fills)
+  2026-01-19: net=-42 (184 fills)
+  2026-01-20: net=-86 (271 fills)
+  2026-01-21: net=-98 (222 fills)
+  2026-01-22: net=-38 (207 fills)
+  2026-01-23: net=-81 (133 fills)
+  2026-01-26: net=-81 (238 fills)
+  2026-01-27: net=-92 (223 fills)
+  2026-01-28: net=-76 (196 fills)
+  2026-01-29: net=-76 (212 fills)
+  2026-01-30: net=-32 (222 fills)
+  2026-02-02: net=-27 (203 fills)
+  2026-02-03: net=-88 (227 fills)
+  2026-02-04: net=-83 (248 fills)
+  2026-02-05: net=-56 (205 fills)
+  2026-02-06: net=-88 (218 fills)
+  2026-02-09: net=-42 (228 fills)
+  2026-02-10: net=-74 (194 fills)
+  2026-02-11: net=-74 (197 fills)
+  2026-02-12: net=-30 (224 fills)
+  2026-02-13: net=-14 (210 fills)
+  2026-02-16: net=+11 (158 fills)
+  2026-02-17: net=-36 (232 fills)
+  2026-02-18: net=-8 (202 fills)
+  2026-02-19: net=-64 (253 fills)
+  2026-02-20: net=-50 (225 fills)
+  2026-02-23: net=-48 (190 fills)
+  2026-02-25: net=-38 (200 fills)
+  2026-02-26: net=-77 (193 fills)

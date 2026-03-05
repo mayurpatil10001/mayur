@@ -139,10 +139,10 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
             """
             SELECT account_name,
                 printf('%02d:%02d',
-                    CAST(strftime('%H', entry_time) AS INTEGER),
+                    hour_of_day,
                     CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
                 ) as time_slot,
-                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                day_of_week,
                 COUNT(*) as n,
                 AVG(profit_loss) as avg_pnl,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as wr,
@@ -434,7 +434,7 @@ async def get_temporal_analysis(
         # Get hourly performance
         cursor.execute(f"""
             SELECT 
-                CAST(strftime('%H', entry_time) AS INTEGER) as hour_of_day,
+                hour_of_day,
                 COUNT(*) as trades,
                 SUM(profit_loss) as total_pnl,
                 AVG(profit_loss) as avg_profit,
@@ -459,7 +459,7 @@ async def get_temporal_analysis(
         # Get daily performance
         cursor.execute(f"""
             SELECT 
-                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                day_of_week,
                 COUNT(*) as trades,
                 SUM(profit_loss) as total_pnl,
                 AVG(profit_loss) as avg_profit,
@@ -587,10 +587,10 @@ async def get_recommendation_matrix(
                 account_name,
                 symbol,
                 printf('%02d:%02d', 
-                    CAST(strftime('%H', entry_time) AS INTEGER),
+                    hour_of_day,
                     CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
                 ) as time_slot,
-                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                day_of_week,
                 COUNT(*) as total_trades,
                 SUM(profit_loss) as total_pnl,
                 AVG(profit_loss) as avg_trade,
@@ -759,10 +759,10 @@ async def get_recommendation_backtest(
                 SELECT 
                     account_name,
                     printf('%02d:%02d', 
-                        CAST(strftime('%H', entry_time) AS INTEGER),
+                        hour_of_day,
                         CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
                     ) as time_slot,
-                    CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                    day_of_week,
                     COUNT(*) as total_trades,
                     AVG(profit_loss) as avg_trade,
                     ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
@@ -1185,7 +1185,10 @@ async def get_walk_forward_validation(
             
             # Identify selections based on chosen logic in the training months
             current_logic = request_data.get("logic", "persistence")
-            selections = set()
+            
+            # Change: Track best account per (slot, dow) based on highest persistence/metric
+            best_selections_per_slot = {} # (slot, dow) -> {"acc": name, "metric": value}
+            
             for acc, slots in monthly_stats.items():
                 if account_prefix and not acc.startswith(account_prefix): continue
                     
@@ -1204,23 +1207,55 @@ async def get_walk_forward_validation(
                         window_pnl = sum([d["pnl"] for d in relevant_months_data])
                         avg_trade = window_pnl / total_n if total_n > 0 else 0
                         profitable_months = len([d for d in relevant_months_data if d["pnl"] > 0])
-                        persistence = (profitable_months * 100.0 / len(relevant_months_data))
+                        
+                        # Recency Check: Was the most recent month actually profitable?
+                        # This prevents picking "Dead Legends" that were good 1 year ago but are failing now.
+                        latest_month_data = relevant_months_data[-1] if relevant_months_data else None
+                        is_recently_profitable = latest_month_data["pnl"] > 0 if latest_month_data else False
+                        
+                        # CRITICAL FIX: Persistence must be relative to the FULL window size (train_months)
+                        persistence = (profitable_months * 100.0 / len(train_months_list))
                         
                         # Selection Logic Application
-                        is_selected = False
+                        is_qualified = False
                         if current_logic == 'persistence':
-                            is_selected = persistence >= min_persistence and window_pnl > 0
+                            # Require minimum activity and recency
+                            is_qualified = (persistence >= min_persistence and 
+                                            window_pnl > 0 and 
+                                            total_n >= 5 and 
+                                            is_recently_profitable)
                         elif current_logic == 'classic':
-                            # Simple profit filter for walk-forward selection
-                            is_selected = window_pnl > 0 and avg_trade > 10.0 # $10 minimum floor
+                            is_qualified = (window_pnl > 0 and 
+                                            avg_trade > 10.0 and 
+                                            total_n >= 5 and 
+                                            is_recently_profitable)
                         elif current_logic == 'statistical':
-                            # Simplified selection: positive expectancy
-                            is_selected = window_pnl > 0 and persistence > 50
-                        else: # fallback to persistence
-                            is_selected = persistence >= min_persistence and window_pnl > 0
+                            is_qualified = (window_pnl > 0 and 
+                                            persistence > 50 and 
+                                            total_n >= 5 and 
+                                            is_recently_profitable)
+                        else:
+                            is_qualified = persistence >= min_persistence and window_pnl > 0 and is_recently_profitable
 
-                        if is_selected:
-                            selections.add((acc, slot, dow))
+                        if is_qualified:
+                            slot_key = (slot, dow)
+                            # Logic: Pick the account with highest persistence. 
+                            # Tie-breaker: Highest total PnL in training window.
+                            if slot_key not in best_selections_per_slot:
+                                best_selections_per_slot[slot_key] = {"acc": acc, "metric": persistence, "pnl": window_pnl}
+                            else:
+                                existing = best_selections_per_slot[slot_key]
+                                if persistence > existing["metric"]:
+                                    best_selections_per_slot[slot_key] = {"acc": acc, "metric": persistence, "pnl": window_pnl}
+                                elif persistence == existing["metric"]:
+                                    # Use total PnL as the tie-breaker to pick the most robust edge
+                                    if window_pnl > existing["pnl"]:
+                                        best_selections_per_slot[slot_key] = {"acc": acc, "metric": persistence, "pnl": window_pnl}
+
+            # Convert to final selections set for OOS testing (only 1 account per slot)
+            selections = set()
+            for slot_key, data in best_selections_per_slot.items():
+                selections.add((data["acc"], slot_key[0], slot_key[1]))
             
             # Apply to Test Month(s)
             for test_m in test_months_list:

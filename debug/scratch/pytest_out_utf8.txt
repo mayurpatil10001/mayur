@@ -1,0 +1,72 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.8, pytest-8.4.2, pluggy-1.5.0
+rootdir: C:\SierraChart\SC results WF
+plugins: anyio-4.8.0, langsmith-0.3.45, opik-1.9.8
+collected 4 items
+
+tests\test_binary_benchmark_1218.py F..[2025-12-18T04:18:31.102976] SYNC CHECK: sc_pre_pos=0, running_position=3
+F
+
+================================== FAILURES ===================================
+________________ test_reference_files_parse_for_1218_benchmark ________________
+
+    @pytest.mark.skipif(not REF_ACTIVITY.exists(), reason="Missing 1218 all activity reference file.")
+    @pytest.mark.skipif(not REF_TRADES.exists(), reason="Missing 1218 trade list reference file.")
+    def test_reference_files_parse_for_1218_benchmark():
+        """
+        Reference benchmark files should parse cleanly.
+        These values are reference-only; import logic remains binary-only.
+        """
+        trade_rows = _load_trade_list_rows(REF_TRADES)
+        activity_fills = _load_activity_fills(REF_ACTIVITY)
+    
+        # Known 12/18 benchmark counts from current dataset.
+>       assert len(trade_rows) == 171
+E       AssertionError: assert 136 == 171
+E        +  where 136 = len([{'Account': 'V_sim16', 'Close Position Quantity': '2', 'Commission (C)': '4.20', 'Cumulative Profit/Loss (C)': '75.80...sim16', 'Close Position Quantity': '0', 'Commission (C)': '12.60', 'Cumulative Profit/Loss (C)': '-1620.40', ...}, ...])
+
+tests\test_binary_benchmark_1218.py:297: AssertionError
+___________ test_binary_to_reference_benchmark_report_is_generated ____________
+
+    @pytest.mark.skipif(not BINARY_FILE.exists(), reason="Missing 12/18 V_sim16 binary file.")
+    @pytest.mark.skipif(not REF_TRADES.exists(), reason="Missing 1218 trade list reference file.")
+    def test_binary_to_reference_benchmark_report_is_generated():
+        """
+        Produce a benchmark metric against trade-list reference.
+        This is a reporting guard, not a hard quality gate yet.
+        """
+        fills = _load_binary_fills_for_ny_1218()
+        parser = BinaryLogParser(db_path=":memory:")
+        trades, _unpaired, _warnings = parser._pairs_to_trades(fills, persist_state=False)
+        trade_rows = _load_trade_list_struct(REF_TRADES)
+    
+        normalized = []
+        for t in trades:
+            side = "Long" if (t.get("side") or "").upper() == "LONG" else "Short"
+            normalized.append(
+                {
+                    "entry_dt": dt.datetime.fromisoformat(t["entry_time"]),
+                    "exit_dt": dt.datetime.fromisoformat(t["exit_time"]),
+                    "entry_price": float(t["entry_price"]),
+                    "exit_price": float(t["exit_price"]),
+                    "qty": int(t["quantity"]),
+                    "side": side,
+                }
+            )
+    
+        strict_match_count = sum(1 for bt in normalized if any(_match_trade(bt, sc) for sc in trade_rows))
+        strict_match_pct = (strict_match_count / len(normalized) * 100.0) if normalized else 0.0
+    
+        # Binary-only pairing (FIFO + open/close + position order) reaches ~24% without ParentInternalOrderID.
+>       assert strict_match_pct >= 20.0, (
+            f"Strict binary->SC trade match is {strict_match_pct:.2f}% "
+            f"({strict_match_count}/{len(normalized)}). Expected >= 20%."
+        )
+E       AssertionError: Strict binary->SC trade match is 11.84% (18/152). Expected >= 20%.
+E       assert 11.842105263157894 >= 20.0
+
+tests\test_binary_benchmark_1218.py:361: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_binary_benchmark_1218.py::test_reference_files_parse_for_1218_benchmark
+FAILED tests/test_binary_benchmark_1218.py::test_binary_to_reference_benchmark_report_is_generated
+========================= 2 failed, 2 passed in 3.16s =========================

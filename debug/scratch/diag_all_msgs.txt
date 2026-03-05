@@ -1,0 +1,61 @@
+Time         | S | Qty | Px       | Msg
+------------------------------------------------------------------------------------------
+02:18:14 | S |   1 | 25030.75 | Trading Evaluator (Filled). Info: Trade simulation fill. Bid
+02:18:14 | S |   1 |     0.00 | Updated Internal Position Quantity to 2. Previous: 3. Fill o
+02:18:14 | S |   0 |     0.00 | Cash Balance update | Trade Fee: 2.20USD. Qty: 1. NQH26     
+02:18:14 | S |   0 |     0.00 | Cash Balance update | Closed Trade Profit/Loss: 95.00. Symbo
+02:18:14 | S |   0 |     0.00 | Updated Service Position Quantity to 2                      
+02:18:14 | S |   3 | 25014.25 | Auto-trade order modification: NQH26 [CBV][M]  3 Min  #6 | A
+02:18:14 | S |   2 | 25026.25 | Trading Evaluator (Cancel/Replace complete). Info: Simulated
+02:18:56 | S |   2 | 25026.25 | Trading Evaluator (Filled). Info: Trade simulation fill. Bid
+02:18:56 | S |   2 |     0.00 | Updated Internal Position Quantity to 0. Previous: 2. Fill o
+02:18:56 | S |   0 |     0.00 | Cash Balance update | Trade Fee: 4.40USD. Qty: 2. NQH26     
+02:18:56 | S |   0 |     0.00 | Updated Service Position Quantity to 0                      
+02:18:56 | S |   1 | 25036.75 | Initiating: Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrad
+02:18:56 | S |   1 | 25036.75 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Ca
+02:18:56 | S |   1 | 25073.25 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Ca
+02:18:56 | S |   1 | 25036.75 | Trading Evaluator (Canceled). Info: Simulated order canceled
+02:18:56 | S |   1 | 25073.25 | Trading Evaluator (Canceled). Info: Simulated order canceled
+02:19:04 | S |   0 |     0.00 | Removing Position with quantity of 0                        
+02:26:26 | B |   3 |     0.00 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Bu
+02:26:26 | B |   3 |     0.00 | Trading Evaluator (New). Info: Order from DTC client #32128.
+02:26:26 | S |   3 |     0.00 | Updated Internal Position Quantity to 3. Previous: 0. Fill o
+02:26:26 | S |   0 |     0.00 | Cash Balance update | Trade Fee: 6.60USD. Qty: 3. NQH26     
+02:26:26 | S |   0 |     0.00 | Updated Service Position Quantity to 3                      
+02:26:26 | S |   3 | 25017.75 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Se
+02:26:26 | S |   1 | 25044.25 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Se
+02:26:26 | S |   1 | 25050.50 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Se
+02:26:26 | S |   1 | 25090.50 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | Se
+02:26:26 | S |   3 | 25017.75 | Trading Evaluator (New). Info: Order from DTC client #32128.
+02:26:26 | S |   1 | 25044.25 | Trading Evaluator (New). Info: Order from DTC client #32128.
+02:26:26 | S |   1 | 25050.50 | Trading Evaluator (New). Info: Order from DTC client #32128.
+02:26:26 | S |   1 | 25090.50 | Trading Evaluator (New). Info: Order from DTC client #32128.
+02:26:26 | B |   3 |     0.00 | Order from DTC client #32128. Sierra Chart. 93.173.105.113 |
+02:26:26 | B |   3 |     0.00 | Simulated order accepted                                    
+02:26:26 | B |   3 |     0.00 | Trade simulation fill. Bid: 25038.00 Ask: 25039.00 Last: 250
+02:26:27 | S |   3 | 25017.75 | Order from DTC client #32128. Sierra Chart. 93.173.105.113 |
+02:26:27 | S |   3 | 25017.75 | Simulated order accepted                                    
+02:26:27 | S |   1 | 25044.25 | Order from DTC client #32128. Sierra Chart. 93.173.105.113 |
+02:26:27 | S |   1 | 25044.25 | Simulated order accepted                                    
+02:26:27 | S |   1 | 25050.50 | Order from DTC client #32128. Sierra Chart. 93.173.105.113 |
+02:26:27 | S |   1 | 25050.50 | Simulated order accepted                                    
+02:26:27 | S |   1 | 25090.50 | Order from DTC client #32128. Sierra Chart. 93.173.105.113 |
+02:26:27 | S |   1 | 25090.50 | Simulated order accepted                                    
+03:05:08 | S |   3 | 25017.75 | Trade simulation fill. Bid: 25017.75 Ask: 25018.75 Last: 250
+03:23:35 | S |   1 | 25044.25 | Trade simulation fill. Bid: 25044.25 Ask: 25044.75 Last: 250
+03:43:04 | S |   1 | 25050.50 | Trade simulation fill. Bid: 25050.50 Ask: 25051.00 Last: 250
+04:05:48 | S |   0 |     0.00 | Updated Service Position Quantity to -2                     
+04:05:48 | S |   0 |     0.00 | Cash Balance update | Current account balance data request  
+04:05:48 | S |   3 | 25017.75 | Internally marking as canceled. No order update from server.
+04:05:48 | S |   1 | 25044.25 | Internally marking as canceled. No order update from server.
+04:05:48 | S |   1 | 25050.50 | Internally marking as canceled. No order update from server.
+04:05:54 | S |   0 |     0.00 | Synchronized Internal Position quantity to current Service P
+04:05:56 | S |   1 | 25090.50 | Initiating: NQH26 [CBV][M]  3 Min  #6 | Canceling non-market
+04:05:56 | S |   1 | 25090.50 | NQH26 [CBV][M]  3 Min  #6 | Canceling non-market orders duri
+04:05:56 | B |   2 |     0.00 | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | So
+04:05:56 | S |   1 | 25090.50 | Trading Evaluator (Canceled). Info: Simulated order canceled
+04:05:56 | B |   2 |     0.00 | Trading Evaluator (New). Info: Order from DTC client #32630.
+04:05:56 | S |   2 |     0.00 | Updated Internal Position Quantity to 0. Previous: -2. Fill 
+04:05:56 | S |   0 |     0.00 | Cash Balance update | Trade Fee: 4.40USD. Qty: 2. NQH26     
+04:05:56 | S |   0 |     0.00 | Updated Service Position Quantity to 0                      
+04:06:04 | S |   0 |     0.00 | Removing Position with quantity of 0                        

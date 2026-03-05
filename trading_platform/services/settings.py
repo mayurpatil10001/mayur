@@ -15,7 +15,7 @@ class SettingsService:
                 { "symbol": 'NQ', "path": 'D:\\SierraChart_Simulated_Feed\\TradeActivityLogs' },
                 { "symbol": 'FDAX', "path": 'D:\\SierraChart_Delayed_Simulated\\TradeActivityLogs' },
             ],
-            "last_import_range": "30", # Default to last 30 days or similar
+            "last_import_range": "2000", # effectively unlimited
             "last_used_symbol": "CL"
         }
         self.settings = self.load_settings()

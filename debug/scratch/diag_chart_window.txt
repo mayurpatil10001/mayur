@@ -1,0 +1,35 @@
+Time         | S | Qty | Px       | Note                      | Msg
+--------------------------------------------------------------------------------------------------------------
+02:18:14 | S |   1 | 25030.75 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+02:18:14 | S |   1 |     0.00 |                           | Updated Internal Position Quantity to 2.
+02:18:14 | S |   3 | 25014.25 | AT_NQ_TM(D-R-2+last50)    | Auto-trade order modification: NQH26 [CB
+02:18:14 | S |   2 | 25026.25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Cancel/Replace comple
+02:18:56 | S |   2 | 25026.25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Filled). Info: Trade 
+02:18:56 | S |   2 |     0.00 |                           | Updated Internal Position Quantity to 0.
+02:18:56 | S |   1 | 25036.75 | AT_NQ_TM(D-R-2+last50)    | Initiating: Auto-trade: NQH26 [CBV][M]  
+02:18:56 | S |   1 | 25073.25 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:18:56 | S |   1 | 25036.75 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+02:18:56 | S |   1 | 25073.25 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+02:26:26 | B |   3 |     0.00 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:26:26 | B |   3 |     0.00 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (New). Info: Order fro
+02:26:26 | S |   3 |     0.00 |                           | Updated Internal Position Quantity to 3.
+02:26:26 | S |   3 | 25017.75 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:26:26 | S |   1 | 25044.25 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:26:26 | S |   1 | 25050.50 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:26:26 | S |   1 | 25090.50 | AT_NQ_TM(D-R-2+last50)    | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+02:26:26 | B |   3 |     0.00 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+02:26:27 | S |   3 | 25017.75 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+02:26:27 | S |   1 | 25044.25 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+02:26:27 | S |   1 | 25050.50 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+02:26:27 | S |   1 | 25090.50 | Tag: AT_NQ_TM(D-R-2+last5 | Order from DTC client #32128. Sierra Cha
+03:05:08 | S |   3 | 25017.75 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25017.75 Ask
+03:23:35 | S |   1 | 25044.25 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25044.25 Ask
+03:43:04 | S |   1 | 25050.50 | Tag: AT_NQ_TM(D-R-2+last5 | Trade simulation fill. Bid: 25050.50 Ask
+04:05:48 | S |   3 | 25017.75 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+04:05:48 | S |   1 | 25044.25 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+04:05:48 | S |   1 | 25050.50 | AT_NQ_TM(D-R-2+last50)    | Internally marking as canceled. No order
+04:05:56 | S |   1 | 25090.50 | AT_NQ_TM(D-R-2+last50)    | Initiating: NQH26 [CBV][M]  3 Min  #6 | 
+04:05:56 | B |   2 |     0.00 |                           | Auto-trade: NQH26 [CBV][M]  3 Min  #6 | 
+04:05:56 | S |   1 | 25090.50 | AT_NQ_TM(D-R-2+last50)    | Trading Evaluator (Canceled). Info: Simu
+04:05:56 | B |   2 |     0.00 |                           | Trading Evaluator (New). Info: Order fro
+04:05:56 | S |   2 |     0.00 |                           | Updated Internal Position Quantity to 0.

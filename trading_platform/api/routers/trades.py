@@ -23,6 +23,7 @@ from ..models.trades import (
     TradeSide
 )
 from ..exceptions import DataNotFoundException
+from ...utils.timezone_utils import to_ny
 
 
 router = APIRouter()
@@ -43,6 +44,7 @@ async def list_trades(
     min_profit: Optional[float] = Query(None, description="Filter trades with profit >= this amount"),
     max_profit: Optional[float] = Query(None, description="Filter trades with profit <= this amount"),
     side: Optional[TradeSide] = Query(None, description="Filter by trade side"),
+    sort: str = Query("DESC", description="Sort order (ASC or DESC)"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ) -> APIResponse[PaginatedResponse[TradeResponse]]:
@@ -53,7 +55,7 @@ async def list_trades(
     from pathlib import Path
     
     logger = logging.getLogger(__name__)
-    logger.info(f"[TRADES API] Listing trades - account={account_name}, symbol={symbol}, page={pagination.page}")
+    logger.info(f"[TRADES API] Listing trades - account={account_name}, symbol={symbol}, page={pagination.page}, sort={sort}")
     
     try:
         # Connect to SQLite database
@@ -81,27 +83,28 @@ async def list_trades(
             commission,
             duration_minutes,
             hour_of_day,
-            day_of_week
+            day_of_week,
+            trip_id
         FROM processed_trades
         WHERE 1=1
         """
         params = []
         
         if account_name:
-            query += " AND account_name = ?"
+            query += " AND UPPER(account_name) = UPPER(?)"
             params.append(account_name)
         
         if symbol:
-            query += " AND symbol = ?"
+            query += " AND symbol LIKE ? || '%'"
             params.append(symbol)
             
         if start_date:
-            query += " AND entry_time >= ?"
-            params.append(start_date.isoformat())
+            query += " AND (entry_time >= ? OR exit_time >= ?)"
+            params.extend([start_date.isoformat(), start_date.isoformat()])
             
         if end_date:
-            query += " AND entry_time <= ?"
-            params.append(end_date.isoformat())
+            query += " AND (entry_time <= ? OR exit_time <= ?)"
+            params.extend([end_date.isoformat(), end_date.isoformat()])
             
         if side:
             query += " AND side = ?"
@@ -113,7 +116,8 @@ async def list_trades(
         total_count = cursor.fetchone()[0]
         
         # Apply sorting and pagination
-        query += " ORDER BY entry_time DESC LIMIT ? OFFSET ?"
+        order = "ASC" if sort.upper() == "ASC" else "DESC"
+        query += f" ORDER BY entry_time {order} LIMIT ? OFFSET ?"
         params.extend([pagination.size, pagination.offset])
         
         logger.info(f"[TRADES API] Executing query: {query}")
@@ -122,12 +126,17 @@ async def list_trades(
         
         trades = []
         for row in rows:
-            # Calculate time slot matching the hourly breakdown logic
-            dt = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
-            # We use the raw hour/minute as stored in DB (string-based strftime behavior)
-            # Since fromisoformat preserves the numbers, we can just extract them
-            slot_hour = dt.hour
-            slot_minute = 0 if dt.minute < 30 else 30
+            # Parse UTC string from DB
+            entry_utc = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
+            exit_utc = datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time']
+            
+            # Convert to NY for display
+            dt_ny = to_ny(entry_utc)
+            exit_ny = to_ny(exit_utc)
+
+            # Calculate time slot based on NY hours
+            slot_hour = dt_ny.hour
+            slot_minute = 0 if dt_ny.minute < 30 else 30
             time_slot = f"{slot_hour:02d}:{slot_minute:02d}"
 
             trades.append(TradeResponse(
@@ -135,8 +144,8 @@ async def list_trades(
                 time_slot=time_slot,
                 account_name=row['account_name'],
                 symbol=row['symbol'],
-                entry_time=dt,
-                exit_time=datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time'],
+                entry_time=dt_ny,
+                exit_time=exit_ny,
                 entry_price=row['entry_price'],
                 exit_price=row['exit_price'],
                 quantity=row['quantity'],
@@ -144,8 +153,9 @@ async def list_trades(
                 profit_loss=row['profit_loss'],
                 commission=row['commission'],
                 duration_minutes=row['duration_minutes'],
-                hour_of_day=row['hour_of_day'],
-                day_of_week=row['day_of_week']
+                hour_of_day=row['hour_of_day'], # Note: hour_of_day in DB might still be UTC, but time_slot is now NY
+                day_of_week=row['day_of_week'],
+                trip_id=row['trip_id']
             ))
             
         conn.close()
@@ -167,6 +177,8 @@ async def list_trades(
         )
         
     except Exception as e:
+        import traceback
+        logger.error(f"[TRADES API] Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve trades: {str(e)}")
 
 
@@ -201,9 +213,14 @@ async def get_trade(
         if not row:
             raise DataNotFoundException("Trade", trade_id)
             
-        dt = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
-        slot_hour = dt.hour
-        slot_minute = 0 if dt.minute < 30 else 30
+        entry_utc = datetime.fromisoformat(row['entry_time']) if isinstance(row['entry_time'], str) else row['entry_time']
+        exit_utc = datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time']
+        
+        dt_ny = to_ny(entry_utc)
+        exit_ny = to_ny(exit_utc)
+        
+        slot_hour = dt_ny.hour
+        slot_minute = 0 if dt_ny.minute < 30 else 30
         time_slot = f"{slot_hour:02d}:{slot_minute:02d}"
 
         trade = TradeResponse(
@@ -211,8 +228,8 @@ async def get_trade(
             time_slot=time_slot,
             account_name=row['account_name'],
             symbol=row['symbol'],
-            entry_time=dt,
-            exit_time=datetime.fromisoformat(row['exit_time']) if isinstance(row['exit_time'], str) else row['exit_time'],
+            entry_time=dt_ny,
+            exit_time=exit_ny,
             entry_price=row['entry_price'],
             exit_price=row['exit_price'],
             quantity=row['quantity'],
@@ -236,108 +253,3 @@ async def get_trade(
         raise HTTPException(status_code=404, detail=f"Trade {trade_id} not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve trade: {str(e)}")
-
-
-@router.get(
-    "/stats/{account_name}",
-    response_model=APIResponse[TradeStatsResponse],
-    summary="Get trade statistics",
-    description="Get statistical summary of trades for an account."
-)
-async def get_trade_stats(
-    account_name: str = Path(..., description="Account name"),
-    start_date: Optional[datetime] = Query(None, description="Filter trades from this date"),
-    end_date: Optional[datetime] = Query(None, description="Filter trades until this date"),
-    symbol: Optional[str] = Query(None, description="Filter by symbol"),
-    db: Session = Depends(get_database_session),
-    current_user: dict = Depends(require_read_permission)
-) -> APIResponse[TradeStatsResponse]:
-    """Get trade statistics for an account."""
-    
-    import logging
-    import sqlite3
-    from pathlib import Path
-    
-    logger = logging.getLogger(__name__)
-    
-    try:
-        db_path = Path("trading_platform.db")
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        query = "FROM processed_trades WHERE account_name = ?"
-        params = [account_name]
-        
-        if symbol:
-            query += " AND symbol = ?"
-            params.append(symbol)
-        
-        if start_date:
-            query += " AND entry_time >= ?"
-            params.append(start_date.isoformat())
-            
-        if end_date:
-            query += " AND entry_time <= ?"
-            params.append(end_date.isoformat())
-            
-        cursor.execute(f"""
-            SELECT 
-                COUNT(*) as total_trades,
-                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
-                SUM(CASE WHEN profit_loss <= 0 THEN 1 ELSE 0 END) as losing_trades,
-                SUM(profit_loss) as total_pnl,
-                AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_win,
-                AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loss,
-                MAX(profit_loss) as largest_win,
-                MIN(profit_loss) as largest_loss,
-                AVG(duration_minutes) as avg_duration,
-                SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as gross_profit,
-                ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)) as gross_loss
-            {query}
-        """, params)
-        
-        row = cursor.fetchone()
-        
-        if not row or row['total_trades'] == 0:
-            stats = TradeStatsResponse(
-                total_trades=0,
-                winning_trades=0,
-                losing_trades=0,
-                win_rate=0.0,
-                total_profit_loss=0.0,
-                average_win=0.0,
-                average_loss=0.0,
-                largest_win=0.0,
-                largest_loss=0.0,
-                profit_factor=0.0,
-                average_duration_minutes=0.0
-            )
-        else:
-            win_rate = (row['winning_trades'] / row['total_trades'] * 100)
-            profit_factor = (row['gross_profit'] / row['gross_loss']) if row['gross_loss'] > 0 else 0.0
-            
-            stats = TradeStatsResponse(
-                total_trades=row['total_trades'],
-                winning_trades=row['winning_trades'],
-                losing_trades=row['losing_trades'],
-                win_rate=win_rate,
-                total_profit_loss=row['total_pnl'] or 0.0,
-                average_win=row['avg_win'] or 0.0,
-                average_loss=row['avg_loss'] or 0.0,
-                largest_win=row['largest_win'] or 0.0,
-                largest_loss=row['largest_loss'] or 0.0,
-                profit_factor=profit_factor,
-                average_duration_minutes=row['avg_duration'] or 0.0
-            )
-            
-        conn.close()
-        
-        return APIResponse[TradeStatsResponse](
-            status="success",
-            message=f"Retrieved trade statistics for {account_name}",
-            data=stats
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve trade statistics: {str(e)}")

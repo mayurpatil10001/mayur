@@ -25,6 +25,13 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001') do taskkill /f /pid %
 
 echo ✅ Cleanup complete - all prior connections terminated
 
+REM Rotate logs
+if exist "trading_platform.log" (
+    echo [1.5/5] Archiving previous log...
+    move /y "trading_platform.log" "trading_platform.log.old" >nul 2>&1
+    echo ✅ Previous log archived to trading_platform.log.old
+)
+
 REM Wait a moment for processes to fully terminate
 timeout /t 2 /nobreak >nul
 
@@ -54,7 +61,7 @@ echo.
 echo [4/5] Starting backend API server...
 echo Backend will run on: http://localhost:8000
 echo API docs will be available at: http://localhost:8000/docs
-start "Trading Platform Backend" cmd /k "venv\Scripts\activate.bat && uvicorn trading_platform.api.main:app --host 0.0.0.0 --port 8000 --reload"
+start "Trading Platform Backend" cmd /k "venv\Scripts\activate.bat && uvicorn trading_platform.api.main:app --host 0.0.0.0 --port 8000"
 
 REM Wait a moment for backend to start
 echo Waiting 5 seconds for backend to initialize...

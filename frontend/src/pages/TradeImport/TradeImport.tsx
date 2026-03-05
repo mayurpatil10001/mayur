@@ -24,6 +24,7 @@ interface ImportResult {
     errors: string[];
     trades: ParsedTrade[];
     stats?: Record<string, any>;
+    dropped_ghost_fills?: any[];
 }
 
 const TradeImport: React.FC = () => {
@@ -32,6 +33,27 @@ const TradeImport: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const [saveStep, setSaveStep] = useState(0);
+    const saveMsgs = [
+        "Ripping Sierra Fills...",
+        "Reconstructing Trade Pairs...",
+        "Deduplicating Database...",
+        "Checking High-PnL Outliers...",
+        "Running Shield Filters...",
+        "Finalizing Performance Stats..."
+    ];
+
+    React.useEffect(() => {
+        let interval: any;
+        if (isLoading) {
+            setSaveStep(0);
+            interval = setInterval(() => {
+                setSaveStep(prev => (prev + 1) % saveMsgs.length);
+            }, 2000);
+        }
+        return () => clearInterval(interval);
+    }, [isLoading]);
 
     const handlePreview = async () => {
         if (!pasteText.trim()) return;
@@ -82,6 +104,9 @@ const TradeImport: React.FC = () => {
             <p className="description">
                 Paste the contents of your Sierra Chart <strong>TradesList.txt</strong> (26-column format) below.
             </p>
+            <p className="sc-exact-tip">
+                <strong>For entry+exit pairing that matches Sierra Chart exactly:</strong> Use Trade Activity Log → File → Save Log As. Set Trade Activity Type to &quot;Fills&quot; in Display Settings. The export includes OpenClose — paste that for SC-exact matching (entry 3 + exit 3).
+            </p>
 
             <div className="input-section">
                 <textarea
@@ -100,7 +125,12 @@ const TradeImport: React.FC = () => {
                 </div>
             </div>
 
-            {isLoading && <div className="loading">Processing...</div>}
+            {isLoading && (
+                <div className="loading" style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                    <div style={{ width: '10px', height: '10px', background: '#22c55e', borderRadius: '50%', animation: 'loading-pulse 1.5s infinite' }}></div>
+                    {saveMsgs[saveStep]}
+                </div>
+            )}
             {error && <div className="error-message">Error: {error}</div>}
             {successMessage && <div className="success-message">{successMessage}</div>}
 
@@ -120,6 +150,20 @@ const TradeImport: React.FC = () => {
                         </div>
                     )}
 
+                    {previewResult.dropped_ghost_fills && previewResult.dropped_ghost_fills.length > 0 && (
+                        <div className="ghost-fills-warning">
+                            <h3>⚠️ Simulation Ghost Fills Blocked ({previewResult.dropped_ghost_fills.length})</h3>
+                            <p>The precision engine dropped the following mathematically impossible ghost fills to protect your PnL accuracy:</p>
+                            <ul>
+                                {previewResult.dropped_ghost_fills.map((fill, i) => (
+                                    <li key={i}>
+                                        <strong>{fill.timestamp}</strong> - {fill.account} ({fill.symbol}) | Attempted to <strong>{fill.side} {fill.dropped_qty}</strong> | Blocked at Limit {fill.limit}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     {previewResult.stats && Object.keys(previewResult.stats).length > 0 && (
                         <div className="import-stats-summary">
                             <h3>🛡️ Shield Filter Summary</h3>
@@ -130,7 +174,8 @@ const TradeImport: React.FC = () => {
                                         long_duration: 0,
                                         eod_1700: 0,
                                         future: 0,
-                                        price_mismatch: 0
+                                        price_mismatch: 0,
+                                        auto_cleaned: previewResult.stats.auto_cleaned_count || 0
                                     };
 
                                     Object.values(previewResult.stats).forEach((accStats: any) => {
@@ -165,6 +210,12 @@ const TradeImport: React.FC = () => {
                                                 <div className="stat-item">
                                                     <label>Future Trades</label>
                                                     <span>{totals.future}</span>
+                                                </div>
+                                            )}
+                                            {totals.auto_cleaned > 0 && (
+                                                <div className="stat-item cleaned">
+                                                    <label>Overlapping Trades Replaced</label>
+                                                    <span>{totals.auto_cleaned}</span>
                                                 </div>
                                             )}
                                         </>

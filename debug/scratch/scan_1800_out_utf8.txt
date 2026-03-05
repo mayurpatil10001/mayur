@@ -1,0 +1,60 @@
+Scaning file: D:\SierraChart_Simulated_Feed\TradeActivityLogs\TradeActivityLog_2025-12-17_UTC.V_sim16.data
+2025-12-17T17:59:58.386313 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:00:00.000 | Last: 24988.75 | AOE=false | AOU=false
+2025-12-17T17:59:58.560867 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.00 Ask: 24988.75 Last: 24986.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T17:59:58.560961 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24986.00 Ask: 24988.75 Last: 24986.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T17:59:58.607179 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:00:00.000 | Last: 24992 | Scaling out | AOE=false | AOU=false
+2025-12-17T17:59:58.607536 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:00:00.000 | Last: 24992 | Scaling out | AOE=false | AOU=false
+2025-12-17T17:59:58.607887 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:00:00.000 | Last: 24992 | Scaling out | AOE=false | AOU=false
+2025-12-17T17:59:58.608237 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:00:00.000 | Last: 24992 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:00:04.861601 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24997.75 Ask: 24998.00 Last: 24996.25. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:00:04.861629 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24997.75 Ask: 24998.00 Last: 24996.25. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:00:25.230205 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.75 Ask: 24990.50 Last: 24988.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:00:25.230245 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24988.75 Ask: 24990.50 Last: 24988.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:20:00.964113 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:18:00.000 | Last: 24954.75 | AOE=false | AOU=false
+2025-12-17T18:20:01.149949 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24954.25 Ask: 24955.25 Last: 24954.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:20:01.149999 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24954.25 Ask: 24955.25 Last: 24954.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:20:01.269850 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:18:00.000 | Last: 24954.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:20:01.270268 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:18:00.000 | Last: 24954.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:20:01.270470 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:18:00.000 | Last: 24954.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:20:01.270635 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:18:00.000 | Last: 24954.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:25:16.774162 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24945.75 Ask: 24946.75 Last: 24946.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:25:16.774199 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24945.75 Ask: 24946.75 Last: 24946.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:25:47.323656 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24937.00 Ask: 24937.50 Last: 24937.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:25:47.323690 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24937.00 Ask: 24937.50 Last: 24937.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:25:47.440054 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:24:00.000 | Last: 24936.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:27:24.353765 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24944.00 Ask: 24945.00 Last: 24944.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:27:24.353795 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24944.00 Ask: 24945.00 Last: 24944.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:30:02.476683 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:30:00.000 | Last: 24957 | AOE=false | AOU=false
+2025-12-17T18:30:02.662994 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.50 Ask: 24958.50 Last: 24957.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:30:02.663018 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24957.50 Ask: 24958.50 Last: 24957.00. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:30:02.779870 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:30:00.000 | Last: 24957 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:30:02.780268 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:30:00.000 | Last: 24957 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:30:02.780552 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:30:00.000 | Last: 24957 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:30:02.780697 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:30:00.000 | Last: 24957 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:31:17.874225 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.75 Ask: 24964.75 Last: 24965.00. Fill based on queue. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:31:17.874267 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24963.75 Ask: 24964.75 Last: 24965.00. Fill based on queue. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:32:55.530836 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.75 Ask: 24959.50 Last: 24958.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:32:55.530872 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24958.75 Ask: 24959.50 Last: 24958.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:36:02.533665 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:36:00.000 | Last: 24959.75 | AOE=false | AOU=false
+2025-12-17T18:36:02.777418 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24959.00 Ask: 24959.75 Last: 24959.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:36:02.777468 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24959.00 Ask: 24959.75 Last: 24959.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:36:02.824564 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:36:00.000 | Last: 24959.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:36:02.824906 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:36:00.000 | Last: 24959.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:36:02.825095 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:36:00.000 | Last: 24959.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:36:02.825289 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:36:00.000 | Last: 24959.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:36:51.824648 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24965.75 Ask: 24966.75 Last: 24966.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:36:51.824664 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24965.75 Ask: 24966.75 Last: 24966.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:41:58.090264 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.50 Ask: 24973.25 Last: 24972.50. Fill based on queue. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:41:58.090294 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24972.50 Ask: 24973.25 Last: 24972.50. Fill based on queue. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:41:58.200359 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:39:00.000 | Last: 24973.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:45:08.587357 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.75 Ask: 24967.25 Last: 24966.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:45:08.587371 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24966.75 Ask: 24967.25 Last: 24966.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:55:35.632978 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | SellEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:54:00.000 | Last: 24927.75 | AOE=false | AOU=false
+2025-12-17T18:55:35.822441 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24927.50 Ask: 24928.75 Last: 24927.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:55:35.822465 : Trading Evaluator (Filled). Info: Trade simulation fill. Bid: 24927.50 Ask: 24928.75 Last: 24927.75. Text: Tag: AT_NQ_TM(D-R-2+last50)
+2025-12-17T18:55:35.936596 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:54:00.000 | Last: 24927.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:55:35.936913 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:54:00.000 | Last: 24927.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:55:35.937033 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:54:00.000 | Last: 24927.75 | Scaling out | AOE=false | AOU=false
+2025-12-17T18:55:35.937146 : Auto-trade: NQH26 [CBV][M]  3 Min  #6 | Autotrader V1.3 | BuyEntry | AT_NQ_TM(D-R-2+last50) | Bar start date-time: 2025-12-17  18:54:00.000 | Last: 24927.75 | Scaling out | AOE=false | AOU=false
+Scaning file: D:\SierraChart_Simulated_Feed\TradeActivityLogs\TradeActivityLog_2025-12-18_UTC.V_sim16.data
+Scaning file: D:\SierraChart_Simulated_Feed\TradeActivityLogs\TradeActivityLog_2025-12-19_UTC.V_sim16.data
