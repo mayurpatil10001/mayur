@@ -8,7 +8,7 @@ Requirements: 7.1, 10.1, 10.3
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Response
 from sqlalchemy.orm import Session
 
 from ..dependencies import (
@@ -135,6 +135,9 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
         w_start = end - timedelta(days=w_days)
         w_start_str = w_start.strftime("%Y-%m-%d")
         
+        cutoff_dt = datetime.now() - timedelta(days=30)
+        cutoff_str = cutoff_dt.isoformat()
+
         cursor.execute(
             """
             SELECT account_name,
@@ -149,10 +152,18 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
                 AVG(profit_loss * profit_loss) - (AVG(profit_loss) * AVG(profit_loss)) as variance
             FROM processed_trades
             WHERE symbol = ? AND entry_time >= ?
+              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
+              AND account_name IN (
+                  SELECT account_name
+                  FROM processed_trades
+                  WHERE symbol = ?
+                  GROUP BY account_name
+                  HAVING MAX(strftime('%Y-%m-%d %H:%M:%S', entry_time)) >= strftime('%Y-%m-%d %H:%M:%S', ?)
+              )
             GROUP BY account_name, time_slot, day_of_week
             HAVING n >= ?
             """,
-            (symbol, w_start_str, max(3, int(min_trades * w_days / 90.0))),
+            (symbol, w_start_str, symbol, cutoff_str, max(3, int(min_trades * w_days / 90.0))),
         )
         
         w_candidates = {}
@@ -199,7 +210,9 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
         for i, res in enumerate(window_results):
             if key in res:
                 acct = res[key]["account"]
-                weight = 1.0 if i == 0 else 0.7
+                # Weights: 30d=1.0, 45d=0.7, 90d=0.5 (prioritize recent consistency)
+                weights = [1.0, 0.7, 0.5]
+                weight = weights[i] if i < len(weights) else 0.4
                 votes[acct] += res[key]["score"] * weight
                 meta[acct] = res[key]["raw"]
                 
@@ -905,12 +918,17 @@ async def get_discovery(
     logic: str = Query('persistence', description="Selection logic: 'persistence', 'classic', 'statistical', 'ensemble'"),
     winners_only: bool = Query(False, description="If true, only returns the best performing account per slot"),
     db: Session = Depends(get_database_session),
-    current_user: dict = Depends(require_read_permission)
+    current_user: dict = Depends(require_read_permission),
+    response: Response = None
 ):
     """
     Unified Discovery Engine. Supports Persistence (All-Stars), 
     Classic (Profit-based), and Statistical (EV-based) rankings.
     """
+    if response:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     try:
         import logging as _logging
         _logger = _logging.getLogger(__name__)
@@ -938,6 +956,14 @@ async def get_discovery(
         elif logic == 'statistical':
             sort_clause = "(avg_profit_per_trade * (win_rate / 100.0)) DESC, win_rate DESC"
 
+        cutoff_dt = datetime.now() - timedelta(days=30)
+        cutoff_str = cutoff_dt.isoformat()
+
+        # Check if we have ANY data from the last 30 days for this symbol
+        # Normalizing to YYYY-MM-DD HH:MM:SS for robust comparison
+        cursor.execute("SELECT COUNT(*) FROM processed_trades WHERE symbol = ? AND strftime('%Y-%m-%d %H:%M:%S', entry_time) >= strftime('%Y-%m-%d %H:%M:%S', ?)", (symbol, cutoff_str))
+        has_recent_data = cursor.fetchone()[0] > 0
+
         if logic == 'ensemble':
             # Use the existing ensemble logic but convert it to edge list
             # Note: _get_ensemble_recommendations requires cursor and db session
@@ -961,7 +987,7 @@ async def get_discovery(
             return APIResponse(
                 status="success",
                 message=f"Ensemble discovery results for {symbol}",
-                data={"symbol": symbol, "edges": sorted(edges, key=lambda x: x['persistence_score'], reverse=True)}
+                data={"symbol": symbol, "edges": sorted(edges, key=lambda x: x['persistence_score'], reverse=True), "has_recent_data": has_recent_data}
             )
 
         
@@ -971,7 +997,14 @@ async def get_discovery(
             winner_filter = "AND (rk_persistence = 1 OR rk_profit = 1 OR rk_volume = 1)"
 
         query = f"""
-            WITH slot_monthly AS (
+            WITH recent_accounts AS (
+                SELECT account_name
+                FROM processed_trades
+                WHERE symbol = ?
+                GROUP BY account_name
+                HAVING MAX(strftime('%Y-%m-%d %H:%M:%S', entry_time)) >= strftime('%Y-%m-%d %H:%M:%S', ?)
+            ),
+            slot_monthly AS (
                 SELECT account_name,
                     printf('%02d:%02d', 
                         CAST(strftime('%H', entry_time) AS INTEGER), 
@@ -983,7 +1016,9 @@ async def get_discovery(
                     SUM(profit_loss) as month_pnl,
                     SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winnings
                 FROM processed_trades
-                WHERE symbol = ?
+                WHERE symbol = ? 
+                  AND account_name IN (SELECT account_name FROM recent_accounts)
+                  AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
                 GROUP BY 1, 2, 3, 4
             ),
             slot_stats AS (
@@ -1030,13 +1065,13 @@ async def get_discovery(
         """
 
         
-        cursor.execute(query, (symbol, min_trades_total, min_months, min_avg_profit, min_persistence))
+        cursor.execute(query, (symbol, cutoff_str, symbol, min_trades_total, min_months, min_avg_profit, min_persistence))
         
         edges = []
         for r in cursor.fetchall():
             gross_profit = r['gross_profit']
             gross_loss = r['gross_loss']
-            pf = round(gross_profit / gross_loss, 2) if gross_loss > 0 else float('inf')
+            pf = round(gross_profit / gross_loss, 2) if gross_loss > 0 else 999.0
             
             tags = []
             if r['rk_persistence'] == 1: tags.append('persistence')
@@ -1060,7 +1095,7 @@ async def get_discovery(
         return APIResponse(
             status="success",
             message=f"Discovered {len(edges)} edges for {symbol} using {logic} logic",
-            data={"symbol": symbol, "edges": edges}
+            data={"symbol": symbol, "edges": edges, "has_recent_data": has_recent_data}
         )
         
     except HTTPException:
@@ -1127,6 +1162,7 @@ async def get_walk_forward_validation(
                 COUNT(*) as n
             FROM processed_trades 
             WHERE symbol = ?
+              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
             GROUP BY 1, 2, 3, 4
         """, (symbol,))
         
@@ -1144,6 +1180,7 @@ async def get_walk_forward_validation(
                 CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week
             FROM processed_trades 
             WHERE symbol = ?
+              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
             ORDER BY entry_time ASC
         """, (symbol,))
         
@@ -1208,34 +1245,30 @@ async def get_walk_forward_validation(
                         avg_trade = window_pnl / total_n if total_n > 0 else 0
                         profitable_months = len([d for d in relevant_months_data if d["pnl"] > 0])
                         
-                        # Recency Check: Was the most recent month actually profitable?
-                        # This prevents picking "Dead Legends" that were good 1 year ago but are failing now.
-                        latest_month_data = relevant_months_data[-1] if relevant_months_data else None
-                        is_recently_profitable = latest_month_data["pnl"] > 0 if latest_month_data else False
+                        active_months = len(relevant_months_data)
+                        persistence = (profitable_months * 100.0 / active_months) if active_months > 0 else 0
                         
-                        # CRITICAL FIX: Persistence must be relative to the FULL window size (train_months)
-                        persistence = (profitable_months * 100.0 / len(train_months_list))
-                        
-                        # Selection Logic Application
+                        # Selection Logic Application - Loosened and corrected
                         is_qualified = False
+                        # If user explicitly selected this edge, we are more lenient
+                        min_n = 5 if allowed_lut is None else 1
+                        min_act_months = 2 if allowed_lut is None else 1
+
                         if current_logic == 'persistence':
-                            # Require minimum activity and recency
                             is_qualified = (persistence >= min_persistence and 
                                             window_pnl > 0 and 
-                                            total_n >= 5 and 
-                                            is_recently_profitable)
+                                            total_n >= min_n and
+                                            active_months >= min_act_months)
                         elif current_logic == 'classic':
                             is_qualified = (window_pnl > 0 and 
                                             avg_trade > 10.0 and 
-                                            total_n >= 5 and 
-                                            is_recently_profitable)
+                                            total_n >= min_n)
                         elif current_logic == 'statistical':
                             is_qualified = (window_pnl > 0 and 
                                             persistence > 50 and 
-                                            total_n >= 5 and 
-                                            is_recently_profitable)
+                                            total_n >= min_n)
                         else:
-                            is_qualified = persistence >= min_persistence and window_pnl > 0 and is_recently_profitable
+                            is_qualified = persistence >= min_persistence and window_pnl > 0
 
                         if is_qualified:
                             slot_key = (slot, dow)

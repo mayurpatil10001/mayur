@@ -391,6 +391,12 @@ def setup_routers(app: FastAPI) -> None:
     )
     
     app.include_router(
+        trade_import.router,
+        prefix="/api/v1/trade-import",
+        tags=["Trade Import"]
+    )
+    
+    app.include_router(
         system.router,
         tags=["System Monitoring"]
     )

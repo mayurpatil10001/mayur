@@ -201,14 +201,14 @@ async def get_system_status(db: Session = Depends(get_database_session)) -> List
     # Check trades table
     try:
         start_time = time.time()
-        # Use a faster check instead of full COUNT(*)
-        result = db.execute(text("SELECT 1 FROM processed_trades LIMIT 1"))
-        has_trades = result.scalar() is not None
+        # Get actual count for the frontend UI
+        result = db.execute(text("SELECT COUNT(*) FROM processed_trades"))
+        trade_count = result.scalar() or 0
         response_time = int((time.time() - start_time) * 1000)
         
         status_list.append({
-            "component": "Trades Table",
-            "status": "online" if has_trades else "warning",
+            "component": f"Trades Table ({trade_count:,} records)",
+            "status": "online" if trade_count > 0 else "warning",
             "lastUpdate": "just now",
             "responseTime": response_time,
             "note": "Table accessible"

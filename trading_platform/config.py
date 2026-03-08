@@ -15,7 +15,9 @@ class Config:
     SIERRA_CHART_DELAYED_PATH = Path(r"D:\SierraChart_Delayed_Simulated\SavedTradeActivity")
     
     # Database configuration
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./trading_platform.db")
+    ROOT_DIR = Path(__file__).parent.parent
+    DEFAULT_DB_PATH = ROOT_DIR / "trading_platform.db"
+    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH.absolute()}")
     
     # MCP configuration
     MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8080")

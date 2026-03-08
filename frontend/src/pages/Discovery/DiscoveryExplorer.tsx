@@ -36,6 +36,7 @@ const DiscoveryExplorer: React.FC = () => {
     const [symbol, setSymbol] = useState('NQ');
     const [edges, setEdges] = useState<Edge[]>([]);
     const [loading, setLoading] = useState(false);
+    const [hasRecentData, setHasRecentData] = useState<boolean | null>(null);
     const [validationLoading, setValidationLoading] = useState(false);
     const [validationData, setValidationData] = useState<ValidationData | null>(null);
     const [minPersistence, setMinPersistence] = useState(70);
@@ -61,6 +62,7 @@ const DiscoveryExplorer: React.FC = () => {
             const data = await response.json();
             if (data.status === 'success') {
                 setEdges(data.data.edges);
+                setHasRecentData(data.data.has_recent_data);
             }
         } catch (error) {
             console.error('Error fetching edges:', error);
@@ -259,6 +261,14 @@ const DiscoveryExplorer: React.FC = () => {
             </div>
 
             {
+                hasRecentData === false && (
+                    <div className="warning-box" style={{ margin: '15px 20px', padding: '15px', background: '#ffebee', color: '#c62828', borderRadius: '4px', borderLeft: '4px solid #ef5350' }}>
+                        <strong>Alert: No Recent Data!</strong> No accounts with data from the last 30 days were found for this symbol. Please import more data using the binary importer.
+                    </div>
+                )
+            }
+
+            {
                 loading && (
                     <div className="discovery-progress-container">
                         <div className="discovery-progress-bar"></div>
@@ -405,23 +415,29 @@ const DiscoveryExplorer: React.FC = () => {
                                         <span>{portfolioData.metrics.sortino}</span>
                                     </div>
                                 </div>
-                                <div className="validation-chart">
-                                    <Plot
-                                        data={[{
-                                            x: portfolioData.equity_curve.map((d: any) => d.date),
-                                            y: portfolioData.equity_curve.map((d: any) => d.pnl),
-                                            type: 'scatter', mode: 'lines', name: 'Portfolio',
-                                            line: { color: '#4caf50', width: 2 }
-                                        }]}
-                                        layout={{
-                                            autosize: true, height: 300, margin: { l: 50, r: 10, t: 10, b: 30 },
-                                            paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                                            xaxis: { showgrid: false, tickfont: { size: 9 } },
-                                            yaxis: { gridcolor: '#eee', tickfont: { size: 9 } }
-                                        }}
-                                        config={{ responsive: true, displayModeBar: false }}
-                                    />
-                                </div>
+                                {portfolioData.equity_curve && portfolioData.equity_curve.length > 0 ? (
+                                    <div className="validation-chart">
+                                        <Plot
+                                            data={[{
+                                                x: portfolioData.equity_curve.map((d: any) => d.date),
+                                                y: portfolioData.equity_curve.map((d: any) => d.pnl),
+                                                type: 'scatter', mode: 'lines', name: 'Portfolio',
+                                                line: { color: '#4caf50', width: 2 }
+                                            }]}
+                                            layout={{
+                                                autosize: true, height: 300, margin: { l: 50, r: 10, t: 10, b: 30 },
+                                                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                                                xaxis: { showgrid: false, tickfont: { size: 9 } },
+                                                yaxis: { gridcolor: '#eee', tickfont: { size: 9 } }
+                                            }}
+                                            config={{ responsive: true, displayModeBar: false }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="empty-chart-msg" style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                                        📉 No trades found matching these selections in historical data.
+                                    </div>
+                                )}
                             </div>
                         )}
 

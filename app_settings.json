@@ -1,6 +1,18 @@
 {
   "scanners": [
     {
+      "symbol": "NQ",
+      "path": "D:\\SierraChart_Simulated_Feed\\TradeActivityLogs"
+    },
+    {
+      "symbol": "NQ_Inst4",
+      "path": "D:\\SierraChart_Simulated_Feed\\SierraChartInstance_4\\TradeActivityLogs"
+    },
+    {
+      "symbol": "NQ_Inst5",
+      "path": "D:\\SierraChart_Simulated_Feed\\SierraChartInstance_5\\TradeActivityLogs"
+    },
+    {
       "symbol": "CL",
       "path": "D:\\SierraChart_Simulated_Feed\\TradeActivityLogs"
     },
@@ -9,15 +21,11 @@
       "path": "D:\\SierraChart_Simulated_Feed\\TradeActivityLogs"
     },
     {
-      "symbol": "NQ",
-      "path": "D:\\SierraChart_Simulated_Feed\\TradeActivityLogs"
-    },
-    {
       "symbol": "FDAX",
       "path": "D:\\SierraChart_Delayed_Simulated\\TradeActivityLogs"
     }
   ],
   "last_import_range": "2000",
-  "last_used_symbol": "CL",
+  "last_used_symbol": "NQ",
   "import_days": "0"
 }

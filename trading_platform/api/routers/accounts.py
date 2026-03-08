@@ -86,7 +86,6 @@ async def debug_accounts():
             SELECT COUNT(*) as count FROM (
                 SELECT DISTINCT account_name, symbol 
                 FROM processed_trades 
-                FROM processed_trades 
             )
         """)
         debug_info["account_symbol_combinations"] = cursor.fetchone()["count"]
@@ -177,7 +176,7 @@ async def list_accounts(
         
         params = []
         if symbol:
-            base_query += " AND symbol = ?"
+            base_query += " WHERE symbol = ?"
             params.append(symbol)
             
         base_query += " GROUP BY account_name, symbol ORDER BY account_name, symbol"

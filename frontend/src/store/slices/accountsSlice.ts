@@ -30,7 +30,7 @@ const initialState: AccountsState = {
 export const fetchAccounts = createAsyncThunk(
   'accounts/fetchAccounts',
   async () => {
-    const response = await fetch('http://localhost:8000/api/v1/accounts/?size=100');
+    const response = await fetch('http://localhost:8000/api/v1/accounts/?size=1000');
     if (!response.ok) {
       throw new Error('Failed to fetch accounts');
     }

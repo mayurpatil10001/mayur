@@ -280,6 +280,56 @@ const AccountsByHour: React.FC = () => {
     };
   };
 
+  const getOutlierWarning = () => {
+    if (trades.length === 0) return null;
+
+    const monthlyData: Record<string, { pnl: number, trades: number }> = {};
+    let totalPnl = 0;
+
+    trades.forEach(t => {
+      const date = new Date(t.entry_time);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthlyData[monthKey]) monthlyData[monthKey] = { pnl: 0, trades: 0 };
+      monthlyData[monthKey].pnl += t.profit_loss;
+      monthlyData[monthKey].trades += 1;
+      totalPnl += t.profit_loss;
+    });
+
+    const months = Object.values(monthlyData);
+    if (months.length <= 2) return null;
+
+    let maxAbsPnl = 0;
+    let outlierMonth = '';
+    let outlierPnl = 0;
+    let outlierTrades = 0;
+
+    Object.entries(monthlyData).forEach(([month, data]) => {
+      if (Math.abs(data.pnl) > maxAbsPnl) {
+        maxAbsPnl = Math.abs(data.pnl);
+        outlierMonth = month;
+        outlierPnl = data.pnl;
+        outlierTrades = data.trades;
+      }
+    });
+
+    const sortedPnls = months.map(m => Math.abs(m.pnl)).sort((a, b) => a - b);
+    const medianAbsPnl = sortedPnls[Math.floor(sortedPnls.length / 2)];
+
+    // Check if max is huge compared to median (e.g., > 5x) and absolute > $10,000
+    if (maxAbsPnl > (medianAbsPnl * 4) && maxAbsPnl > 10000) {
+      return {
+        month: outlierMonth,
+        pnl: outlierPnl,
+        trades: outlierTrades,
+        median: medianAbsPnl,
+        ratio: (maxAbsPnl / (medianAbsPnl || 1)).toFixed(1)
+      };
+    }
+    return null;
+  };
+
+  const outlier = getOutlierWarning();
+
   return (
     <div className="accounts-by-hour">
       <h1>Accounts by Hour</h1>
@@ -456,6 +506,27 @@ const AccountsByHour: React.FC = () => {
         zIndex: 1000
       }}>Updating data...</div>}
       {error && <div className="error-message">{error}</div>}
+
+      {outlier && !isLoading && (
+        <div style={{
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffeaa7',
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          color: '#856404'
+        }}>
+          <h3 style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>⚠️</span> Extreme Outlier Detected
+          </h3>
+          <p style={{ margin: 0 }}>
+            The month of <strong>{outlier.month}</strong> generated <strong>{formatCurrency(outlier.pnl)}</strong> over <strong>{outlier.trades}</strong> trades.
+            This is <strong>{outlier.ratio}x larger</strong> in magnitude than the median monthly P&L ({formatCurrency(outlier.median)}).
+            Such an extreme outlier may completely distort the performance averages and win rates for this account.
+            Consider investigating this period in Sierra Chart or filtering it if it represents a bad SIM run.
+          </p>
+        </div>
+      )}
 
       {selectedAccount && selectedSymbol && (
         <div className="analysis-content" style={{ opacity: isLoading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
