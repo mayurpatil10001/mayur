@@ -14,12 +14,18 @@ interface PredictorMatrixProps {
     };
     dayNames: string[];
     timeSlots: string[];
+    minReliability?: number;
+    selectedBinKeys?: Set<string>;
+    onToggleBinSelection?: (payload: { key: string; timeSlot: string; dayOfWeek: number; account: string }) => void;
 }
 
 const PredictorMatrix: React.FC<PredictorMatrixProps> = ({
     predictions,
     dayNames,
-    timeSlots
+    timeSlots,
+    minReliability = 0,
+    selectedBinKeys,
+    onToggleBinSelection,
 }) => {
     // Filter time slots to only show those with predictions
     const filteredTimeSlots = timeSlots.filter(timeSlot => {
@@ -59,15 +65,46 @@ const PredictorMatrix: React.FC<PredictorMatrixProps> = ({
                                 <td className="time-slot-cell">{timeSlot}</td>
                                 {[0, 1, 2, 3, 4, 5].map(dayIndex => {
                                     const pred = predictions[timeSlot]?.[dayIndex.toString()];
-                                    const cellClass = pred ? `matrix-cell ${getConfidenceClass(pred.confidence)}` : 'matrix-cell empty';
+                                    const isLowReliability = pred && (Math.round(pred.agreement_ratio * 100) < minReliability);
+                                    const effectivePred = isLowReliability ? undefined : pred;
+                                    const cellClass = effectivePred ? `matrix-cell ${getConfidenceClass(effectivePred.confidence)}` : 'matrix-cell empty';
+                                    const binKey = effectivePred ? `${timeSlot}_${dayIndex}` : '';
+                                    const isSelected = !!(binKey && selectedBinKeys?.has(binKey));
 
                                     return (
-                                        <td key={dayIndex} className={cellClass}>
-                                            {pred ? (
+                                        <td 
+                                            key={dayIndex} 
+                                            className={`${cellClass} ${isSelected ? 'selected' : ''}`}
+                                            style={{
+                                                outline: isSelected ? '3px solid #2563eb' : undefined,
+                                                outlineOffset: '-3px',
+                                                backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.25)' : undefined,
+                                                cursor: effectivePred ? 'pointer' : 'default',
+                                                position: 'relative',
+                                                boxShadow: isSelected ? 'inset 0 0 10px rgba(37, 99, 235, 0.2)' : undefined
+                                            }}
+                                            onClick={effectivePred ? () => onToggleBinSelection?.({
+                                                key: binKey,
+                                                timeSlot,
+                                                dayOfWeek: dayIndex,
+                                                account: effectivePred.predicted_account,
+                                            }) : undefined}
+                                        >
+                                            {effectivePred ? (
                                                 <div className="cell-content">
-                                                    <div className="best-account" style={{ fontSize: '11px' }}>{pred.predicted_account}</div>
+                                                    {isSelected && (
+                                                        <span style={{
+                                                            position: 'absolute', top: 2, right: 3,
+                                                            background: '#2563eb', color: '#fff',
+                                                            borderRadius: 999, padding: '1px 5px',
+                                                            fontSize: 7, fontWeight: 700,
+                                                        }}>
+                                                            SELECTED
+                                                        </span>
+                                                    )}
+                                                    <div className="best-account" style={{ fontSize: '11px', fontWeight: isSelected ? 800 : 400 }}>{effectivePred.predicted_account}</div>
                                                     <div className="cell-stats" style={{ fontSize: '9px', marginTop: '2px' }}>
-                                                        {pred.confidence} ({Math.round(pred.agreement_ratio * 100)}%)
+                                                        {effectivePred.confidence} ({Math.round(effectivePred.agreement_ratio * 100)}%)
                                                     </div>
                                                 </div>
                                             ) : (

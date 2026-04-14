@@ -95,8 +95,9 @@ class ProcessedTrade(Base):
     
     # Derived fields
     duration_minutes = Column(Integer, nullable=False)
-    hour_of_day = Column(Integer, nullable=False)
-    day_of_week = Column(Integer, nullable=False)
+    hour_of_day = Column(Integer, nullable=False)  # America/New_York hour at entry
+    day_of_week = Column(Integer, nullable=False)  # America/New_York weekday
+    minute_of_hour_ny = Column(Integer, default=0, nullable=True)  # America/New_York minute (for 30-min slots)
     
     # Foreign key relationship
     account = relationship("Account", back_populates="trades")

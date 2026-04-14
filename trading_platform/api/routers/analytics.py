@@ -8,7 +8,7 @@ Requirements: 7.1, 10.1, 10.3
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Response, Body
 from sqlalchemy.orm import Session
 
 from ..dependencies import (
@@ -33,13 +33,434 @@ from ...services.performance_metrics_calculator import PerformanceMetricsCalcula
 from ...services.temporal_analysis_service import TemporalAnalysisService
 from ...services.account_comparison_service import AccountComparisonService
 from ...services.vix_regime_analyzer import VIXDataIntegration, VolatilityRegime
+from ...config import config as _tp_config
 import math
 from datetime import timedelta
 from collections import defaultdict
 import sqlite3
 import logging
+import numpy as np
+import time
 
 logger = logging.getLogger(__name__)
+
+# Global cache for expensive recommendation matrix calculations
+# Key: (symbol, min_trades, min_avg_profit, min_win_rate, min_persistence, selection_logic)
+# Value: (matrix_data, timestamp)
+_matrix_cache = {}
+
+
+def _sqlite_db_path():
+    """Project-root DB path (matches SQLAlchemy DATABASE_URL), not process CWD."""
+    return _tp_config.DEFAULT_DB_PATH
+
+
+def _matrix_row_float(row: sqlite3.Row, key: str, ndigits: int = 2):
+    """Avoid truthiness bugs: 0.0 and 0 are valid metric values."""
+    v = row[key]
+    if v is None:
+        return None
+    try:
+        return round(float(v), ndigits)
+    except (TypeError, ValueError):
+        return None
+
+
+def _calculate_reliability(avg_trade: float, avg_profit_sq: float, n: int) -> float:
+    """
+    Calculates a 'Statistical Reliability' score (0-100%).
+    This is based on the Z-score logic for a single-sample t-test hypothesis where mean > 0.
+    """
+    if n < 3 or avg_trade <= 0:
+        return 0.0
+        
+    variance = max(0.0001, avg_profit_sq - (avg_trade * avg_trade))
+    std_dev = math.sqrt(variance)
+    
+    # Standard Error = StdDev / SQRT(n)
+    se = std_dev / math.sqrt(n)
+    
+    # Z-Score = Avg / SE
+    z_score = avg_trade / se
+    
+    # Approximate CDF of Normal Distribution (Reliability score)
+    reliability = 0.5 * (1 + math.erf(z_score / math.sqrt(2)))
+    
+    return round(reliability * 100.0, 1)
+
+
+def _get_matrix_internal(symbol, min_trades, min_avg_profit, min_win_rate, min_persistence, selection_logic, cursor, db=None, logger=None):
+    """
+    Internal helper to fetch recommendation matrix with caching.
+    Ensures that /matrix, /combined-stats, and /backtest all use the exact same cached data.
+    """
+    import time
+    if logger is None:
+        import logging
+        logger = logging.getLogger(__name__)
+
+    # Normalize parameters for cache key
+    cache_key = (
+        symbol, 
+        int(min_trades), 
+        float(min_avg_profit), 
+        float(min_win_rate), 
+        float(min_persistence), 
+        str(selection_logic)
+    )
+    
+    now = time.time()
+    if cache_key in _matrix_cache:
+        cached_val, ts = _matrix_cache[cache_key]
+        if now - ts < 60:
+            logger.info(f"[SHARED CACHE] Hit for {symbol} ({selection_logic})")
+            return cached_val
+
+    logger.info(f"[SHARED CACHE] Miss for {symbol} ({selection_logic}). Calculating...")
+    t0 = time.time()
+
+    # Freshness gate (Standard 30 days)
+    # Using direct SQLite date subtraction for maximum consistency across system
+    cutoff_sql = "date('now', '-30 days')"
+    
+    # Pre-fetch recent accounts to optimize CTEs
+    t_start = time.time()
+    logger.info(f"[MATRIX] Calculating for {symbol} ({selection_logic})...")
+
+    if selection_logic == 'ensemble':
+        if db is None:
+             raise Exception("db session required for ensemble logic")
+        matrix_data = _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_rate, cursor, db, logger)
+        _hydrate_ensemble_matrix_metrics(matrix_data, symbol, cursor)
+    else:
+        # Check active accounts for logic verification
+        cursor.execute("""
+            SELECT group_concat(DISTINCT account_name) as names
+            FROM processed_trades
+            WHERE symbol = ?
+            GROUP BY symbol
+            HAVING MAX(entry_time) >= date('now', '-30 days')
+        """, (symbol,))
+        active_res = cursor.fetchone()
+        active_names = active_res['names'] if active_res else "None"
+        logger.info(f"[MATRIX] Active accounts for {symbol}: {active_names}")
+
+    if selection_logic == 'persistence':
+        cursor.execute("""
+        WITH recent_accounts AS (
+            SELECT account_name
+            FROM processed_trades
+            WHERE symbol = ?
+            GROUP BY account_name
+            HAVING MAX(entry_time) >= date('now', '-30 days')
+        ),
+        slot_monthly AS (
+            SELECT
+                account_name,
+                printf('%02d:%02d',
+                    hour_of_day,
+                    CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                day_of_week,
+                strftime('%Y-%m', entry_time) as year_month,
+                SUM(profit_loss) as month_pnl
+            FROM processed_trades
+            WHERE symbol = ?
+              AND account_name IN (SELECT account_name FROM recent_accounts)
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+              AND day_of_week IN (0,1,2,3,4,6)
+            GROUP BY 1,2,3,4
+        ),
+        slot_stats AS (
+            SELECT
+                sm.account_name,
+                sm.time_slot,
+                sm.day_of_week,
+                COUNT(*) as total_months,
+                SUM(CASE WHEN sm.month_pnl > 0 THEN 1 ELSE 0 END) as profitable_months
+            FROM slot_monthly sm
+            GROUP BY 1,2,3
+        ),
+        trade_stats AS (
+            SELECT
+                account_name,
+                printf('%02d:%02d',
+                    hour_of_day,
+                    CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                day_of_week,
+                COUNT(*) as total_trades,
+                SUM(profit_loss) as total_pnl,
+                AVG(profit_loss) as avg_trade,
+                ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate,
+                AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_winner,
+                AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loser,
+                MAX(profit_loss) as largest_winner,
+                MIN(profit_loss) as largest_loser,
+                CASE WHEN SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END) > 0
+                     THEN ROUND(SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) /
+                          SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END), 2)
+                     ELSE 99 END as profit_factor,
+                AVG(profit_loss * profit_loss) as avg_profit_sq
+            FROM processed_trades
+            WHERE symbol = ?
+              AND account_name IN (SELECT account_name FROM recent_accounts)
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+              AND day_of_week IN (0,1,2,3,4,6)
+            GROUP BY 1,2,3
+            HAVING total_trades >= ?
+        ),
+        merged AS (
+            SELECT
+                t.*,
+                ROUND((s.profitable_months * 100.0 / CASE WHEN s.total_months = 0 THEN 1 ELSE s.total_months END), 1) as persistence_score
+            FROM trade_stats t
+            JOIN slot_stats s
+              ON s.account_name = t.account_name
+             AND s.time_slot = t.time_slot
+             AND s.day_of_week = t.day_of_week
+        ),
+        ranked AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY time_slot, day_of_week
+                    ORDER BY persistence_score DESC, avg_trade DESC, win_rate DESC
+                ) as rank
+            FROM merged
+        )
+        SELECT *
+        FROM ranked
+        WHERE rank = 1
+          AND avg_trade > ?
+          AND win_rate >= ?
+          AND persistence_score >= ?
+        ORDER BY time_slot, day_of_week
+        """, (symbol, symbol, symbol, min_trades, min_avg_profit, min_win_rate, min_persistence))
+
+        logger.info(f"[MATRIX] Persistence calculation took {time.time() - t_start:.2f}s")
+
+        rows = cursor.fetchall()
+        matrix_data = {}
+        for row in rows:
+            ts, dow = row['time_slot'], row['day_of_week']
+            if ts not in matrix_data:
+                matrix_data[ts] = {}
+            matrix_data[ts][dow] = {
+                'best_account': row['account_name'],
+                'total_trades': row['total_trades'],
+                'total_pnl': float(row['total_pnl']) if row['total_pnl'] is not None else 0.0,
+                'avg_trade': float(row['avg_trade']) if row['avg_trade'] is not None else 0.0,
+                'win_rate': float(row['win_rate']) if row['win_rate'] is not None else 0.0,
+                'avg_winner': _matrix_row_float(row, 'avg_winner'),
+                'avg_loser': _matrix_row_float(row, 'avg_loser'),
+                'largest_winner': _matrix_row_float(row, 'largest_winner'),
+                'largest_loser': _matrix_row_float(row, 'largest_loser'),
+                'profit_factor': _matrix_row_float(row, 'profit_factor'),
+                'persistence_score': _matrix_row_float(row, 'persistence_score', 1),
+                'reliability_score': _calculate_reliability(
+                    float(row['avg_trade']) if row['avg_trade'] is not None else 0.0,
+                    float(row['avg_profit_sq']) if row['avg_profit_sq'] is not None else 0.0,
+                    int(row['total_trades']) if row['total_trades'] is not None else 0
+                )
+            }
+    else:
+        # CLASSIC / STATISTICAL
+        order_by = "avg_trade DESC, win_rate DESC"
+        if selection_logic == 'statistical':
+            order_by = "(avg_trade * (win_rate / 100.0)) DESC, win_rate DESC"
+            
+        query = f"""
+        WITH recent_accounts AS (
+            SELECT account_name
+            FROM processed_trades
+            WHERE symbol = ?
+            GROUP BY account_name
+            HAVING MAX(entry_time) >= date('now', '-30 days')
+        ),
+        time_day_performance AS (
+            SELECT 
+                account_name,
+                symbol,
+                printf('%02d:%02d', 
+                    hour_of_day,
+                    CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                day_of_week as day_of_week,
+                COUNT(*) as total_trades,
+                SUM(profit_loss) as total_pnl,
+                AVG(profit_loss) as avg_trade,
+                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
+                ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate,
+                AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_winner,
+                AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loser,
+                MAX(profit_loss) as largest_winner,
+                MIN(profit_loss) as largest_loser,
+                CASE WHEN SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END) > 0
+                     THEN ROUND(SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) /
+                          SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END), 2)
+                     ELSE 99 END as profit_factor,
+                AVG(profit_loss * profit_loss) as avg_profit_sq
+            FROM processed_trades 
+            WHERE symbol = ?
+              AND account_name IN (SELECT account_name FROM recent_accounts)
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+              AND day_of_week IN (0,1,2,3,4,6)
+            GROUP BY 1, 3, 4
+            HAVING total_trades >= ?
+        ),
+        ranked_performance AS (
+            SELECT *,
+                ROW_NUMBER() OVER (
+                    PARTITION BY time_slot, day_of_week 
+                    ORDER BY {order_by}
+                ) as rank
+            FROM time_day_performance
+        )
+        SELECT 
+            time_slot,
+            day_of_week,
+            account_name as best_account,
+            total_trades,
+            total_pnl,
+            avg_trade,
+            win_rate,
+            avg_winner,
+            avg_loser,
+            largest_winner,
+            largest_loser,
+            profit_factor,
+            avg_profit_sq
+        FROM ranked_performance
+        WHERE rank = 1 
+            AND avg_trade > ? 
+            AND win_rate >= ?
+        ORDER BY time_slot, day_of_week
+        """
+        cursor.execute(query, (symbol, symbol, min_trades, min_avg_profit, min_win_rate))
+        logger.info(f"[MATRIX] Classic/Stats calculation took {time.time() - t_start:.2f}s")
+        rows = cursor.fetchall()
+        matrix_data = {}
+        for r in rows:
+            ts, dow = r['time_slot'], r['day_of_week']
+            if ts not in matrix_data: matrix_data[ts] = {}
+            matrix_data[ts][dow] = {
+                'best_account': r['best_account'],
+                'total_trades': r['total_trades'],
+                'total_pnl': float(r['total_pnl']) if r['total_pnl'] is not None else 0.0,
+                'avg_trade': float(r['avg_trade']) if r['avg_trade'] is not None else 0.0,
+                'win_rate': float(r['win_rate']) if r['win_rate'] is not None else 0.0,
+                'avg_winner': _matrix_row_float(r, 'avg_winner'),
+                'avg_loser': _matrix_row_float(r, 'avg_loser'),
+                'largest_winner': _matrix_row_float(r, 'largest_winner'),
+                'largest_loser': _matrix_row_float(r, 'largest_loser'),
+                'profit_factor': _matrix_row_float(r, 'profit_factor'),
+                'reliability_score': _calculate_reliability(
+                    float(r['avg_trade']) if r['avg_trade'] is not None else 0.0,
+                    float(r['avg_profit_sq']) if r['avg_profit_sq'] is not None else 0.0,
+                    int(r['total_trades']) if r['total_trades'] is not None else 0
+                )
+            }
+
+    # OPTIMIZED Health/Drift dots: Only check the winners in the matrix_data
+    if matrix_data:
+        winners = []
+        for ts, dv in matrix_data.items():
+            for d, r in dv.items():
+                winners.append((r['best_account'], ts, d))
+        
+        # We check monthly persistence and 30d drift only for winners
+        winner_accounts = list(set([w[0] for w in winners]))
+        
+        # Monthly persistence for winners
+        persistence_query = """
+        WITH slot_monthly AS (
+            SELECT
+                account_name,
+                printf('%02d:%02d',
+                    hour_of_day,
+                    CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                day_of_week,
+                strftime('%Y-%m', entry_time) as ym,
+                SUM(profit_loss) as month_pnl
+            FROM processed_trades
+            WHERE symbol = ? AND account_name IN ({})
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+              AND day_of_week IN (0,1,2,3,4,6)
+            GROUP BY 1,2,3,4
+        )
+        SELECT account_name, time_slot, day_of_week, COUNT(*) as tm, SUM(CASE WHEN month_pnl > 0 THEN 1 ELSE 0 END) as pm
+        FROM slot_monthly
+        GROUP BY 1,2,3
+        """.format(','.join(['?'] * len(winner_accounts)))
+        
+        cursor.execute(persistence_query, [symbol] + winner_accounts)
+        plu = {(p[0], p[1], p[2]): round((p[4] * 100.0 / p[3]), 1) if p[3] > 0 else 0 for p in cursor.fetchall()}
+
+        # 30-day Drift for winners
+        recent_query = """
+        SELECT account_name,
+            printf('%02d:%02d', hour_of_day, CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END) as time_slot,
+            day_of_week, AVG(profit_loss) as r_avg, COUNT(*) as r_n
+        FROM processed_trades 
+        WHERE symbol = ? AND account_name IN ({}) AND entry_time >= date('now', '-30 days')
+          AND (hour_of_day < 17 OR hour_of_day >= 18)
+        GROUP BY 1, 2, 3
+        """.format(','.join(['?'] * len(winner_accounts)))
+        
+        cursor.execute(recent_query, [symbol] + winner_accounts)
+        rlu = {(r[0], r[1], r[2]): {'avg': r[3], 'n': r[4]} for r in cursor.fetchall()}
+
+        # Update matrix_data with status
+        for ts, dv in matrix_data.items():
+            for d, r in dv.items():
+                acc = r['best_account']
+                rec = rlu.get((acc, ts, d))
+                # Update persistence if missing (classic/stats path)
+                if 'persistence_score' not in r:
+                    r['persistence_score'] = plu.get((acc, ts, d), 0)
+                
+                st, hs = "NEW", 100
+                if rec and rec['n'] >= 5:
+                    if rec['avg'] >= r['avg_trade'] * 0.9: st, hs = "STABLE", 100
+                    elif rec['avg'] > 0: st, hs = "DRIFTING", 70
+                    else: st, hs = "CRITICAL", 30
+                elif rec:
+                    st, hs = "STABLE", 90
+                r['status'], r['health_score'], r['recent_avg'] = st, hs, round(rec['avg'], 2) if rec else None
+
+    # FINAL FAIL-SAFE: Remove anything that still looks stale or is explicitly on the ban list
+    stale_accounts_found = []
+    for ts in list(matrix_data.keys()):
+        for dow in list(matrix_data[ts].keys()):
+            acc = matrix_data[ts][dow]['best_account']
+            status = matrix_data[ts][dow].get('status')
+            
+            # If we confirmed it has NO recent trades, or it's an explicitly known stale account
+            if status == "NEW" or acc in ['TM_8', 'TM_5']:
+                stale_accounts_found.append(acc)
+                del matrix_data[ts][dow]
+        
+        # Cleanup empty slots
+        if not matrix_data[ts]:
+            del matrix_data[ts]
+
+    if stale_accounts_found:
+        logger.warning(f"[MATRIX] Removed stale accounts from final result: {list(set(stale_accounts_found))}")
+
+    _matrix_cache[cache_key] = (matrix_data, time.time())
+    logger.info(f"[SHARED CACHE] Calculation complete for {symbol} ({selection_logic}) in {time.time() - t0:.2f}s")
+    return matrix_data
+
+
+def _get_analytics_db_cursor():
+    """Return (conn, cursor) for analytics SQLite, same pattern as discovery. Avoids session.connection() issues."""
+    db_path = _sqlite_db_path()
+    if not db_path.exists():
+        raise HTTPException(status_code=500, detail=f"Database file not found: {db_path}")
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    return conn, conn.cursor()
 
 
 router = APIRouter()
@@ -143,27 +564,27 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
             SELECT account_name,
                 printf('%02d:%02d',
                     hour_of_day,
-                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                    CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
                 ) as time_slot,
-                day_of_week,
+                day_of_week as day_of_week,
                 COUNT(*) as n,
                 AVG(profit_loss) as avg_pnl,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as wr,
                 AVG(profit_loss * profit_loss) - (AVG(profit_loss) * AVG(profit_loss)) as variance
             FROM processed_trades
             WHERE symbol = ? AND entry_time >= ?
-              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
               AND account_name IN (
                   SELECT account_name
                   FROM processed_trades
                   WHERE symbol = ?
                   GROUP BY account_name
-                  HAVING MAX(strftime('%Y-%m-%d %H:%M:%S', entry_time)) >= strftime('%Y-%m-%d %H:%M:%S', ?)
+                  HAVING MAX(entry_time) >= date('now', '-30 days')
               )
-            GROUP BY account_name, time_slot, day_of_week
+            GROUP BY 1, 2, 3
             HAVING n >= ?
             """,
-            (symbol, w_start_str, symbol, cutoff_str, max(3, int(min_trades * w_days / 90.0))),
+            (symbol, w_start_str, symbol, max(3, int(min_trades * w_days / 90.0))),
         )
         
         w_candidates = {}
@@ -211,8 +632,9 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
             if key in res:
                 acct = res[key]["account"]
                 # Weights: 30d=1.0, 45d=0.7, 90d=0.5 (prioritize recent consistency)
-                weights = [1.0, 0.7, 0.5]
-                weight = weights[i] if i < len(weights) else 0.4
+                # windows list is [90, 45, 30], so we map weights by index
+                weight_map = {90: 0.5, 45: 0.7, 30: 1.0}
+                weight = weight_map.get(windows[i], 0.4)
                 votes[acct] += res[key]["score"] * weight
                 meta[acct] = res[key]["raw"]
                 
@@ -239,6 +661,44 @@ def _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_ra
     return ensemble_matrix
 
 
+def _hydrate_ensemble_matrix_metrics(matrix_data: Dict[str, Any], symbol: str, cursor) -> None:
+    """Ensemble cells only had n/confidence; add same aggregates as classic matrix for tooltips and best-bins."""
+    q = """
+        SELECT
+            COUNT(*) as total_trades,
+            SUM(profit_loss) as total_pnl,
+            AVG(profit_loss) as avg_trade,
+            ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate,
+            AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_winner,
+            AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loser,
+            MAX(profit_loss) as largest_winner,
+            MIN(profit_loss) as largest_loser,
+            CASE WHEN SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END) > 0
+                 THEN ROUND(SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) /
+                      SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END), 2)
+                 ELSE 99 END as profit_factor
+        FROM processed_trades
+        WHERE symbol = ? AND account_name = ?
+          AND printf('%02d:%02d',
+                CAST(strftime('%H', entry_time) AS INTEGER),
+                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END) = ?
+          AND CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) = ?
+    """
+    for ts, days in matrix_data.items():
+        for dow, data in days.items():
+            cursor.execute(q, (symbol, data["best_account"], ts, int(dow)))
+            row = cursor.fetchone()
+            if not row or row["total_trades"] is None or row["total_trades"] == 0:
+                continue
+            data["total_trades"] = int(row["total_trades"])
+            data["total_pnl"] = float(row["total_pnl"]) if row["total_pnl"] is not None else 0.0
+            data["avg_trade"] = _matrix_row_float(row, "avg_trade") or 0.0
+            data["win_rate"] = _matrix_row_float(row, "win_rate", 1) or 0.0
+            data["avg_winner"] = _matrix_row_float(row, "avg_winner")
+            data["avg_loser"] = _matrix_row_float(row, "avg_loser")
+            data["largest_winner"] = _matrix_row_float(row, "largest_winner")
+            data["largest_loser"] = _matrix_row_float(row, "largest_loser")
+            data["profit_factor"] = _matrix_row_float(row, "profit_factor")
 
 
 @router.get(
@@ -265,7 +725,7 @@ async def get_performance_metrics(
         
         logger = logging.getLogger(__name__)
         
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -424,7 +884,7 @@ async def get_temporal_analysis(
         
         logger = logging.getLogger(__name__)
         
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -472,13 +932,13 @@ async def get_temporal_analysis(
         # Get daily performance
         cursor.execute(f"""
             SELECT 
-                day_of_week,
+                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
                 COUNT(*) as trades,
                 SUM(profit_loss) as total_pnl,
                 AVG(profit_loss) as avg_profit,
                 SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as win_rate
             {query_base}
-            GROUP BY day_of_week
+            GROUP BY 1
             ORDER BY total_pnl DESC
         """, params)
         daily_rows = cursor.fetchall()
@@ -511,7 +971,7 @@ async def get_temporal_analysis(
                 "hourly_p_value": 0.032,
                 "daily_p_value": 0.045,
                 "significant_hours": [h for h in best_trading_hours if h in [9, 10, 11, 14, 15]],
-                "significant_days": [d for d in best_trading_days if d in [0, 1, 2, 3, 4]]
+                "significant_days": [d for d in best_trading_days if d in [0, 1, 2, 3, 4, 5]]
             }
         )
         
@@ -545,136 +1005,20 @@ async def get_recommendation_matrix(
     min_avg_profit: float = Query(12.0, description="Minimum average profit per trade"),
     min_win_rate: float = Query(45.0, description="Minimum win rate percentage"),
     min_trades: int = Query(100, description="Minimum number of trades per time slot"),
-    selection_logic: str = Query('classic', description="Logic for ranking accounts: 'classic' or 'statistical'"),
+    min_persistence: float = Query(60.0, description="Minimum profitable-month persistence % (persistence mode only)"),
+    selection_logic: str = Query('classic', description="Logic for ranking accounts: 'classic', 'statistical', 'persistence', or 'ensemble'"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ) -> APIResponse:
-    """Get recommendation matrix showing best account for each time slot and day of week."""
-    
-    import logging
-    import sqlite3
-    from pathlib import Path
-    
-    logger = logging.getLogger(__name__)
-    logger.info(f"[RECOMMENDATION MATRIX] Getting matrix for {symbol} (logic: {selection_logic})")
-    
+    logger.info(f"[RECOMMENDATION MATRIX] Request for {symbol} ({selection_logic})")
     try:
-        # Connect to SQLite database
-        db_path = Path("trading_platform.db")
-        
-        if not db_path.exists():
-            logger.error(f"[RECOMMENDATION MATRIX] Database file not found: {db_path.absolute()}")
-            raise HTTPException(status_code=500, detail="Database file not found")
-        
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        if selection_logic == 'ensemble':
-            ensemble_data = _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_rate, cursor, db, logger)
-            
-            conn.close()
-            return APIResponse(
-                status="success",
-                message=f"Ensemble recommendation matrix generated for {symbol}",
-                data={'symbol': symbol, 'matrix': ensemble_data, 'total_recommendations': len(ensemble_data)}
-            )
-            
-            conn.close()
-            return APIResponse(
-                status="success",
-                message=f"Ensemble recommendation matrix generated for {symbol}",
-                data={'symbol': symbol, 'matrix': final_matrix, 'total_recommendations': len(final_matrix)}
-            )
-
-        # ── CLASSIC / STATISTICAL LOGIC ──
-        # Determine ranking clause based on logic
-        order_by = "avg_trade DESC, win_rate DESC"
-        if selection_logic == 'statistical':
-            order_by = "(avg_trade * (win_rate / 100.0)) DESC, win_rate DESC"
-            
-        # Query to get best performing account for each time slot and day of week
-        query = f"""
-        WITH time_day_performance AS (
-            SELECT 
-                account_name,
-                symbol,
-                printf('%02d:%02d', 
-                    hour_of_day,
-                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                ) as time_slot,
-                day_of_week,
-                COUNT(*) as total_trades,
-                SUM(profit_loss) as total_pnl,
-                AVG(profit_loss) as avg_trade,
-                SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
-                ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
-            FROM processed_trades 
-            WHERE symbol = ? 
-            GROUP BY account_name, time_slot, day_of_week
-            HAVING total_trades >= ?
-        ),
-        ranked_performance AS (
-            SELECT *,
-                ROW_NUMBER() OVER (
-                    PARTITION BY time_slot, day_of_week 
-                    ORDER BY {order_by}
-                ) as rank
-            FROM time_day_performance
-        )
-        SELECT 
-            time_slot,
-            day_of_week,
-            account_name as best_account,
-            total_trades,
-            total_pnl,
-            avg_trade,
-            win_rate
-        FROM ranked_performance
-        WHERE rank = 1 
-            AND avg_trade > ? 
-            AND win_rate >= ?
-        ORDER BY time_slot, day_of_week
-        """
-        
-        cursor.execute(query, (symbol, min_trades, min_avg_profit, min_win_rate))
-        rows = cursor.fetchall()
-        
-        # Convert to matrix format
-        matrix_data = {}
-        for row in rows:
-            time_slot = row['time_slot']
-            day_of_week = row['day_of_week']
-            
-            if time_slot not in matrix_data:
-                matrix_data[time_slot] = {}
-            
-            matrix_data[time_slot][day_of_week] = {
-                'best_account': row['best_account'],
-                'total_trades': row['total_trades'],
-                'total_pnl': float(row['total_pnl']) if row['total_pnl'] else 0.0,
-                'avg_trade': float(row['avg_trade']) if row['avg_trade'] else 0.0,
-                'win_rate': float(row['win_rate']) if row['win_rate'] else 0.0
-            }
-        
+        conn, cursor = _get_analytics_db_cursor()
+        matrix_data = _get_matrix_internal(symbol, min_trades, min_avg_profit, min_win_rate, min_persistence, selection_logic, cursor, db, logger)
         conn.close()
-        
-        logger.info(f"[RECOMMENDATION MATRIX] SUCCESS: Returning matrix for {symbol} with {len(rows)} recommendations")
-        
-        return APIResponse(
-            status="success",
-            message=f"Recommendation matrix generated for {symbol}",
-            data={
-                'symbol': symbol,
-                'matrix': matrix_data,
-                'total_recommendations': len(rows)
-            }
-        )
-        
+        return APIResponse(status="success", message="Success", data={"matrix": matrix_data})
     except Exception as e:
         logger.error(f"[RECOMMENDATION MATRIX] ERROR: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate recommendation matrix: {str(e)}")
-
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get(
     "/recommendations/backtest/{symbol}",
@@ -690,6 +1034,7 @@ async def get_recommendation_backtest(
     min_trades: int = Query(100, description="Minimum number of trades per time slot"),
     export: bool = Query(False, description="Include detailed trade data for export"),
     selection_logic: str = Query('classic', description="Logic for ranking accounts: 'classic' or 'statistical'"),
+    target_slots: Optional[str] = Query(None, description="Comma-separated list of time_slot-day keys to filter results (e.g. '08:30-4,09:30-1')"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ) -> APIResponse:
@@ -705,7 +1050,7 @@ async def get_recommendation_backtest(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[RECOMMENDATION BACKTEST] Database file not found: {db_path.absolute()}")
@@ -758,60 +1103,49 @@ async def get_recommendation_backtest(
         
         # First, get the recommendation matrix for this symbol
         # Use ALL historical data to build recommendations, not just the backtest period
+        # Call the shared helper to benefit from caching
+        matrix_data = _get_matrix_internal(symbol, min_trades, min_avg_profit, min_win_rate, 60.0, selection_logic, cursor, db, logger)
+        
+        # Filter by target slots if provided
+        if target_slots:
+            allowed = set(target_slots.split(','))
+            filtered_data = {}
+            for ts, days in matrix_data.items():
+                for d, data in days.items():
+                    key = f"{ts}_{d}"
+                    if key in allowed:
+                        if ts not in filtered_data: filtered_data[ts] = {}
+                        filtered_data[ts][d] = data
+            matrix_data = filtered_data
+            logger.info(f"[BACKTEST] Filtered to {len(allowed)} target slots")
+        
+        # Create recommendation lookup
         rec_lookup = {}
+        for ts, days in matrix_data.items():
+            for dow, data in days.items():
+                key = f"{ts}_{dow}"
+                rec_lookup[key] = data['best_account']
         
-        if selection_logic == 'ensemble':
-            ensemble_data = _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_rate, cursor, db, logger)
-            for time_slot, days in ensemble_data.items():
-                for day, data in days.items():
-                    key = f"{time_slot}_{day}"
-                    rec_lookup[key] = data['best_account']
-        else:
-            matrix_query = f"""
-            WITH time_day_performance AS (
-                SELECT 
-                    account_name,
-                    printf('%02d:%02d', 
-                        hour_of_day,
-                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                    ) as time_slot,
-                    day_of_week,
-                    COUNT(*) as total_trades,
-                    AVG(profit_loss) as avg_trade,
-                    ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
-                FROM processed_trades
-                WHERE symbol = ?
-                GROUP BY account_name, time_slot, day_of_week
-                HAVING total_trades >= ?
-            ),
-            ranked_performance AS (
-                SELECT *,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY time_slot, day_of_week 
-                        ORDER BY {order_by}
-                    ) as rank
-                FROM time_day_performance
-            )
-            SELECT 
-                time_slot,
-                day_of_week,
-                account_name as best_account
-            FROM ranked_performance
-            WHERE rank = 1 
-                AND avg_trade > ?
-                AND win_rate >= ?
-            """
-            
-            cursor.execute(matrix_query, (symbol, min_trades, min_avg_profit, min_win_rate))
-            recommendations = cursor.fetchall()
-            
-            # Create recommendation lookup
-            for rec in recommendations:
-                key = f"{rec['time_slot']}_{rec['day_of_week']}"
-                rec_lookup[key] = rec['best_account']
+        # Define the set of unique accounts that have recommendations
+        recommended_accounts = list(set(rec_lookup.values()))
         
-        # Now get actual trades in the backtest period and see what would have happened
-        backtest_query = """
+        # Early exit if no recommendations found (prevents SQL error on empty IN clause)
+        if not recommended_accounts:
+            logger.warning(f"[RECOMMENDATION BACKTEST] No recommendations found for {symbol} with current filters")
+            conn.close()
+            return APIResponse(status="success", data={
+                'symbol': symbol,
+                'period_days': days_back,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'chart_data': [],
+                'total_pnl': 0,
+                'total_trades_followed': 0,
+                'total_trades_available': 0
+            })
+        
+        # Optimization: Filter by recommended accounts in SQL first to reduce row volume
+        backtest_query = f"""
         SELECT 
             entry_time,
             DATE(entry_time) as trade_date,
@@ -824,12 +1158,13 @@ async def get_recommendation_backtest(
             profit_loss
         FROM processed_trades 
         WHERE symbol = ? 
+            AND account_name IN ({','.join(['?'] * len(recommended_accounts))})
             AND entry_time >= ? 
             AND entry_time <= ?
         ORDER BY entry_time
         """
         
-        cursor.execute(backtest_query, (symbol, start_date.isoformat(), end_date.isoformat()))
+        cursor.execute(backtest_query, [symbol] + recommended_accounts + [start_date.isoformat(), end_date.isoformat()])
         trades = cursor.fetchall()
         
         # Calculate P&L following recommendations - ONLY count trades that match recommendations
@@ -936,7 +1271,7 @@ async def get_discovery(
         # Connect directly to SQLite (same pattern as other endpoints)
         from pathlib import Path as _Path
         import sqlite3 as _sqlite3
-        db_path = _Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         if not db_path.exists():
             raise HTTPException(status_code=500, detail="Database file not found")
         conn = _sqlite3.connect(str(db_path))
@@ -960,8 +1295,7 @@ async def get_discovery(
         cutoff_str = cutoff_dt.isoformat()
 
         # Check if we have ANY data from the last 30 days for this symbol
-        # Normalizing to YYYY-MM-DD HH:MM:SS for robust comparison
-        cursor.execute("SELECT COUNT(*) FROM processed_trades WHERE symbol = ? AND strftime('%Y-%m-%d %H:%M:%S', entry_time) >= strftime('%Y-%m-%d %H:%M:%S', ?)", (symbol, cutoff_str))
+        cursor.execute("SELECT COUNT(*) FROM processed_trades WHERE symbol = ? AND entry_time >= ?", (symbol, cutoff_str))
         has_recent_data = cursor.fetchone()[0] > 0
 
         if logic == 'ensemble':
@@ -1002,15 +1336,12 @@ async def get_discovery(
                 FROM processed_trades
                 WHERE symbol = ?
                 GROUP BY account_name
-                HAVING MAX(strftime('%Y-%m-%d %H:%M:%S', entry_time)) >= strftime('%Y-%m-%d %H:%M:%S', ?)
+                HAVING MAX(entry_time) >= date('now', '-30 days')
             ),
             slot_monthly AS (
                 SELECT account_name,
-                    printf('%02d:%02d', 
-                        CAST(strftime('%H', entry_time) AS INTEGER), 
-                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                    ) as time_slot,
-                    CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                    printf('%02d:%02d', hour_of_day, CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END) as time_slot,
+                    day_of_week,
                     strftime('%Y-%m', entry_time) as year_month,
                     COUNT(*) as n,
                     SUM(profit_loss) as month_pnl,
@@ -1018,7 +1349,8 @@ async def get_discovery(
                 FROM processed_trades
                 WHERE symbol = ? 
                   AND account_name IN (SELECT account_name FROM recent_accounts)
-                  AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
+                  AND (hour_of_day < 17 OR hour_of_day >= 18)
+                  AND day_of_week IN (0,1,2,3,4,6)
                 GROUP BY 1, 2, 3, 4
             ),
             slot_stats AS (
@@ -1065,8 +1397,21 @@ async def get_discovery(
         """
 
         
-        cursor.execute(query, (symbol, cutoff_str, symbol, min_trades_total, min_months, min_avg_profit, min_persistence))
-        
+        min_trades_val = int(min_trades_total)
+        min_avg_val = float(min_avg_profit)
+        min_pers_val = float(min_persistence)
+        try:
+            cursor.execute(query, (symbol, symbol, min_trades_val, min_months, min_avg_val, min_pers_val))
+        except sqlite3.OperationalError as e:
+            if "minute_of_hour_ny" in str(e):
+                query_fallback = query.replace(
+                    "printf('%02d:%02d', hour_of_day, CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END)",
+                    "printf('%02d:00', hour_of_day)"
+                )
+                cursor.execute(query_fallback, (symbol, symbol, min_trades_val, min_months, min_avg_val, min_pers_val))
+            else:
+                raise
+
         edges = []
         for r in cursor.fetchall():
             gross_profit = r['gross_profit']
@@ -1105,14 +1450,13 @@ async def get_discovery(
         raise HTTPException(status_code=500, detail=f"Discovery failed: {str(e)}")
 
 
-
 @router.post(
     "/recommendations/validation/walk-forward/{symbol}",
     response_model=APIResponse,
     summary="Walk-forward validation of persistence logic"
 )
 async def get_walk_forward_validation(
-    request_data: Dict[str, Any],
+    request_data: Dict[str, Any] = Body(default_factory=dict),
     symbol: str = Path(..., description="Trading symbol"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
@@ -1122,6 +1466,7 @@ async def get_walk_forward_validation(
     identified in previous windows. Respects the 'allowed_edges' filter if 
     the user has selected specific rows in the Discovery Explorer.
     """
+    conn = None
     try:
         # Simplified Month-based parameters
         train_months = request_data.get("train_months", 4)
@@ -1144,11 +1489,8 @@ async def get_walk_forward_validation(
             logger.info(f"[WF VALIDATION] User cleared all bins. Result will be 0.")
         else:
             logger.info(f"[WF VALIDATION] No bin filter provided. Running autonomous discovery.")
-            
-        conn = db.connection().connection
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
+
+        conn, cursor = _get_analytics_db_cursor()
         # 1. Pre-calculate ALL monthly statistics for selection (Selection Pool)
         cursor.execute("""
             SELECT account_name,
@@ -1156,13 +1498,13 @@ async def get_walk_forward_validation(
                     CAST(strftime('%H', entry_time) AS INTEGER), 
                     CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
                 ) as time_slot,
-                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
                 strftime('%Y-%m', entry_time) as year_month,
                 SUM(profit_loss) as month_pnl,
                 COUNT(*) as n
-            FROM processed_trades 
+            FROM processed_trades
             WHERE symbol = ?
-              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
             GROUP BY 1, 2, 3, 4
         """, (symbol,))
         
@@ -1177,15 +1519,16 @@ async def get_walk_forward_validation(
                     CAST(strftime('%H', entry_time) AS INTEGER), 
                     CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
                 ) as time_slot,
-                CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week
-            FROM processed_trades 
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week
+            FROM processed_trades
             WHERE symbol = ?
-              AND NOT (strftime('%w', entry_time) = '5' AND strftime('%H:%M', entry_time) > '17:00')
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
             ORDER BY entry_time ASC
         """, (symbol,))
         
         all_trades_raw = cursor.fetchall()
         if not all_trades_raw:
+            conn.close()
             return APIResponse(status="error", message="No trades found for symbol")
 
         # Optimization: Index trades by date for O(1) lookup during OOS simulation
@@ -1218,7 +1561,7 @@ async def get_walk_forward_validation(
             train_end_idx = curr_train_end_idx
             
             train_months_list = unique_months[train_start_idx:train_end_idx]
-            test_months_list = unique_months[train_end_idx:train_end_idx + test_months]
+            test_months_list = unique_months[train_end_idx:curr_train_end_idx + test_months]
             
             # Identify selections based on chosen logic in the training months
             current_logic = request_data.get("logic", "persistence")
@@ -1264,6 +1607,10 @@ async def get_walk_forward_validation(
                                             avg_trade > 10.0 and 
                                             total_n >= min_n)
                         elif current_logic == 'statistical':
+                            is_qualified = (window_pnl > 0 and 
+                                            persistence > 50 and 
+                                            total_n >= min_n)
+                        elif current_logic == 'ensemble':
                             is_qualified = (window_pnl > 0 and 
                                             persistence > 50 and 
                                             total_n >= min_n)
@@ -1327,20 +1674,424 @@ async def get_walk_forward_validation(
             curr_train_end_idx += test_months
             
         metrics = _calculate_performance_metrics(all_profits, list(daily_pnls.values()))
-            
+        
+        # Add Monte Carlo for OOS trades
+        mc_results = None
+        if all_profits:
+            try:
+                pnl_array = np.array(all_profits)
+                simulations = 5000
+                # Horizon: use average trades per day * 20 days (approx one month)
+                days_history = len(daily_pnls) or 1
+                trades_per_day = len(all_profits) / days_history
+                horizon = int(trades_per_day * 21) # 1 month outlook
+                if horizon < 5: horizon = 5
+                
+                rng = np.random.default_rng()
+                indices = rng.integers(0, len(pnl_array), size=(simulations, horizon))
+                sim_pnls = pnl_array[indices]
+                sim_totals = np.sum(sim_pnls, axis=1)
+                
+                prob_profit = float(np.mean(sim_totals > 0)) * 100
+                expected_ret = float(np.mean(sim_totals))
+                percentiles = np.percentile(sim_totals, [5, 25, 50, 75, 95])
+                
+                mc_results = {
+                    "probability_of_profit": round(prob_profit, 2),
+                    "expected_return": round(expected_ret, 2),
+                    "percentiles": {
+                        "5": round(percentiles[0], 2),
+                        "25": round(percentiles[1], 2),
+                        "50": round(percentiles[2], 2),
+                        "75": round(percentiles[3], 2),
+                        "95": round(percentiles[4], 2)
+                    },
+                    "sample_paths": np.column_stack((np.zeros(50), np.cumsum(sim_pnls[:50], axis=1))).tolist()
+                }
+            except Exception as mc_err:
+                logger.error(f"MC OOS Error: {mc_err}")
+
+        logic_label = request_data.get("logic", "persistence")
+        if logic_label == "ensemble":
+            logic_str = "Ensemble (multi-window consensus)"
+        elif logic_label == "statistical":
+            logic_str = "Statistical EV"
+        elif logic_label == "classic":
+            logic_str = "Classic profit"
+        else:
+            logic_str = f"Persistence > {min_persistence}%"
+        conn.close()
         return APIResponse(
             status="success",
             message="Walk-forward validation completed",
             data={
                 "symbol": symbol,
-                "logic": f"Persistence > {min_persistence}%",
+                "logic": logic_str,
                 "equity_curve": equity_curve[::max(1, len(equity_curve)//500)], # Downsample for chart
-                "metrics": metrics
+                "metrics": metrics,
+                "monte_carlo": mc_results
             }
         )
         
     except Exception as e:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
         logger.error(f"[WALK FORWARD VALIDATION] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/recommendations/validation/walk-forward/export/{symbol}",
+    response_model=APIResponse,
+    summary="Export trade list from walk-forward validation"
+)
+async def get_walk_forward_export(
+    request_data: Dict[str, Any] = Body(default_factory=dict),
+    symbol: str = Path(..., description="Trading symbol"),
+    db: Session = Depends(get_database_session),
+    current_user: dict = Depends(require_read_permission)
+):
+    """
+    Similar to validation, but returns a flat list of ALL OOS trades for CSV export.
+    """
+    conn = None
+    try:
+        train_months = request_data.get("train_months", 4)
+        test_months = request_data.get("test_months", 1)
+        min_persistence = request_data.get("min_persistence", 70.0)
+        account_prefix = request_data.get("account_prefix")
+        mode = request_data.get("mode", "expanding")
+        allowed_edges_raw = request_data.get("allowed_edges")
+        
+        allowed_lut = None
+        if allowed_edges_raw is not None and len(allowed_edges_raw) > 0:
+            allowed_lut = set()
+            for e in allowed_edges_raw:
+                allowed_lut.add((e["account_name"], e["time_slot"], int(e["day_of_week"])))
+
+        conn, cursor = _get_analytics_db_cursor()
+        logger.info(f"[WF EXPORT] Starting export for {symbol}. Logic: {request_data.get('logic')}, Mode: {mode}")
+        
+        # 1. Monthly stats
+        cursor.execute("""
+            SELECT account_name,
+                printf('%02d:%02d', 
+                    CAST(strftime('%H', entry_time) AS INTEGER), 
+                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
+                strftime('%Y-%m', entry_time) as year_month,
+                SUM(profit_loss) as month_pnl,
+                COUNT(*) as n
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            GROUP BY 1, 2, 3, 4
+        """, (symbol,))
+        
+        monthly_stats = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        for r in cursor.fetchall():
+            monthly_stats[r[0]][r[1]][r[2]][r[3]] = {"pnl": r[4], "n": r[5]}
+            
+        # 2. Detail trades
+        cursor.execute("""
+            SELECT entry_time, exit_time, account_name, profit_loss, entry_price, exit_price, quantity, side,
+                printf('%02d:%02d', 
+                    CAST(strftime('%H', entry_time) AS INTEGER), 
+                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            ORDER BY entry_time ASC
+        """, (symbol,))
+        
+        all_trades_raw = cursor.fetchall()
+        col_names = [desc[0] for desc in cursor.description] if cursor.description else []
+        def row_to_dict(row):
+            if hasattr(row, 'keys'):
+                return {k: row[k] for k in row.keys()}
+            return dict(zip(col_names, row)) if col_names else {}
+        trades_by_date = defaultdict(list)
+        for r in all_trades_raw:
+            trade_dict = row_to_dict(r)
+            entry_time = trade_dict.get('entry_time') or ''
+            trades_by_date[entry_time[:10] if entry_time else ''].append(trade_dict)
+
+        unique_months = sorted(list(set(m for acc in monthly_stats.values() for slots in acc.values() for days in slots.values() for m in days.keys())))
+        
+        export_trades = []
+        curr_train_end_idx = train_months
+        while curr_train_end_idx + test_months <= len(unique_months):
+            train_start_idx = 0 if mode == "expanding" else curr_train_end_idx - train_months
+            train_end_idx = curr_train_end_idx
+            train_months_list = unique_months[train_start_idx:train_end_idx]
+            test_months_list = unique_months[train_end_idx:curr_train_end_idx + test_months]
+            current_logic = request_data.get("logic", "persistence")
+            
+            best_selections_per_slot = {}
+            for acc, slots in monthly_stats.items():
+                if account_prefix and not acc.startswith(account_prefix): continue
+                for slot, days in slots.items():
+                    for dow, months in days.items():
+                        if allowed_lut is not None and (acc, slot, dow) not in allowed_lut: continue
+                        relevant_months_data = [d for m, d in months.items() if m in train_months_list]
+                        if not relevant_months_data: continue
+                        total_n = sum([d["n"] for d in relevant_months_data])
+                        window_pnl = sum([d["pnl"] for d in relevant_months_data])
+                        profitable_months = len([d for d in relevant_months_data if d["pnl"] > 0])
+                        active_months = len(relevant_months_data)
+                        persistence = (profitable_months * 100.0 / active_months) if active_months > 0 else 0
+                        
+                        is_qualified = False
+                        min_n = 5 if allowed_lut is None else 1
+                        if current_logic == 'persistence':
+                            is_qualified = persistence >= min_persistence and window_pnl > 0 and total_n >= min_n
+                        elif current_logic == 'classic':
+                            is_qualified = window_pnl > 0 and total_n >= min_n
+                        elif current_logic == 'statistical':
+                            is_qualified = window_pnl > 0 and persistence > 50 and total_n >= min_n
+                        elif current_logic == 'ensemble':
+                            is_qualified = window_pnl > 0 and persistence > 50 and total_n >= min_n
+                        else:
+                            is_qualified = persistence >= min_persistence and window_pnl > 0
+
+                        if is_qualified:
+                            slot_key = (slot, dow)
+                            if slot_key not in best_selections_per_slot or persistence > best_selections_per_slot[slot_key]["metric"] or (persistence == best_selections_per_slot[slot_key]["metric"] and window_pnl > best_selections_per_slot[slot_key]["pnl"]):
+                                best_selections_per_slot[slot_key] = {"acc": acc, "metric": persistence, "pnl": window_pnl}
+
+            selections = set((d["acc"], sk[0], sk[1]) for sk, d in best_selections_per_slot.items())
+            
+            for test_m in test_months_list:
+                days_in_m = sorted([d for d in trades_by_date.keys() if d.startswith(test_m)])
+                for day_str in days_in_m:
+                    selection_counts = defaultdict(int)
+                    for t in trades_by_date[day_str]:
+                        key = (t["account_name"], t["time_slot"], t["day_of_week"])
+                        if key in selections: selection_counts[key] += 1
+                    
+                    for t in trades_by_date[day_str]:
+                        key = (t["account_name"], t["time_slot"], t["day_of_week"])
+                        if key in selections and selection_counts[key] <= 200:
+                            export_trades.append({
+                                "date": t["entry_time"][:10],
+                                "time": t["entry_time"][11:19],
+                                "exit_time": t["exit_time"],
+                                "permutation": t["account_name"],
+                                "side": t["side"],
+                                "quantity": t["quantity"],
+                                "entry_price": t["entry_price"],
+                                "exit_price": t["exit_price"],
+                                "pnl": round(t["profit_loss"], 2)
+                            })
+            curr_train_end_idx += test_months
+
+        logger.info(f"[WF EXPORT] SUCCESS: Exported {len(export_trades)} trades for {symbol}")
+        conn.close()
+        return APIResponse(
+            status="success",
+            message=f"Exported {len(export_trades)} trades",
+            data=export_trades
+        )
+    except Exception as e:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[WF EXPORT] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _run_oos_monte_carlo(
+    symbol: str,
+    request_data: Dict[str, Any],
+    conn,
+    logger,
+) -> Optional[Dict[str, Any]]:
+    """Run Monte Carlo on OOS trades using same logic as walk-forward validation. Returns monte_carlo dict or None."""
+    train_months = request_data.get("train_months", 4)
+    test_months = request_data.get("test_months", 1)
+    min_persistence = request_data.get("min_persistence", 70.0)
+    account_prefix = request_data.get("account_prefix")
+    mode = request_data.get("mode", "expanding")
+    allowed_edges_raw = request_data.get("allowed_edges")
+    current_logic = request_data.get("logic", "persistence")
+
+    allowed_lut = None
+    if allowed_edges_raw is not None and len(allowed_edges_raw) > 0:
+        allowed_lut = set()
+        for e in allowed_edges_raw:
+            allowed_lut.add((e["account_name"], e["time_slot"], int(e["day_of_week"])))
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT account_name,
+            printf('%02d:%02d',
+                CAST(strftime('%H', entry_time) AS INTEGER),
+                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+            ) as time_slot,
+            CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
+            strftime('%Y-%m', entry_time) as year_month,
+            SUM(profit_loss) as month_pnl,
+            COUNT(*) as n
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            GROUP BY 1, 2, 3, 4
+        """, (symbol,))
+    monthly_stats = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+    for r in cursor.fetchall():
+        monthly_stats[r[0]][r[1]][r[2]][r[3]] = {"pnl": r[4], "n": r[5]}
+
+    cursor.execute("""
+        SELECT entry_time, account_name, profit_loss,
+            printf('%02d:%02d',
+                CAST(strftime('%H', entry_time) AS INTEGER),
+                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+            ) as time_slot,
+            CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            ORDER BY entry_time ASC
+        """, (symbol,))
+    all_trades_raw = cursor.fetchall()
+    if not all_trades_raw:
+        return None
+    trades_by_date = defaultdict(list)
+    for r in all_trades_raw:
+        trades_by_date[r[0][:10]].append({
+            "account_name": r[1],
+            "profit_loss": r[2],
+            "time_slot": r[3],
+            "day_of_week": r[4]
+        })
+
+    unique_months = sorted(list(set(m for acc in monthly_stats.values() for slots in acc.values() for days in slots.values() for m in days.keys())))
+    all_profits = []
+    curr_train_end_idx = train_months
+    while curr_train_end_idx + test_months <= len(unique_months):
+        train_start_idx = 0 if mode == "expanding" else curr_train_end_idx - train_months
+        train_end_idx = curr_train_end_idx
+        train_months_list = unique_months[train_start_idx:train_end_idx]
+        test_months_list = unique_months[train_end_idx:curr_train_end_idx + test_months]
+        best_selections_per_slot = {}
+        for acc, slots in monthly_stats.items():
+            if account_prefix and not acc.startswith(account_prefix):
+                continue
+            for slot, days in slots.items():
+                for dow, months in days.items():
+                    if allowed_lut is not None and (acc, slot, dow) not in allowed_lut:
+                        continue
+                    relevant_months_data = [d for m, d in months.items() if m in train_months_list]
+                    if not relevant_months_data:
+                        continue
+                    total_n = sum([d["n"] for d in relevant_months_data])
+                    window_pnl = sum([d["pnl"] for d in relevant_months_data])
+                    profitable_months = len([d for d in relevant_months_data if d["pnl"] > 0])
+                    active_months = len(relevant_months_data)
+                    persistence = (profitable_months * 100.0 / active_months) if active_months > 0 else 0
+                    min_n = 5 if allowed_lut is None else 1
+                    is_qualified = False
+                    if current_logic == 'persistence':
+                        is_qualified = persistence >= min_persistence and window_pnl > 0 and total_n >= min_n
+                    elif current_logic == 'classic':
+                        is_qualified = window_pnl > 0 and total_n >= min_n
+                    elif current_logic == 'statistical':
+                        is_qualified = window_pnl > 0 and persistence > 50 and total_n >= min_n
+                    elif current_logic == 'ensemble':
+                        is_qualified = window_pnl > 0 and persistence > 50 and total_n >= min_n
+                    else:
+                        is_qualified = persistence >= min_persistence and window_pnl > 0
+                    if is_qualified:
+                        slot_key = (slot, dow)
+                        if slot_key not in best_selections_per_slot or persistence > best_selections_per_slot[slot_key]["metric"] or (persistence == best_selections_per_slot[slot_key]["metric"] and window_pnl > best_selections_per_slot[slot_key]["pnl"]):
+                            best_selections_per_slot[slot_key] = {"acc": acc, "metric": persistence, "pnl": window_pnl}
+        selections = set((d["acc"], sk[0], sk[1]) for sk, d in best_selections_per_slot.items())
+        daily_pnls = {}
+        for test_m in test_months_list:
+            days_in_m = sorted([d for d in trades_by_date.keys() if d.startswith(test_m)])
+            for day_str in days_in_m:
+                selection_counts = defaultdict(int)
+                for t in trades_by_date[day_str]:
+                    key = (t["account_name"], t["time_slot"], t["day_of_week"])
+                    if key in selections:
+                        selection_counts[key] += 1
+                for t in trades_by_date[day_str]:
+                    key = (t["account_name"], t["time_slot"], t["day_of_week"])
+                    if key in selections and selection_counts[key] <= 200:
+                        all_profits.append(t["profit_loss"])
+        curr_train_end_idx += test_months
+
+    if not all_profits:
+        return None
+    try:
+        pnl_array = np.array(all_profits)
+        simulations = 5000
+        # Count OOS days (we didn't track in loop; use trades count / reasonable default for horizon)
+        days_history = max(1, len(all_profits) // 5)
+        trades_per_day = len(all_profits) / days_history
+        horizon = max(5, int(trades_per_day * 21))
+        rng = np.random.default_rng()
+        indices = rng.integers(0, len(pnl_array), size=(simulations, horizon))
+        sim_pnls = pnl_array[indices]
+        sim_totals = np.sum(sim_pnls, axis=1)
+        prob_profit = float(np.mean(sim_totals > 0)) * 100
+        expected_ret = float(np.mean(sim_totals))
+        percentiles = np.percentile(sim_totals, [5, 25, 50, 75, 95])
+        return {
+            "probability_of_profit": round(prob_profit, 2),
+            "expected_return": round(expected_ret, 2),
+            "percentiles": {
+                "5": round(percentiles[0], 2),
+                "25": round(percentiles[1], 2),
+                "50": round(percentiles[2], 2),
+                "75": round(percentiles[3], 2),
+                "95": round(percentiles[4], 2)
+            },
+            "sample_paths": np.column_stack((np.zeros(50), np.cumsum(sim_pnls[:50], axis=1))).tolist()
+        }
+    except Exception as mc_err:
+        logger.error(f"MC OOS Error: {mc_err}")
+        return None
+
+
+@router.post(
+    "/recommendations/validation/walk-forward/monte-carlo/{symbol}",
+    response_model=APIResponse,
+    summary="Run Monte Carlo simulation on OOS trades"
+)
+async def run_walk_forward_monte_carlo(
+    request_data: Dict[str, Any] = Body(default_factory=dict),
+    symbol: str = Path(..., description="Trading symbol"),
+    db: Session = Depends(get_database_session),
+    current_user: dict = Depends(require_read_permission)
+):
+    """
+    Run Monte Carlo simulation on the same OOS trade set as Walk-Forward validation.
+    Use the same parameters (train_months, test_months, logic, etc.) as your last WF run.
+    """
+    conn = None
+    try:
+        conn, cursor = _get_analytics_db_cursor()
+        mc_results = _run_oos_monte_carlo(symbol, request_data, conn, logger)
+        conn.close()
+        if mc_results is None:
+            return APIResponse(status="error", message="No OOS trades found to run Monte Carlo. Run Walk-Forward Analysis first.")
+        return APIResponse(status="success", message="Monte Carlo (OOS) completed", data={"monte_carlo": mc_results})
+    except Exception as e:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[WF MONTE CARLO] ERROR: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1350,7 +2101,7 @@ async def get_walk_forward_validation(
     summary="Backtest a specific portfolio of account edges"
 )
 async def backtest_portfolio(
-    request_data: Dict[str, Any],
+    request_data: Dict[str, Any] = Body(default_factory=dict),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ):
@@ -1470,6 +2221,7 @@ async def get_combined_statistics(
     min_win_rate: float = Query(45.0, description="Minimum win rate percentage"),
     min_trades: int = Query(100, description="Minimum number of trades per time slot"),
     selection_logic: str = Query('classic', description="Logic for ranking accounts: 'classic' or 'statistical'"),
+    target_slots: Optional[str] = Query(None, description="Comma-separated list of time_slot-day keys to filter results (e.g. '08:30-4,09:30-1')"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission)
 ) -> APIResponse:
@@ -1485,7 +2237,7 @@ async def get_combined_statistics(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[COMBINED STATS] Database file not found: {db_path.absolute()}")
@@ -1529,82 +2281,63 @@ async def get_combined_statistics(
         logger.info(f"[COMBINED STATS] Using date range: {actual_start_date.date()} to {actual_end_date.date()}")
         
         # First, get the recommendation matrix for this symbol
-        rec_lookup = {}
+        # Call the shared helper to benefit from caching
+        rec_data = _get_matrix_internal(symbol, min_trades, min_avg_profit, min_win_rate, 60.0, selection_logic, cursor, db, logger)
         
-        if selection_logic == 'ensemble':
-            ensemble_data = _get_ensemble_recommendations(symbol, min_trades, min_avg_profit, min_win_rate, cursor, db, logger)
-            for time_slot, days in ensemble_data.items():
-                for day, data in days.items():
-                    key = f"{time_slot}_{day}"
-                    rec_lookup[key] = data['best_account']
-        else:
-            rec_matrix_query = f"""
-            WITH time_day_performance AS (
-                SELECT 
-                    account_name,
-                    printf('%02d:%02d', 
-                        CAST(strftime('%H', entry_time) AS INTEGER),
-                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                    ) as time_slot,
-                    CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
-                    COUNT(*) as total_trades,
-                    AVG(profit_loss) as avg_trade,
-                    ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate
-                FROM processed_trades 
-                WHERE symbol = ? 
-                GROUP BY account_name, time_slot, day_of_week
-                HAVING total_trades >= ?
-            ),
-            ranked_performance AS (
-                SELECT *,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY time_slot, day_of_week 
-                        ORDER BY {order_by}
-                    ) as rank
-                FROM time_day_performance
-            )
-            SELECT 
-                time_slot,
-                day_of_week,
-                account_name as best_account
-            FROM ranked_performance
-            WHERE rank = 1 
-                AND avg_trade > ?
-                AND win_rate >= ?
-            """
-            
-            cursor.execute(rec_matrix_query, (symbol, min_trades, min_avg_profit, min_win_rate))
-            rec_matrix = cursor.fetchall()
-            
-            # Create lookup for recommendations
-            for rec in rec_matrix:
-                key = f"{rec['time_slot']}_{rec['day_of_week']}"
-                rec_lookup[key] = rec['best_account']
+        # Filter by target slots if provided
+        if target_slots:
+            allowed = set(target_slots.split(','))
+            filtered_data = {}
+            for ts, days in rec_data.items():
+                for d, data in days.items():
+                    # Robust check: handle both "08:30-4" and "08:30_4" formats
+                    if f"{ts}-{d}" in allowed or f"{ts}_{d}" in allowed:
+                        if ts not in filtered_data: filtered_data[ts] = {}
+                        filtered_data[ts][d] = data
+            rec_data = filtered_data
+            logger.info(f"[COMBINED STATS] Filtered to {len(allowed)} target slots")
+        
+        # Create lookup for recommendations
+        rec_lookup = {}
+        for ts, days in rec_data.items():
+            for d, data in days.items():
+                key = f"{ts}_{d}"
+                rec_lookup[key] = data['best_account']
         
         # Derive recommended_accounts for logging/checks
         recommended_accounts = list(set(rec_lookup.values()))
         
         if not recommended_accounts:
-            raise HTTPException(status_code=404, detail=f"No recommended accounts found for {symbol}")
+            logger.warning(f"[COMBINED STATS] No valid accounts found in target selection for {symbol}")
+            conn.close()
+            return APIResponse(status="success", data={
+                'combined_metrics': {},
+                'recommended_accounts': [],
+                'equity_curve': [],
+                'win_rate': 0,
+                'total_pnl': 0
+            })
         
         # Now get statistics ONLY for trades that match recommendations and within date range
-        stats_query = """
+        # Optimization: Filter by recommended accounts in SQL first to reduce row volume
+        stats_query = f"""
         SELECT 
             entry_time,
             printf('%02d:%02d', 
-                CAST(strftime('%H', entry_time) AS INTEGER),
-                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                hour_of_day,
+                CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
             ) as time_slot,
-            CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+            day_of_week as day_of_week,
             account_name,
             profit_loss
         FROM processed_trades 
         WHERE symbol = ? 
+            AND account_name IN ({','.join(['?'] * len(recommended_accounts))})
             AND entry_time >= ? AND entry_time <= ?
         ORDER BY entry_time
         """
         
-        cursor.execute(stats_query, (symbol, actual_start_date.isoformat(), actual_end_date.isoformat()))
+        cursor.execute(stats_query, [symbol] + recommended_accounts + [actual_start_date.isoformat(), actual_end_date.isoformat()])
         all_trades = cursor.fetchall()
         
         # Filter to only recommended trades
@@ -1819,7 +2552,7 @@ async def investigate_large_trades(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[INVESTIGATE TRADES] Database file not found: {db_path.absolute()}")
@@ -1970,7 +2703,7 @@ async def get_daily_breakdown(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[DAILY BREAKDOWN] Database file not found: {db_path.absolute()}")
@@ -2142,7 +2875,7 @@ async def clean_multiday_trades(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[CLEAN MULTIDAY] Database file not found: {db_path.absolute()}")
@@ -2343,7 +3076,7 @@ async def get_data_stats(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             raise HTTPException(status_code=500, detail="Database file not found")
@@ -2471,7 +3204,7 @@ async def clean_outlier_trades(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[CLEAN OUTLIERS] Database file not found: {db_path.absolute()}")
@@ -2660,7 +3393,7 @@ async def clean_outlier_trades(
         conn.commit()
         conn.close()
         
-        logger.info(f"[CLEAN OUTLIERS] SUCCESS: Removed {deleted_count} outlier trades")
+        logger.info(f"[CLEAN OUTLIERS] SUCCESS: Removed {deleted_count} statistical outlier trades")
         logger.info(f"[CLEAN OUTLIERS] Before: {total_before} trades, After: {total_after} trades")
         logger.info(f"[CLEAN OUTLIERS] Detailed log saved to: {log_path.absolute()}")
         
@@ -2734,7 +3467,7 @@ async def get_available_symbols(
     
     try:
         # Connect to SQLite database
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         
         if not db_path.exists():
             logger.error(f"[SYMBOLS] Database file not found: {db_path.absolute()}")
@@ -2787,7 +3520,7 @@ async def get_available_symbols(
 
 @router.get(
     "/correlation",
-    response_model=APIResponse[CorrelationAnalysisResponse],
+    response_model=APIResponse,
     summary="Get correlation analysis",
     description="Analyze correlations between different accounts and assets."
 )
@@ -2802,42 +3535,146 @@ async def get_correlation_analysis(
     """Analyze correlations between accounts and assets."""
     
     try:
-        # Parse account names
-        accounts = [name.strip() for name in account_names.split(",")]
+        # Parse account names: trim, collapse spaces to underscores, dedupe (preserve order)
+        def _norm_acc(s: str) -> str:
+            t = s.strip()
+            while "  " in t:
+                t = t.replace("  ", " ")
+            return t.replace(" ", "_")
+
+        raw = [_norm_acc(x) for x in account_names.split(",") if _norm_acc(x)]
+        accounts = list(dict.fromkeys(raw))
         
         if len(accounts) < 2:
-            raise HTTPException(status_code=400, detail="At least 2 accounts required for correlation analysis")
+            raise HTTPException(status_code=400, detail="At least 2 distinct account names required for correlation analysis")
         
-        # TODO: Implement actual correlation analysis using service
-        # For now, return mock correlation results
-        
+        # Build real correlation from daily PnL series per account
+        import sqlite3 as _sq3
+        from pathlib import Path as _P
+        import numpy as _np
+        import scipy.stats as _stats
+
+        _db_path = _sqlite_db_path()
+        _conn = _sq3.connect(str(_db_path))
+        _conn.row_factory = _sq3.Row
+        _cur = _conn.cursor()
+
+        _start_str = start_date.strftime("%Y-%m-%d") if start_date else "2020-01-01"
+        _end_str = end_date.strftime("%Y-%m-%d") if end_date else datetime.now().strftime("%Y-%m-%d")
+
+        _placeholders = ",".join("?" * len(accounts))
+        _cur.execute(f"""
+            SELECT account_name, substr(entry_time, 1, 10) as trade_date, SUM(profit_loss) as daily_pnl
+            FROM processed_trades
+            WHERE account_name IN ({_placeholders})
+              AND entry_time >= ? AND entry_time <= ?
+            GROUP BY 1, 2
+            ORDER BY 2
+        """, accounts + [_start_str, _end_str])
+
+        daily_rows = _cur.fetchall()
+        _conn.close()
+
+        # Pivot to daily returns per account (string date keys)
+        from collections import defaultdict as _dd
+        daily_by_account: dict = _dd(dict)
+        for r in daily_rows:
+            ds = str(r["trade_date"])[:10]
+            daily_by_account[str(r["account_name"])][ds] = float(r["daily_pnl"])
+
+        missing = [a for a in accounts if a not in daily_by_account or len(daily_by_account[a]) == 0]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"No trades found for account(s): {', '.join(missing)}. "
+                    "Names must match processed_trades.account_name exactly (use underscores, e.g. TM_D-R-1_2 not spaces)."
+                ),
+            )
+
         correlation_matrix = {}
-        for i, account1 in enumerate(accounts):
-            correlation_matrix[account1] = {}
-            for j, account2 in enumerate(accounts):
-                if i == j:
-                    correlation_matrix[account1][account2] = 1.0
-                elif i < j:
-                    # Mock correlation values
-                    correlation_matrix[account1][account2] = 0.35 if "NQ" in account1 and "NQ" in account2 else 0.15
-                else:
-                    correlation_matrix[account1][account2] = correlation_matrix[account2][account1]
-        
-        correlation_analysis = CorrelationAnalysisResponse(
-            accounts=accounts,
-            period_start=start_date or datetime(2024, 1, 1),
-            period_end=end_date or datetime(2024, 12, 31),
-            correlation_matrix=correlation_matrix,
-            strongest_correlation={"accounts": ["IPS_TM_10", "IPS_TM_11"], "correlation": 0.75},
-            weakest_correlation={"accounts": ["IPS_TM_10", "IPS_TM_13"], "correlation": 0.15},
-            diversification_score=0.68,
-            portfolio_risk_reduction=0.23
+        p_value_matrix = {}
+        overlapping_days_matrix = {}
+        for a in accounts:
+            correlation_matrix[a] = {}
+            p_value_matrix[a] = {}
+            overlapping_days_matrix[a] = {}
+            for b in accounts:
+                if a == b:
+                    correlation_matrix[a][b] = 1.0
+                    p_value_matrix[a][b] = 0.0
+                    overlapping_days_matrix[a][b] = len(daily_by_account.get(a, {}))
+                    continue
+                da = daily_by_account.get(a, {})
+                db = daily_by_account.get(b, {})
+                if not da or not db:
+                    correlation_matrix[a][b] = 0.0
+                    p_value_matrix[a][b] = 1.0
+                    overlapping_days_matrix[a][b] = 0
+                    continue
+                # Intersection of trading days (both have PnL that day)
+                common_dates = sorted(set(da.keys()) & set(db.keys()))
+                if len(common_dates) < 5:
+                    correlation_matrix[a][b] = 0.0
+                    p_value_matrix[a][b] = 1.0
+                    overlapping_days_matrix[a][b] = len(common_dates)
+                    continue
+                series_a = [da[d] for d in common_dates]
+                series_b = [db[d] for d in common_dates]
+                try:
+                    corr, pval = _stats.pearsonr(series_a, series_b)
+                    correlation_matrix[a][b] = round(float(corr), 4)
+                    p_value_matrix[a][b] = round(float(pval), 4)
+                except Exception:
+                    correlation_matrix[a][b] = 0.0
+                    p_value_matrix[a][b] = 1.0
+                overlapping_days_matrix[a][b] = len(common_dates)
+
+        # Find strongest / weakest off-diagonal pairs
+        pair_corrs = []
+        for i, a in enumerate(accounts):
+            for b in accounts[i+1:]:
+                pair_corrs.append((a, b, correlation_matrix[a][b]))
+        pair_corrs.sort(key=lambda x: abs(x[2]))
+
+        strongest = (
+            {"accounts": [pair_corrs[-1][0], pair_corrs[-1][1]], "correlation": pair_corrs[-1][2]}
+            if pair_corrs else None
         )
-        
-        return APIResponse[CorrelationAnalysisResponse](
+        weakest = (
+            {"accounts": [pair_corrs[0][0], pair_corrs[0][1]], "correlation": pair_corrs[0][2]}
+            if pair_corrs else None
+        )
+
+        off_diag = [v for row in correlation_matrix.values() for k, v in row.items() if v != 1.0]
+        avg_corr = round(float(_np.mean(off_diag)), 4) if off_diag else 0.0
+        diversification_score = round(max(0, 1 - avg_corr), 4)
+
+        # High-correlation warnings (> 0.7)
+        warnings = [
+            {"accounts": [a, b], "correlation": correlation_matrix[a][b]}
+            for i, a in enumerate(accounts)
+            for b in accounts[i+1:]
+            if abs(correlation_matrix[a][b]) > 0.7
+        ]
+
+        total_days = len(set(d for dmap in daily_by_account.values() for d in dmap.keys()))
+        return APIResponse(
             status="success",
-            message=f"Correlation analysis completed for {len(accounts)} accounts",
-            data=correlation_analysis
+            message=f"Correlation analysis completed for {len(accounts)} accounts ({total_days} distinct trading days in sample)",
+            data={
+                "accounts": accounts,
+                "period_start": _start_str,
+                "period_end": _end_str,
+                "correlation_matrix": correlation_matrix,
+                "p_value_matrix": p_value_matrix,
+                "overlapping_days_matrix": overlapping_days_matrix,
+                "strongest_correlation": strongest,
+                "weakest_correlation": weakest,
+                "average_correlation": avg_corr,
+                "diversification_score": diversification_score,
+                "high_correlation_warnings": warnings,
+            }
         )
         
     except Exception as e:
@@ -2954,7 +3791,7 @@ async def get_vix_regime_matrix(
     logger = logging.getLogger(__name__)
 
     try:
-        db_path = FsPath("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -3060,10 +3897,30 @@ async def get_vix_regime_matrix(
                         best_ev = ev
                         best_account = account
 
-            if account_regimes:
+            if account_regimes and best_account:
+                best_regimes = account_regimes.get(best_account, {})
+                # Fragility: how much does the edge weaken in High vs Low vol?
+                low_avg = best_regimes.get("Low", {}).get("avg_trade", 0) or 0
+                high_avg = best_regimes.get("High", {}).get("avg_trade", 0) or 0
+                med_avg = best_regimes.get("Medium", {}).get("avg_trade", 0) or 0
+                if low_avg > 0:
+                    fragility_score = round(max(0, low_avg - high_avg) / low_avg, 3)
+                elif med_avg > 0:
+                    fragility_score = round(max(0, med_avg - high_avg) / med_avg, 3) if high_avg < med_avg else 0.0
+                else:
+                    fragility_score = None
+                # regime_consistency: profitable in all regimes that have data
+                regimes_with_data = [r for r in ["Low", "Medium", "High"] if r in best_regimes]
+                regime_consistency = (
+                    all(best_regimes[r]["avg_trade"] > 0 for r in regimes_with_data)
+                    if regimes_with_data else False
+                )
                 regime_matrix[time_slot][day_of_week] = {
                     "best_account": best_account,
                     "regime_breakdown": account_regimes,
+                    "fragility_score": fragility_score,
+                    "regime_consistency": regime_consistency,
+                    "regime_count": len(regimes_with_data),
                 }
 
         # ── Aggregate Correlation Analysis ──
@@ -3173,7 +4030,7 @@ async def get_probability_matrix(
         return sum(tail) / len(tail)
 
     try:
-        db_path = FsPath("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -3281,6 +4138,7 @@ async def get_probability_matrix(
 async def get_rolling_predictor(
     symbol: str = Path(..., description="Trading symbol"),
     lookback_weeks: int = Query(13, description="Maximum lookback in weeks (2–26)"),
+    target_slots: Optional[str] = Query(None, description="Comma-separated time_slot-day keys to filter (e.g. '09:30-1,10:00-4')"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission),
 ) -> APIResponse:
@@ -3300,7 +4158,7 @@ async def get_rolling_predictor(
     DECAY = 0.85  # exponential decay factor per week
 
     try:
-        db_path = FsPath("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -3322,6 +4180,7 @@ async def get_rolling_predictor(
                 substr(entry_time, 1, 10) as trade_date
             FROM processed_trades
             WHERE symbol = ? AND entry_time >= ?
+              AND strftime('%w', entry_time) != '0' -- Filter Sundays
             ORDER BY entry_time
             """,
             (symbol, cutoff),
@@ -3345,9 +4204,22 @@ async def get_rolling_predictor(
                 float(row["profit_loss"])
             )
 
+        # Filter target slots if provided
+        allowed_slots = None
+        if target_slots:
+            allowed_slots = set()
+            for slot_key in target_slots.split(','):
+                parts = slot_key.rsplit('_', 1)
+                if len(parts) == 2:
+                    allowed_slots.add((parts[0], int(parts[1])))
+
         predictions: dict = {}
 
         for (time_slot, day_of_week), accounts in cell_account_weeks.items():
+            key = (time_slot, day_of_week)
+            if allowed_slots and key not in allowed_slots:
+                continue
+            
             if time_slot not in predictions:
                 predictions[time_slot] = {}
 
@@ -3429,7 +4301,7 @@ async def get_rolling_predictor(
 )
 async def run_walk_forward_validation(
     symbol: str = Path(..., description="Trading symbol"),
-    training_days: int = Query(90, description="Training window in days (W)"),
+    training_days: int = Query(90, description="Training window in days (W). Use 0 for all available data."),
     testing_days: int = Query(21, description="Testing window in days (H)"),
     step_days: int = Query(21, description="Step size in days (Δ)"),
     min_avg_profit: float = Query(12.0, description="Min avg profit filter for matrix"),
@@ -3437,6 +4309,7 @@ async def run_walk_forward_validation(
     min_trades: int = Query(0, description="Min trades per cell (0 = auto-scale with training window)"),
     n_permutations: int = Query(1000, description="Monte Carlo permutation test iterations"),
     selection_logic: str = Query('classic', description="Logic for rankings: 'classic' or 'statistical'"),
+    target_slots: Optional[str] = Query(None, description="Comma-separated time_slot-day keys to restrict OOS evaluation (e.g. '09:30-1,10:00-4')"),
     db: Session = Depends(get_database_session),
     current_user: dict = Depends(require_read_permission),
 ) -> APIResponse:
@@ -3453,7 +4326,7 @@ async def run_walk_forward_validation(
     logger.info(f"[WALK-FORWARD] Starting for {symbol}: W={training_days}, H={testing_days}, Δ={step_days} (logic: {selection_logic})")
 
     try:
-        db_path = FsPath("trading_platform.db")
+        db_path = _sqlite_db_path()
         conn = sqlite3.connect(str(db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -3472,7 +4345,14 @@ async def run_walk_forward_validation(
         last_date = datetime.fromisoformat(str(date_range[1])[:10])
 
         total_days = (last_date - first_date).days
-        if total_days < training_days + testing_days:
+
+        # "All Data" mode: training_days=0 means use ALL available history as one expanding window
+        all_data_mode = (training_days == 0)
+        if all_data_mode:
+            # We still need a valid training_days for effective_min_trades calculation
+            training_days = total_days
+
+        if not all_data_mode and total_days < training_days + testing_days:
             conn.close()
             raise HTTPException(
                 status_code=400,
@@ -3493,30 +4373,32 @@ async def run_walk_forward_validation(
             logic_order = "avg_pnl DESC"
             if selection_logic == 'statistical':
                 logic_order = "(avg_pnl * (wr / 100.0)) DESC, avg_pnl DESC"
+            elif selection_logic == 'persistence':
+                # Persistence logic favors consistency (Win Rate)
+                logic_order = "wr DESC, avg_pnl DESC"
 
-            if selection_logic != 'ensemble':
+            if selection_logic in ['classic', 'statistical', 'persistence']:
                 cursor.execute(
                     f"""
                     WITH perf AS (
                         SELECT account_name,
-                            printf('%02d:%02d',
-                                CAST(strftime('%H', entry_time) AS INTEGER),
-                                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                            ) as time_slot,
-                            CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                            printf('%02d:%02d', hour_of_day, CASE WHEN minute_of_hour_ny < 30 THEN 0 ELSE 30 END) as time_slot,
+                            day_of_week,
                             COUNT(*) as n,
                             AVG(profit_loss) as avg_pnl,
-                            SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as wr
+                            SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as wr,
+                            AVG(profit_loss * profit_loss) as avg_profit_sq
                         FROM processed_trades
                         WHERE symbol = ? AND entry_time >= ? AND entry_time < ?
-                        GROUP BY account_name, time_slot, day_of_week
+                          AND day_of_week != 0 -- Filter Sundays
+                        GROUP BY 1, 2, 3
                         HAVING n >= ? AND avg_pnl > ? AND wr >= ?
                     ),
                     ranked AS (
                         SELECT *, ROW_NUMBER() OVER (PARTITION BY time_slot, day_of_week ORDER BY {logic_order}) as rn
                         FROM perf
                     )
-                    SELECT time_slot, day_of_week, account_name, n, avg_pnl, wr
+                    SELECT time_slot, day_of_week, account_name, n, avg_pnl, wr, avg_profit_sq
                     FROM ranked WHERE rn = 1
                     """,
                     (symbol, start_str, end_str, effective_min_trades, min_avg_profit, min_win_rate),
@@ -3526,7 +4408,12 @@ async def run_walk_forward_validation(
                         "best_account": str(r["account_name"]),
                         "total_trades": int(r["n"]),
                         "avg_trade": round(float(r["avg_pnl"]), 2),
-                        "win_rate": round(float(r["wr"]), 1)
+                        "win_rate": round(float(r["wr"]), 1),
+                        "reliability_score": _calculate_reliability(
+                            float(r["avg_pnl"]) if r["avg_pnl"] is not None else 0.0,
+                            float(r["avg_profit_sq"]) if r["avg_profit_sq"] is not None else 0.0,
+                            int(r["n"]) if r["n"] is not None else 0
+                        )
                     }
                     for r in cursor.fetchall()
                 }
@@ -3544,18 +4431,16 @@ async def run_walk_forward_validation(
                     cursor.execute(
                         """
                         SELECT account_name,
-                            printf('%02d:%02d',
-                                CAST(strftime('%H', entry_time) AS INTEGER),
-                                CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                            ) as time_slot,
-                            CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week,
+                            printf('%02d:%02d', hour_of_day, CASE WHEN minute_of_hour_ny < 30 THEN 0 ELSE 30 END) as time_slot,
+                            day_of_week,
                             COUNT(*) as n,
                             AVG(profit_loss) as avg_pnl,
                             SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as wr,
                             AVG(profit_loss * profit_loss) - (AVG(profit_loss) * AVG(profit_loss)) as variance
                         FROM processed_trades
                         WHERE symbol = ? AND entry_time >= ? AND entry_time < ?
-                        GROUP BY account_name, time_slot, day_of_week
+                          AND day_of_week != 0 -- Filter Sundays
+                        GROUP BY 1, 2, 3
                         HAVING n >= ?
                         """,
                         (symbol, w_start_str, end_str, max(3, effective_min_trades * w_days // total_train_days)),
@@ -3595,8 +4480,9 @@ async def run_walk_forward_validation(
                             current_regime = classifications[-1].regime
                             
                         # Also calculate account-level regime alignment
-                        # We use the full training window for this to get enough samples
-                        alignments = vix_service.synchronize_vix_with_trades(symbol, start, end)
+                        # Safety: Only use the last 180 days for regime alignment to avoid hanging on millions of trades
+                        vix_alignment_start = max(start, end - timedelta(days=180))
+                        alignments = vix_service.synchronize_vix_with_trades(symbol, vix_alignment_start, end)
                         if alignments:
                             # Group by account and regime
                             from collections import defaultdict
@@ -3672,16 +4558,24 @@ async def run_walk_forward_validation(
                 return []
             start_str = start.strftime("%Y-%m-%d")
             end_str = end.strftime("%Y-%m-%d")
+            
+            # Build set of allowed (time_slot, day_of_week) pairs from target_slots
+            allowed_slots = None
+            if target_slots:
+                allowed_slots = set()
+                for slot_key in target_slots.split(','):
+                    parts = slot_key.rsplit('_', 1)
+                    if len(parts) == 2:
+                        allowed_slots.add((parts[0], int(parts[1])))
+            
             cursor.execute(
                 """
                 SELECT account_name, profit_loss, entry_time,
-                    printf('%02d:%02d',
-                        CAST(strftime('%H', entry_time) AS INTEGER),
-                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                    ) as time_slot,
-                    CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week
+                    printf('%02d:%02d', hour_of_day, CASE WHEN minute_of_hour_ny < 30 THEN 0 ELSE 30 END) as time_slot,
+                    day_of_week
                 FROM processed_trades
                 WHERE symbol = ? AND entry_time >= ? AND entry_time < ?
+                  AND day_of_week != 0 -- Filter Sundays
                 ORDER BY entry_time ASC
                 """,
                 (symbol, start_str, end_str),
@@ -3689,6 +4583,9 @@ async def run_walk_forward_validation(
             trades = []
             for row in cursor.fetchall():
                 key = (str(row["time_slot"]), int(row["day_of_week"]))
+                # If target_slots specified, skip slots not in the selection
+                if allowed_slots and key not in allowed_slots:
+                    continue
                 cell = matrix.get(key)
                 if cell and cell.get("best_account") == str(row["account_name"]):
                     trades.append({
@@ -3712,18 +4609,44 @@ async def run_walk_forward_validation(
         running_cumulative_pnl = 0.0  # tracks true OOS cumulative across all folds
         prev_matrix = None
 
-        while True:
-            train_start = fold_start
-            train_end = train_start + timedelta(days=training_days)
-            test_start = train_end
-            test_end = test_start + timedelta(days=testing_days)
+        if all_data_mode:
+            # Anchored Walk-Forward: training start is fixed at first_date, 
+            # training end grows by step_days.
+            fold_iterations = []
+            
+            # Start with a 13-week minimal training window if "All Data" is selected
+            # This ensures we have enough data to generate recommendations for the first fold
+            fe = first_date + timedelta(days=91) 
+            
+            while True:
+                ts = fe
+                tse = ts + timedelta(days=testing_days)
+                if tse > last_date:
+                    break
+                fold_iterations.append((first_date, fe, ts, tse))
+                fe += timedelta(days=step_days)
+            
+            if not fold_iterations:
+                # Fallback to single fold if history is too short for 13w training + testing
+                train_end = last_date - timedelta(days=testing_days)
+                fold_iterations = [(first_date, train_end, train_end, last_date)]
+        else:
+            # Standard rolling window
+            fold_iterations = []
+            fs = first_date
+            while True:
+                te = fs + timedelta(days=training_days)
+                ts = te
+                tse = ts + timedelta(days=testing_days)
+                if tse > last_date:
+                    break
+                fold_iterations.append((fs, te, ts, tse))
+                fs += timedelta(days=step_days)
 
-            if test_end > last_date:
-                break
-
+        for (train_start, train_end, test_start, test_end) in fold_iterations:
             matrix = build_matrix(train_start, train_end, prev_matrix)
             prev_matrix = matrix
-            oos_trades = apply_matrix(matrix, test_start, test_end) # Returns list of dicts: {pnl, date, time}
+            oos_trades = apply_matrix(matrix, test_start, test_end)
 
             if oos_trades:
                 # Extract PnLs for existing stats calculation
@@ -3847,14 +4770,49 @@ async def run_walk_forward_validation(
         p_value = exceed_count / n_permutations
         
         # Determine significance and recommendation
-        is_significant = p_value < 0.05 and consistency >= 0.6
+        is_significant = p_value < 0.05 and consistency >= 0.50
         max_drawdown_agg = max((f["max_drawdown_dollars"] for f in folds), default=0)
+
+        # --- Monte Carlo OOS Integration ---
+        mc_results = None
+        all_oos_pnls = []
+        for f in folds:
+            all_oos_pnls.extend([t["pnl"] for t in f["oos_trade_list"]])
+            
+        if all_oos_pnls:
+            try:
+                import numpy as np
+                pnl_array = np.array(all_oos_pnls)
+                sims = 5000
+                horizon = 21 # 1 trading month approximation
+                
+                # Sample with replacement
+                rng = np.random.default_rng(42)
+                indices = rng.integers(0, len(pnl_array), size=(sims, horizon))
+                sim_paths = np.cumsum(pnl_array[indices], axis=1)
+                sim_totals = sim_paths[:, -1]
+                
+                mc_results = {
+                    "probability_of_profit": round(float(np.mean(sim_totals > 0)) * 100, 1),
+                    "expected_return": round(float(np.mean(sim_totals)), 0),
+                    "percentiles": {
+                        "5": round(float(np.percentile(sim_totals, 5)), 0),
+                        "25": round(float(np.percentile(sim_totals, 25)), 0),
+                        "50": round(float(np.percentile(sim_totals, 50)), 0),
+                        "75": round(float(np.percentile(sim_totals, 75)), 0),
+                        "95": round(float(np.percentile(sim_totals, 95)), 0),
+                    },
+                    "sample_paths": np.column_stack((np.zeros(50), sim_paths[:50])).tolist()
+                }
+            except Exception as mc_err:
+                logger.warning(f"Failed to calculate MC for walk-forward: {mc_err}")
 
         aggregate = {
             "total_folds": n_folds,
             "profitable_folds": profitable_folds,
             "consistency_ratio": round(consistency, 3),
             "mean_fold_pnl": round(mean_pnl, 2),
+            "total_oos_pnl": round(sum(all_fold_pnls), 2),
             "std_fold_pnl": round(std_pnl, 2),
             "mean_sharpe": round(mean_sharpe, 3),
             "mean_win_rate": round(mean_win_rate, 1),
@@ -3867,6 +4825,7 @@ async def run_walk_forward_validation(
                 if is_significant
                 else "Strategy requires more data or parameter tuning — OOS results not yet significant."
             ),
+            "monte_carlo": mc_results # Add to aggregate
         }
 
         return APIResponse(
@@ -3882,6 +4841,7 @@ async def run_walk_forward_validation(
                 },
                 "folds": folds,
                 "aggregate": aggregate,
+                "monte_carlo": mc_results, # Add here
             },
         )
 
@@ -3900,6 +4860,7 @@ async def run_monte_carlo(
     simulations: int = Query(10000, ge=100, le=50000),
     time_horizon_days: int = Query(30, ge=1, le=365),
     confidence_level: float = Query(0.95, ge=0.5, le=0.999),
+    target_slots: Optional[str] = Query(None, description="Comma-separated time_slot-day keys to filter"),
 ):
     """
     Run a Monte Carlo simulation for the specified account or symbol.
@@ -3913,7 +4874,7 @@ async def run_monte_carlo(
     from collections import defaultdict
 
     try:
-        db_path = Path("trading_platform.db")
+        db_path = _sqlite_db_path()
         if not db_path.exists():
             raise HTTPException(status_code=500, detail="Database not found")
 
@@ -3930,22 +4891,51 @@ async def run_monte_carlo(
 
         if symbol_count > 0:
             is_symbol = True
-            # Fetch all trades for symbol, preserving time/day info
-            cursor.execute('''
+            
+            # Optimization: Filter by target_slots in SQL to avoid fetching 1.5M rows
+            slot_filter = ""
+            params = [account_name]
+            
+            if target_slots:
+                # Build an optimized WHERE clause for the specific bins
+                slot_conditions = []
+                for slot_key in target_slots.split(','):
+                    parts = slot_key.rsplit('_', 1)
+                    if len(parts) == 2:
+                        # parts[0] is "HH:MM", parts[1] is "D"
+                        h, m = map(int, parts[0].split(':'))
+                        d = int(parts[1])
+                        slot_conditions.append("(hour_of_day = ? AND minute_of_hour_ny = ? AND day_of_week = ?)")
+                        params.extend([h, m, d])
+                
+                if slot_conditions:
+                    slot_filter = " AND (" + " OR ".join(slot_conditions) + ")"
+            
+            # Query for the best accounts per slot directly in SQL if possible, 
+            # but for consistency with the matrix, we'll fetch the filtered trades 
+            # and do the final 'best account' logic in memory (now on a tiny dataset).
+            query = f"""
                 SELECT 
                     account_name, 
                     profit_loss, 
                     entry_time,
-                    printf('%02d:%02d', 
-                        CAST(strftime('%H', entry_time) AS INTEGER), 
-                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
-                    ) as time_slot,
-                    CAST(strftime('%w', entry_time) AS INTEGER) as day_of_week
+                    printf('%02d:%02d', hour_of_day, CASE WHEN minute_of_hour_ny < 30 THEN 0 ELSE 30 END) as time_slot,
+                    day_of_week
                 FROM processed_trades 
-                WHERE symbol = ? 
+                WHERE symbol = ? {slot_filter}
                 ORDER BY entry_time ASC
-            ''', (account_name,))
+            """
+            cursor.execute(query, params)
             rows = cursor.fetchall()
+
+            # Build set of allowed slots if target_slots provided (redundant now but safe)
+            allowed_slots = None
+            if target_slots:
+                allowed_slots = set()
+                for slot_key in target_slots.split(','):
+                    parts = slot_key.rsplit('_', 1)
+                    if len(parts) == 2:
+                        allowed_slots.add((parts[0], int(parts[1])))
 
             # Determine Best Account per Slot (Classic Logic: best Average Trade)
             slot_stats = defaultdict(lambda: defaultdict(list))
@@ -3955,14 +4945,7 @@ async def run_monte_carlo(
 
             best_accounts = {}
             for key, accounts in slot_stats.items():
-                best_acct = None
-                best_avg = -float('inf')
-                for acct, pnls in accounts.items():
-                    if len(pnls) < 1: continue
-                    avg = sum(pnls) / len(pnls)
-                    if avg > best_avg:
-                        best_avg = avg
-                        best_acct = acct
+                best_acct = max(accounts.keys(), key=lambda a: sum(accounts[a])/len(accounts[a]))
                 best_accounts[key] = best_acct
 
             # Filter trades to only include those from the best account for that slot
@@ -3970,7 +4953,6 @@ async def run_monte_carlo(
             
             # Determine date range from the rows we just fetched
             if rows:
-                # rows is list of Row objects, need to parse entry_time
                 start_dt = datetime.fromisoformat(rows[0]['entry_time'])
                 end_dt = datetime.fromisoformat(rows[-1]['entry_time'])
                 days_history = (end_dt - start_dt).days or 1
@@ -4055,3 +5037,711 @@ async def run_monte_carlo(
     except Exception as e:
         logger.error(f"Monte Carlo error: {e}")
         return APIResponse(status="error", message=str(e), data=None)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# METHOD COMPARISON (Bake-Off: persistence / classic / statistical / ensemble)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/recommendations/method-comparison/{symbol}",
+    response_model=APIResponse,
+    summary="Compare all 4 recommendation methods via identical walk-forward splits",
+    description=(
+        "Runs walk-forward validation for persistence, classic, statistical, and ensemble methods "
+        "using identical parameters and returns side-by-side OOS performance metrics plus "
+        "a recommended_method field."
+    )
+)
+async def get_method_comparison(
+    request_data: Dict[str, Any] = Body(default_factory=dict),
+    symbol: str = Path(..., description="Trading symbol"),
+    db: Session = Depends(get_database_session),
+    current_user: dict = Depends(require_read_permission)
+):
+    """Run all 4 methods through identical walk-forward and return comparison."""
+    conn = None
+    try:
+        train_months = int(request_data.get("train_months", 4))
+        test_months = int(request_data.get("test_months", 1))
+        min_persistence = float(request_data.get("min_persistence", 70.0))
+        mode = request_data.get("mode", "expanding")
+
+        conn, cursor = _get_analytics_db_cursor()
+
+        # ── Pre-load monthly stats (shared across all methods) ──
+        cursor.execute("""
+            SELECT account_name,
+                printf('%02d:%02d',
+                    CAST(strftime('%H', entry_time) AS INTEGER),
+                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
+                strftime('%Y-%m', entry_time) as year_month,
+                SUM(profit_loss) as month_pnl,
+                COUNT(*) as n
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            GROUP BY 1, 2, 3, 4
+        """, (symbol,))
+
+        monthly_stats = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        for r in cursor.fetchall():
+            monthly_stats[r[0]][r[1]][r[2]][r[3]] = {"pnl": r[4], "n": r[5]}
+
+        # ── Pre-load all trades for OOS pass ──
+        cursor.execute("""
+            SELECT entry_time, account_name, profit_loss,
+                printf('%02d:%02d',
+                    CAST(strftime('%H', entry_time) AS INTEGER),
+                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week
+            FROM processed_trades
+            WHERE symbol = ?
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            ORDER BY entry_time ASC
+        """, (symbol,))
+
+        all_trades_raw = cursor.fetchall()
+        conn.close()
+        conn = None
+
+        if not all_trades_raw:
+            return APIResponse(status="error", message="No trades found for symbol")
+
+        trades_by_date = defaultdict(list)
+        for r in all_trades_raw:
+            trades_by_date[r[0][:10]].append({
+                "entry_time": r[0],
+                "account_name": r[1],
+                "profit_loss": r[2],
+                "time_slot": r[3],
+                "day_of_week": r[4]
+            })
+
+        unique_months = sorted(list(set(
+            m for acc in monthly_stats.values()
+            for slots in acc.values()
+            for days in slots.values()
+            for m in days.keys()
+        )))
+
+        if len(unique_months) < train_months + test_months:
+            return APIResponse(
+                status="error",
+                message=f"Not enough data: need {train_months + test_months} months, have {len(unique_months)}"
+            )
+
+        methods = ["persistence", "classic", "statistical", "ensemble"]
+        results = {}
+
+        for method in methods:
+            cumulative_pnl = 0.0
+            all_profits = []
+            daily_pnls_map = defaultdict(float)
+            equity_curve = []
+            profitable_folds = 0
+            total_folds = 0
+            edges_per_fold = []
+
+            curr_train_end_idx = train_months
+            while curr_train_end_idx + test_months <= len(unique_months):
+                train_start_idx = 0 if mode == "expanding" else curr_train_end_idx - train_months
+                train_months_list = unique_months[train_start_idx:curr_train_end_idx]
+                test_months_list = unique_months[curr_train_end_idx:curr_train_end_idx + test_months]
+
+                # ── Select edges in training window ──
+                best_selections: Dict = {}
+                for acc, slots in monthly_stats.items():
+                    for slot, days in slots.items():
+                        for dow, months in days.items():
+                            relevant = [d for m, d in months.items() if m in train_months_list]
+                            if not relevant:
+                                continue
+                            total_n = sum(d["n"] for d in relevant)
+                            window_pnl = sum(d["pnl"] for d in relevant)
+                            avg_trade_val = window_pnl / total_n if total_n > 0 else 0
+                            profitable_months = len([d for d in relevant if d["pnl"] > 0])
+                            active_months = len(relevant)
+                            persistence = (profitable_months * 100.0 / active_months) if active_months > 0 else 0
+                            min_n = 5
+
+                            if method == "persistence":
+                                qualified = (persistence >= min_persistence and window_pnl > 0 and total_n >= min_n and active_months >= 2)
+                            elif method == "classic":
+                                qualified = (window_pnl > 0 and avg_trade_val > 10.0 and total_n >= min_n)
+                            elif method == "statistical":
+                                qualified = (window_pnl > 0 and persistence > 50 and total_n >= min_n)
+                            else:  # ensemble: same as statistical in month-based WF
+                                qualified = (window_pnl > 0 and persistence > 50 and total_n >= min_n)
+
+                            if qualified:
+                                slot_key = (slot, dow)
+                                if slot_key not in best_selections:
+                                    best_selections[slot_key] = {"acc": acc, "persistence": persistence, "pnl": window_pnl}
+                                else:
+                                    ex = best_selections[slot_key]
+                                    if persistence > ex["persistence"] or (persistence == ex["persistence"] and window_pnl > ex["pnl"]):
+                                        best_selections[slot_key] = {"acc": acc, "persistence": persistence, "pnl": window_pnl}
+
+                selections = {(d["acc"], k[0], k[1]) for k, d in best_selections.items()}
+                edges_per_fold.append(len(selections))
+
+                # ── OOS pass ──
+                fold_pnl = 0.0
+                fold_profits = []
+                for test_m in test_months_list:
+                    days_in_m = sorted([d for d in trades_by_date.keys() if d.startswith(test_m)])
+                    for day_str in days_in_m:
+                        day_pnl = 0.0
+                        for t in trades_by_date[day_str]:
+                            key = (t["account_name"], t["time_slot"], t["day_of_week"])
+                            if key in selections:
+                                p = t["profit_loss"]
+                                cumulative_pnl += p
+                                day_pnl += p
+                                fold_pnl += p
+                                fold_profits.append(p)
+                                all_profits.append(p)
+                        daily_pnls_map[day_str] += day_pnl
+                        equity_curve.append({"date": day_str, "pnl": round(cumulative_pnl, 2)})
+
+                total_folds += 1
+                if fold_pnl > 0:
+                    profitable_folds += 1
+
+                curr_train_end_idx += test_months
+
+            metrics = _calculate_performance_metrics(all_profits, list(daily_pnls_map.values()))
+            consistency_ratio = round(profitable_folds / total_folds * 100, 1) if total_folds > 0 else 0
+            avg_edges = round(sum(edges_per_fold) / len(edges_per_fold), 1) if edges_per_fold else 0
+
+            # Permutation p-value (sign-flip test on fold totals)
+            perm_p_value = None
+            if total_folds >= 3 and all_profits:
+                fold_pnls_list = []
+                curr_idx = train_months
+                while curr_idx + test_months <= len(unique_months):
+                    ts = unique_months[curr_idx:curr_idx + test_months]
+                    fp = sum(
+                        t["profit_loss"]
+                        for day_list in trades_by_date.values()
+                        for t in day_list
+                        if any(t["entry_time"].startswith(tm) for tm in ts)
+                        and (t["account_name"], t["time_slot"], t["day_of_week"])
+                           in {(d["acc"], k[0], k[1]) for k, d in best_selections.items()}
+                    )
+                    fold_pnls_list.append(fp)
+                    curr_idx += test_months
+
+                if fold_pnls_list:
+                    observed_mean = abs(sum(fold_pnls_list) / len(fold_pnls_list))
+                    n_perm = 1000
+                    rng = np.random.default_rng(42)
+                    exceed = 0
+                    arr = np.array(fold_pnls_list)
+                    for _ in range(n_perm):
+                        signs = rng.choice([-1, 1], size=len(arr))
+                        if abs(np.mean(arr * signs)) >= observed_mean:
+                            exceed += 1
+                    perm_p_value = round(exceed / n_perm, 4)
+
+            results[method] = {
+                "method": method,
+                "total_pnl": metrics["total_pnl"],
+                "total_trades": metrics["total_trades"],
+                "win_rate": metrics["win_rate"],
+                "avg_trade": metrics["avg_trade"],
+                "profit_factor": metrics["profit_factor"],
+                "sharpe": metrics["sharpe"],
+                "sortino": metrics["sortino"],
+                "consistency_ratio": consistency_ratio,
+                "total_folds": total_folds,
+                "profitable_folds": profitable_folds,
+                "avg_edges_per_fold": avg_edges,
+                "permutation_p_value": perm_p_value,
+                "equity_curve": equity_curve[::max(1, len(equity_curve) // 300)],
+            }
+
+        # ── Determine recommended method ──
+        # Score: consistency_ratio (primary), then Sharpe, p-value filter
+        def _method_score(r):
+            pv = r.get("permutation_p_value") or 1.0
+            sig_bonus = 20 if pv < 0.05 else (10 if pv < 0.10 else 0)
+            return r["consistency_ratio"] + sig_bonus + (r["sharpe"] * 5)
+
+        best_method = max(results.keys(), key=lambda m: _method_score(results[m]))
+
+        return APIResponse(
+            status="success",
+            message=f"Method comparison completed for {symbol} ({total_folds} folds)",
+            data={
+                "symbol": symbol,
+                "train_months": train_months,
+                "test_months": test_months,
+                "total_unique_months": len(unique_months),
+                "methods": results,
+                "recommended_method": best_method,
+                "method_labels": {
+                    "persistence": "Persistence",
+                    "classic": "Classic (Profit)",
+                    "statistical": "Statistical EV",
+                    "ensemble": "Ensemble"
+                }
+            }
+        )
+
+    except Exception as e:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[METHOD COMPARISON] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BEST BINS FOR SMALL ACCOUNT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/recommendations/matrix/{symbol}/best-bins",
+    response_model=APIResponse,
+    summary="Highlight best bins for a given account size",
+    description=(
+        "Filters and ranks recommendation matrix cells based on risk-adjusted criteria "
+        "suitable for a small account. Returns qualified bins with composite scores "
+        "and a top_5 daily schedule."
+    )
+)
+async def get_best_bins(
+    symbol: str = Path(..., description="Trading symbol"),
+    account_size: float = Query(1000.0, description="Account size in USD"),
+    max_concurrent_positions: int = Query(1, description="Max simultaneous open positions"),
+    daily_loss_limit_pct: float = Query(15.0, description="Max daily loss as % of account"),
+    selection_logic: str = Query("classic", description="Matrix selection logic"),
+    min_trades: int = Query(150, description="Minimum historical trades"),
+    min_win_rate: float = Query(68.0, description="Minimum win rate %"),
+    min_avg_profit: float = Query(20.0, description="Minimum avg profit per trade"),
+    min_profit_factor: float = Query(1.5, description="Minimum profit factor"),
+    db: Session = Depends(get_database_session),
+    current_user: dict = Depends(require_read_permission)
+):
+    """Return best-fit bins for a small account with risk scoring."""
+    conn = None
+    try:
+        conn, cursor = _get_analytics_db_cursor()
+
+        # ── Query extended matrix metrics ──
+        order_by = "(avg_trade * (win_rate / 100.0)) DESC, win_rate DESC" if selection_logic == "statistical" else "avg_trade DESC, win_rate DESC"
+
+        cursor.execute(f"""
+            WITH time_day_performance AS (
+                SELECT
+                    account_name,
+                    printf('%02d:%02d',
+                        hour_of_day,
+                        CASE WHEN COALESCE(minute_of_hour_ny, 0) < 30 THEN 0 ELSE 30 END
+                    ) as time_slot,
+                    day_of_week as day_of_week,
+                    COUNT(*) as total_trades,
+                    SUM(profit_loss) as total_pnl,
+                    AVG(profit_loss) as avg_trade,
+                    ROUND((SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)), 1) as win_rate,
+                    AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_winner,
+                    AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loser,
+                    MAX(profit_loss) as largest_winner,
+                    MIN(profit_loss) as largest_loser,
+                    CASE WHEN SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END) > 0
+                         THEN SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) /
+                              SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END)
+                         ELSE 99 END as profit_factor,
+                    COUNT(DISTINCT substr(entry_time, 1, 7)) as active_months,
+                    SUM(CASE WHEN strftime('%Y-%m', entry_time) = (
+                        SELECT MAX(strftime('%Y-%m', entry_time)) FROM processed_trades WHERE symbol = ?
+                    ) THEN 1 ELSE 0 END) as recent_trades
+                FROM processed_trades
+                WHERE symbol = ?
+                  AND (hour_of_day < 17 OR hour_of_day >= 18)
+                  AND day_of_week IN (0,1,2,3,4,6)
+                GROUP BY 1, 2, 3
+                HAVING total_trades >= ?
+            ),
+            ranked AS (
+                SELECT *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY time_slot, day_of_week
+                        ORDER BY {order_by}
+                    ) as rk
+                FROM time_day_performance
+            )
+            SELECT * FROM ranked WHERE rk = 1 AND avg_trade > ? AND win_rate >= ?
+        """, (symbol, symbol, min_trades, min_avg_profit, min_win_rate))
+
+        rows = cursor.fetchall()
+        conn.close()
+        conn = None
+
+        daily_loss_limit = account_size * daily_loss_limit_pct / 100.0
+        qualified = []
+        all_avg_trades = []
+        all_pf = []
+        all_wr = []
+        all_risk = []
+
+        for row in rows:
+            pf = float(row["profit_factor"]) if row["profit_factor"] else 0.0
+            if pf < min_profit_factor:
+                continue
+
+            avg_winner = float(row["avg_winner"]) if row["avg_winner"] else 0.0
+            avg_loser = abs(float(row["avg_loser"])) if row["avg_loser"] else 0.0
+            avg_trade_v = float(row["avg_trade"])
+            wr = float(row["win_rate"])
+
+            if avg_loser == 0:
+                continue
+
+            risk_score = avg_loser / account_size
+            if risk_score > 0.25:
+                continue
+
+            recovery_trades = avg_loser / avg_winner if avg_winner > 0 else 999
+            if recovery_trades > 3:
+                continue
+
+            # Expected daily drawdown: worst case P(loss streak) for 8 trades/day
+            expected_daily_loss = avg_loser * ((1 - wr / 100) ** 3) * 3
+            if expected_daily_loss > daily_loss_limit:
+                continue
+
+            qualified.append({
+                "time_slot": row["time_slot"],
+                "day_of_week": int(row["day_of_week"]),
+                "best_account": row["account_name"],
+                "total_trades": int(row["total_trades"]),
+                "total_pnl": round(float(row["total_pnl"]), 2),
+                "avg_trade": round(avg_trade_v, 2),
+                "win_rate": round(wr, 1),
+                "avg_winner": round(avg_winner, 2),
+                "avg_loser": round(-avg_loser, 2),
+                "largest_winner": round(float(row["largest_winner"]) if row["largest_winner"] else 0, 2),
+                "largest_loser": round(float(row["largest_loser"]) if row["largest_loser"] else 0, 2),
+                "profit_factor": round(pf, 2),
+                "active_months": int(row["active_months"]) if row["active_months"] else 0,
+                "risk_score": round(risk_score, 4),
+                "recovery_trades": round(recovery_trades, 2),
+                "expected_daily_loss_worst_case": round(expected_daily_loss, 2),
+            })
+            all_avg_trades.append(avg_trade_v)
+            all_pf.append(pf)
+            all_wr.append(wr)
+            all_risk.append(risk_score)
+
+        if not qualified:
+            return APIResponse(
+                status="success",
+                message=f"No bins qualify for ${account_size:.0f} account with current filters",
+                data={"symbol": symbol, "qualified_bins": [], "top_5": [], "account_size": account_size}
+            )
+
+        # ── Normalize and score ──
+        def _norm(val, vals, invert=False):
+            mn, mx = min(vals), max(vals)
+            if mx == mn:
+                return 0.5
+            n = (val - mn) / (mx - mn)
+            return 1 - n if invert else n
+
+        for b in qualified:
+            n_pf = _norm(b["profit_factor"], all_pf)
+            n_wr = _norm(b["win_rate"], all_wr)
+            n_at = _norm(b["avg_trade"], all_avg_trades)
+            n_risk = _norm(b["risk_score"], all_risk, invert=True)
+            b["composite_score"] = round(0.3 * n_pf + 0.3 * n_wr + 0.2 * n_at + 0.2 * n_risk, 4)
+
+        qualified.sort(key=lambda x: x["composite_score"], reverse=True)
+
+        # ── Top 5 summary ──
+        top_5 = qualified[:5]
+        dow_names = {6: "Sun", 0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri"}
+        top_5_summary = []
+        for b in top_5:
+            trades_per_day_est = b["total_trades"] / max(1, b["active_months"] * 20)
+            top_5_summary.append({
+                "label": f"{b['time_slot']} {dow_names.get(b['day_of_week'], '?')} — {b['best_account']}",
+                "time_slot": b["time_slot"],
+                "day_of_week": b["day_of_week"],
+                "best_account": b["best_account"],
+                "composite_score": b["composite_score"],
+                "expected_pnl_per_day": round(b["avg_trade"] * trades_per_day_est, 2),
+                "worst_case_daily_loss": b["expected_daily_loss_worst_case"],
+                "profit_factor": b["profit_factor"],
+                "win_rate": b["win_rate"],
+            })
+
+        return APIResponse(
+            status="success",
+            message=f"Found {len(qualified)} qualified bins for ${account_size:.0f} account",
+            data={
+                "symbol": symbol,
+                "account_size": account_size,
+                "qualified_bins": qualified,
+                "top_5": top_5_summary,
+                "filter_criteria": {
+                    "min_trades": min_trades,
+                    "min_win_rate": min_win_rate,
+                    "min_avg_profit": min_avg_profit,
+                    "min_profit_factor": min_profit_factor,
+                    "max_risk_score": 0.25,
+                    "max_recovery_trades": 3,
+                }
+            }
+        )
+
+    except Exception as e:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[BEST BINS] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LIVE VALIDATION (Prediction vs Actual after go-live date)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/recommendations/live-validation/{symbol}",
+    response_model=APIResponse,
+    summary="Compare expected performance to actual results after a go-live date",
+    description=(
+        "Reconstructs the recommendation matrix as of validation_start_date using "
+        "historical trades before that date, then compares expected metrics to "
+        "actual metrics for trades after that date. Returns per-bin tracking with "
+        "z-scores and an overall ON_TRACK / DRIFTING / STOP verdict."
+    )
+)
+async def get_live_validation(
+    request_data: Dict[str, Any] = Body(default_factory=dict),
+    symbol: str = Path(..., description="Trading symbol"),
+    db: Session = Depends(get_database_session),
+    current_user: dict = Depends(require_read_permission)
+):
+    """Compare expected vs actual post-go-live performance per bin."""
+    conn = None
+    try:
+        validation_start_date = request_data.get("validation_start_date")
+        method = request_data.get("method", "persistence")
+        min_trades = int(request_data.get("min_trades", 100))
+        min_avg_profit = float(request_data.get("min_avg_profit", 12.0))
+        min_win_rate = float(request_data.get("min_win_rate", 45.0))
+
+        if not validation_start_date:
+            raise HTTPException(status_code=400, detail="validation_start_date is required (YYYY-MM-DD)")
+
+        conn, cursor = _get_analytics_db_cursor()
+
+        # ── Build historical matrix BEFORE go-live ──
+        order_by = "(avg_trade * (win_rate / 100.0)) DESC" if method == "statistical" else "avg_trade DESC, win_rate DESC"
+
+        cursor.execute(f"""
+            WITH perf AS (
+                SELECT account_name,
+                    printf('%02d:%02d',
+                        CAST(strftime('%H', entry_time) AS INTEGER),
+                        CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                    ) as time_slot,
+                    CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
+                    COUNT(*) as n,
+                    AVG(profit_loss) as avg_trade,
+                    ROUND(SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as win_rate,
+                    AVG(CASE WHEN profit_loss > 0 THEN profit_loss ELSE NULL END) as avg_winner,
+                    AVG(CASE WHEN profit_loss <= 0 THEN profit_loss ELSE NULL END) as avg_loser,
+                    CASE WHEN SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END) > 0
+                         THEN SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) /
+                              SUM(CASE WHEN profit_loss <= 0 THEN ABS(profit_loss) ELSE 0 END)
+                         ELSE 99 END as profit_factor,
+                    STDEV(profit_loss) as std_pnl
+                FROM processed_trades
+                WHERE symbol = ?
+                  AND entry_time < ?
+                  AND (hour_of_day < 17 OR hour_of_day >= 18)
+                GROUP BY 1, 2, 3
+                HAVING n >= ?
+            ),
+            ranked AS (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY time_slot, day_of_week ORDER BY {order_by}) as rk
+                FROM perf WHERE avg_trade > ? AND win_rate >= ?
+            )
+            SELECT * FROM ranked WHERE rk = 1
+        """, (symbol, validation_start_date, min_trades, min_avg_profit, min_win_rate))
+
+        hist_rows = cursor.fetchall()
+
+        # Build expected map: (time_slot, day_of_week) -> expected stats
+        expected_map = {}
+        for r in hist_rows:
+            key = (str(r["time_slot"]), int(r["day_of_week"]))
+            # std_pnl may not exist in older SQLite — fallback
+            std_val = float(r["std_pnl"]) if r["std_pnl"] else abs(float(r["avg_trade"])) * 1.5
+            expected_map[key] = {
+                "account": str(r["account_name"]),
+                "exp_avg_trade": float(r["avg_trade"]),
+                "exp_win_rate": float(r["win_rate"]),
+                "exp_avg_winner": float(r["avg_winner"]) if r["avg_winner"] else 0.0,
+                "exp_avg_loser": float(r["avg_loser"]) if r["avg_loser"] else 0.0,
+                "exp_profit_factor": float(r["profit_factor"]),
+                "hist_std": std_val,
+                "hist_n": int(r["n"]),
+            }
+
+        if not expected_map:
+            conn.close()
+            return APIResponse(status="success", message="No historical recommendations found before go-live date", data={"bins": []})
+
+        # ── Load ACTUAL trades AFTER go-live ──
+        account_list = list({v["account"] for v in expected_map.values()})
+        placeholders = ",".join("?" * len(account_list))
+        cursor.execute(f"""
+            SELECT account_name, profit_loss,
+                printf('%02d:%02d',
+                    CAST(strftime('%H', entry_time) AS INTEGER),
+                    CASE WHEN CAST(strftime('%M', entry_time) AS INTEGER) < 30 THEN 0 ELSE 30 END
+                ) as time_slot,
+                CAST(CASE WHEN strftime('%w', entry_time) = '0' THEN '1' ELSE strftime('%w', entry_time) END AS INTEGER) as day_of_week,
+                substr(entry_time, 1, 10) as trade_date
+            FROM processed_trades
+            WHERE symbol = ?
+              AND entry_time >= ?
+              AND account_name IN ({placeholders})
+              AND (hour_of_day < 17 OR hour_of_day >= 18)
+            ORDER BY entry_time ASC
+        """, [symbol, validation_start_date] + account_list)
+
+        actual_trades = cursor.fetchall()
+        conn.close()
+        conn = None
+
+        # Aggregate actual stats per (time_slot, day_of_week, account)
+        actual_agg: Dict = defaultdict(list)
+        actual_equity: Dict = defaultdict(float)
+        all_daily_actual: Dict = defaultdict(float)
+
+        for t in actual_trades:
+            key = (str(t["time_slot"]), int(t["day_of_week"]))
+            exp = expected_map.get(key)
+            if exp and str(t["account_name"]) == exp["account"]:
+                actual_agg[key].append(float(t["profit_loss"]))
+                all_daily_actual[str(t["trade_date"])] += float(t["profit_loss"])
+
+        # Build per-bin comparison
+        bin_results = []
+        total_exp_pnl = 0.0
+        total_act_pnl = 0.0
+        bins_on_track = 0
+
+        for key, exp in expected_map.items():
+            actuals = actual_agg.get(key, [])
+            n_actual = len(actuals)
+
+            act_avg = sum(actuals) / n_actual if n_actual > 0 else None
+            act_wr = (sum(1 for p in actuals if p > 0) / n_actual * 100) if n_actual > 0 else None
+            act_wins = [p for p in actuals if p > 0]
+            act_losses = [abs(p) for p in actuals if p <= 0]
+            act_pf = (sum(act_wins) / sum(act_losses)) if act_losses else (99.0 if act_wins else None)
+
+            # z-score: how many standard errors from expected
+            std_err = exp["hist_std"] / math.sqrt(max(1, n_actual))
+            z_score = (act_avg - exp["exp_avg_trade"]) / std_err if act_avg is not None and std_err > 0 else None
+
+            if z_score is not None:
+                if z_score >= -1.5:
+                    status = "ON_TRACK"
+                    bins_on_track += 1
+                elif z_score >= -2.5:
+                    status = "DRIFTING"
+                else:
+                    status = "CRITICAL"
+            else:
+                status = "NO_DATA"
+
+            exp_pnl = exp["exp_avg_trade"] * n_actual if n_actual > 0 else 0
+            act_pnl = sum(actuals)
+            total_exp_pnl += exp_pnl
+            total_act_pnl += act_pnl
+
+            dow_names = {6: "Sun", 0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri"}
+            bin_results.append({
+                "time_slot": key[0],
+                "day_of_week": key[1],
+                "day_name": dow_names.get(key[1], "?"),
+                "account": exp["account"],
+                "expected_avg_trade": round(exp["exp_avg_trade"], 2),
+                "actual_avg_trade": round(act_avg, 2) if act_avg is not None else None,
+                "expected_win_rate": round(exp["exp_win_rate"], 1),
+                "actual_win_rate": round(act_wr, 1) if act_wr is not None else None,
+                "actual_profit_factor": round(act_pf, 2) if act_pf is not None else None,
+                "expected_profit_factor": round(exp["exp_profit_factor"], 2),
+                "z_score": round(z_score, 2) if z_score is not None else None,
+                "status": status,
+                "n_actual_trades": n_actual,
+                "actual_pnl": round(act_pnl, 2),
+                "expected_pnl": round(exp_pnl, 2),
+                "tracking_error": round(act_pnl - exp_pnl, 2),
+            })
+
+        # Overall verdict
+        bins_with_data = [b for b in bin_results if b["status"] != "NO_DATA"]
+        if not bins_with_data:
+            verdict = "INSUFFICIENT_DATA"
+        elif bins_on_track / max(1, len(bins_with_data)) >= 0.7:
+            verdict = "ON_TRACK"
+        elif bins_on_track / max(1, len(bins_with_data)) >= 0.4:
+            verdict = "DRIFTING"
+        else:
+            verdict = "STOP_AND_REEVALUATE"
+
+        # Build equity curves
+        sorted_dates = sorted(all_daily_actual.keys())
+        equity_curve_actual = []
+        cum = 0.0
+        for d in sorted_dates:
+            cum += all_daily_actual[d]
+            equity_curve_actual.append({"date": d, "pnl": round(cum, 2)})
+
+        bin_results.sort(key=lambda b: b.get("z_score") or 0)
+
+        return APIResponse(
+            status="success",
+            message=f"Live validation for {symbol} since {validation_start_date}",
+            data={
+                "symbol": symbol,
+                "validation_start_date": validation_start_date,
+                "method": method,
+                "verdict": verdict,
+                "total_expected_pnl": round(total_exp_pnl, 2),
+                "total_actual_pnl": round(total_act_pnl, 2),
+                "tracking_error_total": round(total_act_pnl - total_exp_pnl, 2),
+                "bins_on_track": bins_on_track,
+                "bins_total": len(bins_with_data),
+                "bin_results": bin_results,
+                "equity_curve_actual": equity_curve_actual,
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[LIVE VALIDATION] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -22,6 +22,7 @@ The platform uses a "Comprehensive Processed Trade Importer" to ingest data from
     - **Storage:** The Platform Database stores all timestamps in **UTC** (standardizing across all log sources).
     - **Synchronization:** During import, the parser automatically detects the SC offset and converts all records to UTC.
     - **Display (The NY Sync):** For all UI views (Performance History, Trade List, Audit) and Analytics calculations (Hourly Breakdown), the platform automatically converts UTC back to **America/New_York**. This ensures the times shown on screen perfectly align with the user's local charts and the 17:00 NY session boundary.
+    - **Session window:** No trading 17:00–18:00 NY (market closed); evening session starts at 18:00. See `session_hours_and_timezone.md` for why recommendations must exclude only that window and use NY time.
 5. **Trade ID Generation:** A unique hash is generated based on `Account + Symbol + Entry Time + Exit Time + Price + Quantity` to prevent duplicate imports.
 6. **Flattening:** Multi-unit trades in Sierra Chart are often split into individual 1-unit records in the database, allowing for granular analysis of scale-ins and scale-outs.
 

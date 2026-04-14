@@ -11,13 +11,15 @@ interface MonteCarloChartProps {
   simulationParams?: Partial<MonteCarloRequest>;
   height?: number;
   showControls?: boolean;
+  targetSlots?: string;
 }
 
 const MonteCarloChart: React.FC<MonteCarloChartProps> = ({
   accountName,
   simulationParams = {},
   height = 500,
-  showControls = true
+  showControls = true,
+  targetSlots
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { monteCarloResults, isLoadingMonteCarlo, monteCarloError } = useSelector(
@@ -31,14 +33,14 @@ const MonteCarloChart: React.FC<MonteCarloChartProps> = ({
     num_simulations: 10000,
     time_horizon_days: 30,
     confidence_levels: [0.95, 0.99],
+    target_slots: targetSlots,
     ...simulationParams
   };
 
   useEffect(() => {
-    if (accountName && !results) {
-      dispatch(runMonteCarloSimulation(defaultParams));
-    }
-  }, [dispatch, accountName, results]);
+    // Re-run if accountName or targetSlots changes
+    dispatch(runMonteCarloSimulation(defaultParams));
+  }, [dispatch, accountName, targetSlots]);
 
   const distributionData = useMemo(() => {
     if (!results || !results.percentiles) return null;

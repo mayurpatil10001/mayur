@@ -11,6 +11,15 @@ You can now switch between different methodologies for identifying top-performin
 - **Statistical:** Ranks by Expected Value (EV = Avg Trade * Win Rate). Focuses on statistical edge quality.
 - **Ensemble:** Uses a multi-window weighted approach to find edges that perform consistently across different lookbacks (30d, 90d, All-Time).
 
+### Discovery vs Recommendations (Important)
+
+- **Discovery Explorer** is the research workspace (candidate generation + multi-selection + portfolio validation).
+- **Recommendations Matrix** is the execution workspace (winner-per-cell matrix + overlays + bake-off/correlation/live tracking workflow).
+- Both now share the same session day basis:
+  - `6` = Sunday evening session
+  - `0..4` = Monday..Friday
+  - `5` (Saturday) excluded
+
 ### 2. Flexible View Modes
 - **List View:** A detailed table of all identified edges with metrics like Persistence Bar, Total PnL, Total Trades, and Average Profit.
 - **Matrix View:** A high-density grid showing time slots vs. days of the week. This allows you to visually identify geographic or temporal clusters of edges.

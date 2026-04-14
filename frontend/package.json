@@ -27,6 +27,7 @@
     "jest": "^27.5.1"
   },
   "scripts": {
+    "postinstall": "node scripts/fix-plotly-sourcemap.js",
     "start": "set PORT=3001&& set BROWSER=none&& react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --watchAll=false",

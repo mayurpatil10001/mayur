@@ -823,6 +823,10 @@ class BinaryLogParser:
         try:
             c.execute("ALTER TABLE processed_trades ADD COLUMN trip_id TEXT")
         except: pass
+        # NY minute for time_slot in discovery (session 17:00-18:00 exclusion uses NY time)
+        try:
+            c.execute("ALTER TABLE processed_trades ADD COLUMN minute_of_hour_ny INTEGER DEFAULT 0")
+        except: pass
         c.execute("""
             CREATE TABLE IF NOT EXISTS pending_fills (
                 account_name TEXT,
@@ -1413,7 +1417,8 @@ class BinaryLogParser:
                     # Store hour and day of week in New York time for session analysis
                     t1_ny = t1_utc.astimezone(NY_TZ)
                     hour, dow = t1_ny.hour, t1_ny.weekday()
-                except: duration, hour, dow = 0, 0, 0
+                    minute_ny = t1_ny.minute
+                except: duration, hour, dow, minute_ny = 0, 0, 0, 0
                 side = "LONG" if "LONG" in t['side'].upper() or "BUY" in t['side'].upper() else "SHORT"
                 acc_upper = t['account'].upper()
                 specific_sym = t['symbol'].upper()
@@ -1422,16 +1427,20 @@ class BinaryLogParser:
                 
                 sig = f"{acc_upper}_{specific_sym}_{side}_{t['entry_time']}_{t['exit_time']}_{t['entry_price']}_{t['exit_price']}_{t['quantity']}"
                 tid = "T" + hashlib.md5(sig.encode()).hexdigest()[:12]
+                try:
+                    minute_ny_val = minute_ny
+                except NameError:
+                    minute_ny_val = 0
                 c.execute("""
                     INSERT OR REPLACE INTO processed_trades (
                         trade_id, account_name, symbol, entry_time, exit_time, 
                         entry_price, exit_price, quantity, side, 
                         profit_loss, commission, duration_minutes,
-                        hour_of_day, day_of_week, trip_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        hour_of_day, day_of_week, minute_of_hour_ny, trip_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (tid, acc_upper, base_sym, t['entry_time'], t['exit_time'],
                       t['entry_price'], t['exit_price'], t['quantity'], side, 
-                      t['profit_loss'], t['commission'], duration, hour, dow, t.get('trip_id')))
+                      t['profit_loss'], t['commission'], duration, hour, dow, minute_ny_val, t.get('trip_id')))
                 count += 1
                          
             except Exception as e:

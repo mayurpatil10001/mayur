@@ -59,6 +59,9 @@ const Monitoring = () => {
   const [filterSymbol, setFilterSymbol] = useState('ALL');
   const [globalImportStatus, setGlobalImportStatus] = useState<ImportStatus | null>(null);
   const [dismissedStatus, setDismissedStatus] = useState(false);
+  const [checkedAccounts, setCheckedAccounts] = useState<string[]>([]);
+  const [isSelectiveLoading, setIsSelectiveLoading] = useState(false);
+  const [selectiveStatus, setSelectiveStatus] = useState<string | null>(null);
 
   // Scanners
   const [scanners, setScanners] = useState<ScannerState[]>([
@@ -110,7 +113,7 @@ const Monitoring = () => {
     return () => clearInterval(interval);
   }, [isSaving]);
 
-  const [importDays, setImportDays] = useState('2000');
+  const [importDays, setImportDays] = useState('14');
   const [vixData, setVixData] = useState<any[]>([]);
   const [showVixModal, setShowVixModal] = useState(false);
   const [ingestionEnabled, setIngestionEnabled] = useState(true);
@@ -169,6 +172,90 @@ const Monitoring = () => {
     }, 3000); // Heartbeat (3s for better responsiveness during imports)
     return () => clearInterval(interval);
   }, []); // Remove fetchData and fetchImportStatus from deps to avoid infinite loops if setScanners triggers re-fetch
+
+  const toggleAccountCheck = (name: string) => {
+    setCheckedAccounts(prev => 
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  };
+
+  const toggleAllFiltered = () => {
+    const filtered = dbAccounts.filter(a => filterSymbol === 'ALL' || a.base_symbol === filterSymbol);
+    if (checkedAccounts.length === filtered.length && filtered.length > 0) {
+      setCheckedAccounts([]);
+    } else {
+      setCheckedAccounts(filtered.map(a => a.name));
+    }
+  };
+
+  const handleSelectiveImport = async () => {
+    if (checkedAccounts.length === 0 || isSelectiveLoading) return;
+    
+    setIsSelectiveLoading(true);
+    setSelectiveStatus("Calculating gap...");
+
+    // Group accounts by symbol and find the maximum gap among selected
+    const symbolToPaths: Record<string, string> = {};
+    let maxGap = 0;
+    
+    checkedAccounts.forEach(accName => {
+      const acc = dbAccounts.find(a => a.name === accName);
+      if (acc) {
+        // Track the largest gap to determine lookback
+        const gap = acc.days_since_last_trade || 0;
+        if (gap > maxGap) maxGap = gap;
+
+        let sym = acc.base_symbol;
+        if (sym === 'FD') sym = 'FDAX'; 
+        const scanner = scanners.find(s => s.symbol === sym);
+        if (scanner) {
+          symbolToPaths[sym] = scanner.path;
+        }
+      }
+    });
+
+    const uniquePaths = Array.from(new Set(Object.values(symbolToPaths)));
+    if (uniquePaths.length === 0) {
+      alert("Critical: No matching paths found for selected accounts.");
+      setIsSelectiveLoading(false);
+      setSelectiveStatus(null);
+      return;
+    }
+
+    // Smart Lookback: Use the gap + 2 days safety buffer, 
+    // but if importDays is '0' (Full History), use 2000.
+    const lookback = importDays === '0' ? 2000 : Math.max(parseInt(importDays), maxGap + 2);
+    
+    setSelectiveStatus(`Scanning gap of ${lookback} days for ${checkedAccounts.length} accounts...`);
+    setDismissedStatus(false);
+    try {
+      const response = await fetch(`${API_BASE}/api/system/import-start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          paths: uniquePaths, 
+          accounts: checkedAccounts, 
+          days: lookback 
+        })
+      });
+      
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+
+      setSelectiveStatus("Import triggered successfully!");
+      setTimeout(() => {
+        setSelectiveStatus(null);
+        setIsSelectiveLoading(false);
+      }, 3000);
+
+      setTimeout(fetchImportStatus, 500);
+      setCheckedAccounts([]);
+    } catch (e) {
+      console.error("Selective import failed:", e);
+      setSelectiveStatus("Failed to start import.");
+      setIsSelectiveLoading(false);
+      setTimeout(() => setSelectiveStatus(null), 5000);
+    }
+  };
 
   // --- Actions ---
   const handleSaveSettings = async (updatedScanners: any[], days?: string) => {
@@ -863,11 +950,43 @@ const Monitoring = () => {
         {/* 📊 ASSET MANAGEMENT PANEL (Now correctly inside grid) */}
         <div className="table-section">
           <div className="section-title">
-            <h2>📊 Database Accounts & Performance</h2>
-            <div className="filter-pills">
-              {['ALL', 'CL', 'ES', 'NQ', 'FDAX'].map(p => (
-                <div key={p} className={`pill ${filterSymbol === p ? 'active' : ''}`} onClick={() => setFilterSymbol(p)}>{p === 'FDAX' ? 'FD' : p}</div>
-              ))}
+            <div className="title-group">
+              <h2>📊 Database Accounts & Performance</h2>
+              {selectiveStatus && (
+                <div className="selective-status-pill">
+                  {selectiveStatus.includes('Failed') ? '❌' : '⚡'} {selectiveStatus}
+                </div>
+              )}
+              {globalImportStatus?.running && !selectiveStatus && (
+                <div className="selective-status-pill processing">
+                  🔄 System Import in Progress ({globalImportStatus.progress}%)
+                </div>
+              )}
+            </div>
+            
+            <div className="header-actions">
+              {checkedAccounts.length > 0 && (
+                <button 
+                  className={`btn-refresh-selected ${(isSelectiveLoading || globalImportStatus?.running) ? 'loading' : ''}`}
+                  onClick={handleSelectiveImport}
+                  disabled={isSelectiveLoading || globalImportStatus?.running}
+                >
+                  {isSelectiveLoading || globalImportStatus?.running ? (
+                    <span className="spinner-small"></span>
+                  ) : (
+                    '🚀'
+                  )}
+                  {globalImportStatus?.running ? 'REFRESHING...' : `REFRESH SELECTED (${checkedAccounts.length})`}
+                </button>
+              )}
+              
+              <div className="filter-pills-container">
+                {['ALL', 'CL', 'ES', 'NQ', 'FDAX'].map(p => (
+                  <div key={p} className={`pill ${filterSymbol === p ? 'active' : ''}`} onClick={() => setFilterSymbol(p)}>
+                    {p === 'FDAX' ? 'FD' : p}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -890,6 +1009,13 @@ const Monitoring = () => {
             <table className="management-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px' }}>
+                    <input 
+                      type="checkbox" 
+                      onChange={toggleAllFiltered} 
+                      checked={filtered.length > 0 && checkedAccounts.length === filtered.length}
+                    />
+                  </th>
                   <th>Account Group</th>
                   <th>Sym</th>
                   <th>Trades</th>
@@ -915,7 +1041,14 @@ const Monitoring = () => {
                   const isStale = (acc.days_since_last_trade || 0) > 30;
                   const winRate = acc.win_rate || 0;
                   return (
-                    <tr key={`${acc.name}-${acc.base_symbol}`} className={isStale ? 'tr-stale' : ''}>
+                    <tr key={`${acc.name}-${acc.base_symbol}`} className={`${isStale ? 'tr-stale' : ''} ${checkedAccounts.includes(acc.name) ? 'row-checked' : ''}`}>
+                      <td>
+                        <input 
+                          type="checkbox" 
+                          checked={checkedAccounts.includes(acc.name)} 
+                          onChange={() => toggleAccountCheck(acc.name)}
+                        />
+                      </td>
                       <td className="acc-name">{acc.name}</td>
                       <td><span className="pill">{acc.base_symbol}</span></td>
                       <td style={{ fontWeight: 600 }}>{acc.trade_count}</td>

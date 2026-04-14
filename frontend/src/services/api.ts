@@ -14,7 +14,28 @@ import {
   MonteCarloRequest
 } from '../types/api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+/**
+ * Same origin strategy as DiscoveryExplorer: direct :8000 on the page hostname.
+ * Avoids CRA proxy-only relative URLs that can break POST (bake-off, correlation) or diverge from Discovery.
+ */
+export function getApiV1BaseUrl(): string {
+  const env = process.env.REACT_APP_API_URL?.replace(/\/$/, '');
+  if (env) {
+    if (env.endsWith('/api/v1')) return env;
+    return `${env}/api/v1`;
+  }
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return `http://${window.location.hostname}:8000/api/v1`;
+  }
+  return 'http://localhost:8000/api/v1';
+}
+
+/** Backtesting router is mounted at /api/backtesting (not under /api/v1). */
+export function getApiBacktestingBaseUrl(): string {
+  return getApiV1BaseUrl().replace(/\/api\/v1\/?$/, '/api/backtesting');
+}
+
+const API_BASE_URL = getApiV1BaseUrl();
 
 class ApiService {
   private getHeaders(): HeadersInit {

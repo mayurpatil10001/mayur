@@ -193,4 +193,5 @@ export interface MonteCarloRequest {
   num_simulations?: number;
   time_horizon_days?: number;
   confidence_levels?: number[];
+  target_slots?: string;
 }

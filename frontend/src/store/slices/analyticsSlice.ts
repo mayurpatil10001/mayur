@@ -68,7 +68,8 @@ export const runMonteCarloSimulation = createAsyncThunk(
     const queryParams = new URLSearchParams();
     queryParams.append('simulations', (request.num_simulations || 10000).toString());
     queryParams.append('time_horizon_days', (request.time_horizon_days || 30).toString());
-    queryParams.append('confidence_level', (request.confidence_levels?.[0] || 0.95).toString());
+    if (request.confidence_levels?.[0]) queryParams.append('confidence_level', request.confidence_levels[0].toString());
+    if (request.target_slots) queryParams.append('target_slots', request.target_slots);
     
     const response = await fetch(`http://localhost:8000/api/v1/analytics/monte-carlo/${request.account_name}?${queryParams.toString()}`);
     

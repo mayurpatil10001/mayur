@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Plot from 'react-plotly.js';
 import './DiscoveryExplorer.css';
 
@@ -30,7 +30,20 @@ interface PerformanceMetrics {
 interface ValidationData {
     equity_curve: { date: string; pnl: number }[];
     metrics: PerformanceMetrics;
+    monte_carlo?: {
+        probability_of_profit: number;
+        expected_return: number;
+        percentiles: { [key: string]: number };
+        sample_paths: number[][];
+    };
 }
+
+const getApiBase = (): string => {
+    if (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) {
+        return process.env.REACT_APP_API_URL.replace(/\/$/, '');
+    }
+    return `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:8000`;
+};
 
 const DiscoveryExplorer: React.FC = () => {
     const [symbol, setSymbol] = useState('NQ');
@@ -39,7 +52,9 @@ const DiscoveryExplorer: React.FC = () => {
     const [hasRecentData, setHasRecentData] = useState<boolean | null>(null);
     const [validationLoading, setValidationLoading] = useState(false);
     const [validationData, setValidationData] = useState<ValidationData | null>(null);
-    const [minPersistence, setMinPersistence] = useState(70);
+    const [minPersistence, setMinPersistence] = useState(60);
+    const [minTradesBin, setMinTradesBin] = useState(200);
+    const [minAvgProfitBin, setMinAvgProfitBin] = useState(20);
     const [selectedEdges, setSelectedEdges] = useState<number[]>([]);
     const [portfolioData, setPortfolioData] = useState<any>(null);
     const [portfolioLoading, setPortfolioLoading] = useState(false);
@@ -48,26 +63,45 @@ const DiscoveryExplorer: React.FC = () => {
     const [testMonths, setTestMonths] = useState(1);
     const [selectionLogic, setSelectionLogic] = useState<'classic' | 'statistical' | 'persistence' | 'ensemble'>('persistence');
     const [viewMode, setViewMode] = useState<'table' | 'matrix'>('table');
+    const [predictions, setPredictions] = useState<any>(null);
+    const [predictionsLoading, setPredictionsLoading] = useState(false);
+    const [monteCarloLoading, setMonteCarloLoading] = useState(false);
+    const fetchGenerationRef = useRef(0);
 
     const fetchEdges = async () => {
+        const generation = ++fetchGenerationRef.current;
         setLoading(true);
         try {
             const token = localStorage.getItem('authToken');
             const headers: HeadersInit = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const API_BASE = `http://${window.location.hostname}:8000`;
-            const url = `${API_BASE}/api/v1/analytics/recommendations/discovery/${symbol}?min_persistence=${minPersistence}&logic=${selectionLogic}&winners_only=${viewMode === 'matrix'}`;
-            const response = await fetch(url, { headers });
+            const API_BASE = getApiBase();
+            const url = `${API_BASE}/api/v1/analytics/recommendations/discovery/${symbol}?min_persistence=${minPersistence}&min_trades_total=${minTradesBin}&min_avg_profit=${minAvgProfitBin}&logic=${selectionLogic}&winners_only=${viewMode === 'matrix'}`;
+            const response = await fetch(url, { headers, cache: 'no-store' });
             const data = await response.json();
+            if (generation !== fetchGenerationRef.current) return;
             if (data.status === 'success') {
-                setEdges(data.data.edges);
+                let list = data.data.edges || [];
+                const minT = minTradesBin;
+                const minA = minAvgProfitBin;
+                const minP = minPersistence;
+                // Session: no trades 17:00–18:00 NY (market closed); 18:00+ is evening session
+                // Ensemble uses its own scoring (conviction/voting); don't apply bin filters or we filter out all results
+                list = list.filter((e: Edge) => {
+                    const sessionOk = e.time_slot < '17:00' || e.time_slot >= '18:00';
+                    if (selectionLogic === 'ensemble') return sessionOk;
+                    return sessionOk && e.avg_profit_per_trade >= minA && e.total_trades >= minT && e.persistence_score >= minP;
+                });
+                if (generation !== fetchGenerationRef.current) return;
+                setEdges(list);
                 setHasRecentData(data.data.has_recent_data);
             }
         } catch (error) {
+            if (generation !== fetchGenerationRef.current) return;
             console.error('Error fetching edges:', error);
         } finally {
-            setLoading(false);
+            if (generation === fetchGenerationRef.current) setLoading(false);
         }
     };
 
@@ -78,12 +112,6 @@ const DiscoveryExplorer: React.FC = () => {
     };
 
     // Helper to find edge index from matrix cell
-    const selectFromMatrix = (time: string, dow: number) => {
-        const index = edges.findIndex(e => e.time_slot === time && e.day_of_week === dow);
-        if (index !== -1) {
-            toggleEdgeSelection(index);
-        }
-    };
 
     const runPortfolioBacktest = async () => {
         if (selectedEdges.length === 0) return;
@@ -94,7 +122,7 @@ const DiscoveryExplorer: React.FC = () => {
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
             const selections = selectedEdges.map(i => edges[i]);
-            const API_BASE = `http://${window.location.hostname}:8000`;
+            const API_BASE = getApiBase();
             const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/backtest/portfolio`, {
                 method: 'POST',
                 headers,
@@ -112,6 +140,7 @@ const DiscoveryExplorer: React.FC = () => {
     };
 
     const runValidation = async () => {
+        setValidationData(null);
         setValidationLoading(true);
         try {
             const token = localStorage.getItem('authToken');
@@ -119,7 +148,7 @@ const DiscoveryExplorer: React.FC = () => {
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
             const selections = selectedEdges.map(i => edges[i]);
-            const API_BASE = `http://${window.location.hostname}:8000`;
+            const API_BASE = getApiBase();
             const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/validation/walk-forward/${symbol}`, {
                 method: 'POST',
                 headers: { ...headers, 'Content-Type': 'application/json' },
@@ -132,30 +161,187 @@ const DiscoveryExplorer: React.FC = () => {
                     allowed_edges: selections.length > 0 ? selections : null
                 })
             });
-            const data = await response.json();
+            const data = await response.json().catch(() => ({ status: 'error', message: 'Invalid response' }));
             if (data.status === 'success') {
                 setValidationData(data.data);
+            } else {
+                const msg = !response.ok && (data.detail ?? data.message)
+                    ? (typeof data.detail === 'string' ? data.detail : data.message || `Server error ${response.status}`)
+                    : (data.message || `Walk-forward failed (${response.status})`);
+                alert(msg);
             }
         } catch (error) {
             console.error('Error running validation:', error);
+            const msg = error instanceof Error ? error.message : 'Network or server error. Is the backend running?';
+            alert(msg);
         } finally {
             setValidationLoading(false);
         }
     };
 
+    const fetchWeeklyPredictions = async () => {
+        setPredictionsLoading(true);
+        try {
+            const API_BASE = getApiBase();
+            const url = `${API_BASE}/api/v1/analytics/recommendations/predict-week/${symbol}?lookback_weeks=13`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.status === 'success') {
+                setPredictions(data.data);
+            }
+        } catch (e) {
+            console.error('Error fetching roadmap:', e);
+        } finally {
+            setPredictionsLoading(false);
+        }
+    };
+
+    const handleExportCSV = async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const selections = selectedEdges.map(i => edges[i]);
+            const API_BASE = getApiBase();
+
+            const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/validation/walk-forward/export/${symbol}`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    min_persistence: minPersistence,
+                    logic: selectionLogic,
+                    mode: validationMode,
+                    train_months: trainMonths,
+                    test_months: testMonths,
+                    allowed_edges: selections.length > 0 ? selections : null
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: null }));
+                const detail = errorData.detail ?? errorData.message;
+                const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((e: any) => e?.msg ?? e).join(', ') : `Server error: ${response.status}`;
+                if (response.status === 404) {
+                    throw new Error(`API not found (404). Is the backend running? Start it with: python main.py (from project root) then try again.`);
+                }
+                throw new Error(msg);
+            }
+
+            const data = await response.json();
+            if (data.status !== 'success') {
+                alert(data.message || 'Export failed.');
+                return;
+            }
+            if (data.data == null) {
+                alert('Export returned no data.');
+                return;
+            }
+            const trades = Array.isArray(data.data) ? data.data : [];
+            const fieldNames = trades.length > 0 ? Object.keys(trades[0]) : ['date', 'time', 'exit_time', 'permutation', 'side', 'quantity', 'entry_price', 'exit_price', 'pnl'];
+
+            const escape = (val: any) => {
+                const str = String(val === null || val === undefined ? '' : val);
+                return `"${str.replace(/"/g, '""')}"`;
+            };
+
+            const csvContent = [
+                fieldNames.map(escape).join(','),
+                ...trades.map((t: any) => fieldNames.map(f => escape(t[f])).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `wf_oos_trades_${symbol}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+            URL.revokeObjectURL(url);
+            if (trades.length === 0) {
+                alert('No OOS trades found; downloaded CSV with headers only.');
+            }
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            let msg = error instanceof Error ? error.message : 'Failed to export trades.';
+            if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+                msg = `Cannot reach the API at ${getApiBase()}. Start the backend with: python main.py (from project root).`;
+            }
+            alert(msg);
+        }
+    };
+
+    const runMonteCarloOOS = async () => {
+        if (!validationData) {
+            alert('Run Walk-Forward Analysis first to get OOS results, then run Monte Carlo.');
+            return;
+        }
+        setMonteCarloLoading(true);
+        try {
+            const token = localStorage.getItem('authToken');
+            const headers: HeadersInit = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const selections = selectedEdges.map(i => edges[i]);
+            const API_BASE = getApiBase();
+            const response = await fetch(`${API_BASE}/api/v1/analytics/recommendations/validation/walk-forward/monte-carlo/${symbol}`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    min_persistence: minPersistence,
+                    logic: selectionLogic,
+                    mode: validationMode,
+                    train_months: trainMonths,
+                    test_months: testMonths,
+                    allowed_edges: selections.length > 0 ? selections : null
+                })
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: null }));
+                const detail = errorData.detail ?? errorData.message;
+                const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((e: any) => e?.msg ?? e).join(', ') : `Server error: ${response.status}`;
+                if (response.status === 404) {
+                    throw new Error(`API not found (404). Is the backend running? Start it with: python main.py (from project root) then try again.`);
+                }
+                throw new Error(msg);
+            }
+            const data = await response.json();
+            if (data.status === 'success' && data.data?.monte_carlo) {
+                setValidationData(prev => prev ? { ...prev, monte_carlo: data.data.monte_carlo } : null);
+            } else {
+                alert(data.message || 'Monte Carlo failed. Run Walk-Forward Analysis first.');
+            }
+        } catch (error) {
+            console.error('Error running Monte Carlo:', error);
+            let msg = error instanceof Error ? error.message : 'Failed to run Monte Carlo.';
+            if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+                msg = `Cannot reach the API at ${getApiBase()}. Start the backend with: python main.py (from project root).`;
+            }
+            alert(msg);
+        } finally {
+            setMonteCarloLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchEdges();
-    }, [symbol, minPersistence, selectionLogic, viewMode]);
+    }, [symbol, minPersistence, minTradesBin, minAvgProfitBin, selectionLogic, viewMode, fetchEdges]);
 
-    const getDayName = (dow: number) => {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return days[dow] || dow;
-    };
+    // When ranking logic or symbol changes, the grid refreshes with new edges. Clear selection and WF results
+    // so indices aren't stale and Export/Monte Carlo run with the current mode (or autonomous discovery if none selected).
+    useEffect(() => {
+        setSelectedEdges([]);
+        setValidationData(null);
+    }, [selectionLogic, symbol]);
+
+    // DB stores day_of_week using Python weekday(): 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 6=Sun
+    // This matches the Recommendations page convention exactly.
+    const DAY_NAME_MAP: Record<number, string> = { 0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 6: 'Sun' };
+    const getDayName = (dow: number) => DAY_NAME_MAP[dow] ?? String(dow);
 
     // Matrix View Component
     const MatrixView = () => {
         const timeSlots = Array.from(new Set(edges.map(e => e.time_slot))).sort();
-        const days = [0, 1, 2, 3, 4, 5]; // Sun-Fri
+        // Column order: Sun (6) then Mon(0)..Fri(4) — matches Recommendations page & DB weekday convention
+        const days = [6, 0, 1, 2, 3, 4];
 
         return (
             <div className="discovery-matrix-container">
@@ -361,7 +547,52 @@ const DiscoveryExplorer: React.FC = () => {
                             <p>Click rows in the table to test their combined historical performance.</p>
                         </div>
 
-                        <div className="portfolio-controls">
+                        <div className="portfolio-controls" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div style={{ padding: '12px 14px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: '#495057', marginBottom: '10px' }}>Bin filters (grid / backtest)</div>
+                                {selectionLogic === 'ensemble' && (
+                                    <p style={{ fontSize: '11px', color: '#6c757d', marginBottom: '10px', fontStyle: 'italic' }}>
+                                        Ensemble mode uses its own scoring (multi-window consensus). Only <strong>Min trades per bin</strong> is used for discovery; persistence and avg profit use fixed internal thresholds. These sliders still apply to Backtest and Walk-Forward if you run them.
+                                    </p>
+                                )}
+                                <div className="control-group" style={{ marginBottom: '10px' }}>
+                                    <label>Min persistence: {minPersistence}%</label>
+                                    <input
+                                        type="range"
+                                        min={50}
+                                        max={95}
+                                        step={5}
+                                        value={minPersistence}
+                                        onChange={(e) => setMinPersistence(parseInt(e.target.value))}
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div className="control-group">
+                                        <label title="Orange number in grid">Min trades per bin</label>
+                                        <input
+                                            type="number"
+                                            className="text-input"
+                                            min={0}
+                                            value={minTradesBin}
+                                            onChange={(e) => setMinTradesBin(Math.max(0, parseInt(e.target.value) || 0))}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                    <div className="control-group">
+                                        <label title="Red number in grid">Min avg profit per bin ($)</label>
+                                        <input
+                                            type="number"
+                                            className="text-input"
+                                            min={0}
+                                            step={1}
+                                            value={minAvgProfitBin}
+                                            onChange={(e) => setMinAvgProfitBin(Math.max(0, parseFloat(e.target.value) || 0))}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                             <button
                                 className="primary-button"
                                 onClick={runPortfolioBacktest}
@@ -447,19 +678,7 @@ const DiscoveryExplorer: React.FC = () => {
                         <p>Simulate real-time edge discovery with a rolling window.</p>
 
                         <div className="validation-controls">
-                            {selectionLogic === 'persistence' && (
-                                <div className="control-group">
-                                    <label>Min Persistence Threshold: {minPersistence}%</label>
-                                    <input
-                                        type="range"
-                                        min="50" max="95" step="5"
-                                        value={minPersistence}
-                                        onChange={(e) => setMinPersistence(parseInt(e.target.value))}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="discovery-wf-setup" style={{ marginTop: '20px', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
+                            <div className="discovery-wf-setup" style={{ marginTop: '0', padding: '15px', background: '#f8f9fa', borderRadius: '8px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div className="control-group">
                                         <label>Train Log (Months)</label>
@@ -507,7 +726,7 @@ const DiscoveryExplorer: React.FC = () => {
 
                         {validationData && validationData.metrics.total_trades === 0 && (
                             <div className="warning-box" style={{ marginTop: '15px', padding: '10px', background: '#fff3cd', color: '#856404', borderRadius: '4px', fontSize: '12px' }}>
-                                <strong>No Trades Found!</strong> Try reducing the "Train Log" window or the "Min Persistence" threshold.
+                                <strong>No Trades Found!</strong> Try reducing the "Train Log" window or the bin filters (min persistence, min trades, min avg profit) above.
                             </div>
                         )}
 
@@ -576,7 +795,7 @@ const DiscoveryExplorer: React.FC = () => {
                                         ]}
                                         layout={{
                                             autosize: true,
-                                            height: 450,
+                                            height: 380,
                                             margin: { l: 60, r: 20, t: 10, b: 40 },
                                             paper_bgcolor: 'transparent',
                                             plot_bgcolor: 'transparent',
@@ -592,7 +811,86 @@ const DiscoveryExplorer: React.FC = () => {
                                         config={{ responsive: true, displayModeBar: false }}
                                     />
                                 </div>
-                                <div className="logic-hint" style={{ marginTop: '15px', padding: '15px', borderLeft: '4px solid #2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)' }}>
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '20px', alignItems: 'center' }}>
+                                    <button onClick={handleExportCSV} className="text-button" style={{ fontSize: '12px', opacity: 0.9 }}>📥 Export OOS Trade List (CSV)</button>
+                                    <span style={{ color: '#999', fontSize: '12px' }}>|</span>
+                                    <button
+                                        onClick={runMonteCarloOOS}
+                                        disabled={monteCarloLoading}
+                                        className="text-button"
+                                        style={{ fontSize: '12px', opacity: 0.9 }}
+                                        title="Run Monte Carlo simulation on the current OOS trades"
+                                    >
+                                        {monteCarloLoading ? 'Running MC…' : '🎲 Run Monte Carlo (OOS)'}
+                                    </button>
+                                </div>
+
+                                {validationData.monte_carlo && (
+                                    <div className="mc-oos-section" style={{ marginTop: '20px', padding: '15px', background: 'rgba(33, 150, 243, 0.03)', borderRadius: '12px', border: '1px solid rgba(33, 150, 243, 0.1)' }}>
+                                        <h4 style={{ marginBottom: '12px' }}>🎲 Monte Carlo Risk (OOS)</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                                            <div className="stat-card" style={{ background: '#fff' }}>
+                                                <label>Prob. of Profit</label>
+                                                <span style={{ fontSize: '20px', color: '#2196f3' }}>{validationData.monte_carlo.probability_of_profit}%</span>
+                                            </div>
+                                            <div className="stat-card" style={{ background: '#fff' }}>
+                                                <label>Expected Ret.</label>
+                                                <span style={{ fontSize: '18px' }}>${validationData.monte_carlo.expected_return.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        <Plot
+                                            data={[
+                                                ...validationData.monte_carlo.sample_paths.slice(0, 50).map((path, i) => ({
+                                                    y: path,
+                                                    type: 'scatter' as any, mode: 'lines' as any,
+                                                    line: { color: 'rgba(33, 150, 243, 0.08)', width: 1 },
+                                                    hoverinfo: 'none' as any, showlegend: false
+                                                })),
+                                                {
+                                                    y: Array(validationData.monte_carlo.sample_paths[0].length).fill(0),
+                                                    type: 'scatter' as any, mode: 'lines' as any,
+                                                    line: { color: '#000', width: 1, dash: 'dash' as any },
+                                                    showlegend: false
+                                                }
+                                            ]}
+                                            layout={{ autosize: true, height: 180, margin: { l: 40, r: 10, t: 10, b: 30 }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', xaxis: { showgrid: false }, yaxis: { gridcolor: '#f0f0f0' } }}
+                                            config={{ responsive: true, displayModeBar: false }}
+                                        />
+                                        <p style={{ fontSize: '10px', color: '#888', fontStyle: 'italic', marginTop: '10px' }}>Simulated across 5,000 permutations of unseen data.</p>
+                                    </div>
+                                )}
+
+                                <div className="forecast-roadmap" style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                        <h4 style={{ margin: 0 }}>🔮 Weekly Prediction Roadmap</h4>
+                                        <button onClick={fetchWeeklyPredictions} disabled={predictionsLoading} className="text-button" style={{ fontSize: '12px' }}>
+                                            {predictionsLoading ? '...' : 'Update'}
+                                        </button>
+                                    </div>
+                                    {predictions ? (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                                            {Object.entries(predictions.predictions).flatMap(([slot, days]: [string, any]) =>
+                                                Object.entries(days).map(([dow, pred]: [string, any]) => (
+                                                    <div key={`${slot}-${dow}`} style={{ padding: '8px 12px', background: '#fff', borderRadius: '8px', border: '1px solid #eee', borderLeft: `4px solid ${pred.confidence === 'High' ? '#10b981' : '#f59e0b'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div>
+                                                            <div style={{ fontSize: '10px', color: '#888' }}>{getDayName(parseInt(dow))} {slot}</div>
+                                                            <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{pred.predicted_account}</div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ fontSize: '11px', color: pred.confidence === 'High' ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>{pred.confidence}</div>
+                                                            <div style={{ fontSize: '10px', color: '#aaa' }}>{(pred.agreement_ratio * 100).toFixed(0)}%</div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ).slice(0, 50)}
+                                        </div>
+                                    ) : (
+                                        <p style={{ fontSize: '12px', color: '#999', textAlign: 'center' }}>Click Update to see this week's winners.</p>
+                                    )}
+                                </div>
+
+                                <div className="logic-hint" style={{ marginTop: '25px', padding: '15px', borderLeft: '4px solid #2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)' }}>
                                     <p style={{ marginBottom: '10px' }}><strong>Note 1 (Timing):</strong> Uses <strong>Calendar Months</strong>. The engine trains on the past month(s) and tests on the next, sliding forward 1 month at a time to ensure no look-ahead bias.</p>
                                     <p style={{ marginBottom: '10px' }}><strong>Note 2 (Selection Logic):</strong> Manual bin selections (Account/Day/Hour) define your <strong>Allowed Universe</strong>. However, an edge is only "traded" in the next month if it <i>also</i> passes the <strong>{selectionLogic.toUpperCase()}</strong> threshold during its specific training window. This simulates a real trader who only sticks with their picks as long as they remain consistent.</p>
                                     <p><strong>Note 3 (Highest Persistence & PnL):</strong> For every unique Time/Day slot, the engine selects the single best account based on <strong>Full Window Consistency</strong> (must be active and green across the entire training period). If scores are tied, it selects the account with the <b>highest Profit</b>. Minimum 5 trades required per window to filter out noise.</p>
@@ -603,21 +901,21 @@ const DiscoveryExplorer: React.FC = () => {
                 </div>
             </div>
 
-            <section className="section methodology-section" style={{ marginTop: '20px' }}>
+            <section className="section methodology-section" style={{ marginTop: '30px' }}>
                 <h3>Methodology & FAQ</h3>
-                <div className="methodology-grid">
+                <div className="methodology-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                     <div className="method-card">
-                        <h4>Where is the data from?</h4>
-                        <p>All metrics (Win%, Avg PnL, Trades) are calculated from your <strong>All-Time Trade History</strong>. These are the "All Stars" that have proven their consistency over the entire life of the account.</p>
+                        <h4>Monte Carlo OOS</h4>
+                        <p style={{ fontSize: '13px', color: '#666' }}>Unlike traditional MC, this simulates permutations of <strong>Out-of-Sample</strong> trades. It calculates the probability that the strategy's robustness actually translates into forward returns over a 21-day horizon.</p>
+                    </div>
+                    <div className="method-card">
+                        <h4>Roadmap Prediction</h4>
+                        <p style={{ fontSize: '13px', color: '#666' }}>Uses a rolling-weighted consensus across 2, 4, 8, and 13-week windows to identify which account is currently dominant in each time slot, providing guidance for the upcoming week.</p>
                     </div>
                     <div className="method-card">
                         <h4>Static vs. Walk-Forward</h4>
-                        <p><strong>Static Backtest:</strong> This is "Hindsight". It shows what happens if you traded your favorite picks across their entire history. Used to verify the DNA of an edge.</p>
-                        <p><strong>Walk-Forward:</strong> This is "Real-Time Simulation". It simulates what you would have picked each month using <i>only</i> data that was available at that time.</p>
-                    </div>
-                    <div className="method-card">
-                        <h4>Expanding Window Mode</h4>
-                        <p>This answers the question: "If I pick the best all-time performers every month, how do they perform in the next month?" It avoids the trap of 'chasing ghosts' by looking for deep, structural consistency.</p>
+                        <p style={{ fontSize: '13px', color: '#666' }}><strong>Static Backtest:</strong> Hindsight view. Shows what happens if you traded your favorite picks across their entire history. Used to verify the "DNA" of an edge.</p>
+                        <p style={{ fontSize: '13px', color: '#666' }}><strong>Walk-Forward:</strong> Real-time simulation. Simulates what you would have picked each month using <i>only</i> data available at that time.</p>
                     </div>
                 </div>
             </section>

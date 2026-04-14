@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import InteractiveChart from '../../components/InteractiveChart/InteractiveChart';
 import TradingReadinessAssessment from '../../components/TradingReadinessAssessment';
-import DragDropDashboard from '../../components/DragDropDashboard';
 import StrategyValidationAnalytics from '../../components/StrategyValidationAnalytics';
 import PerformanceBreakdown from '../../components/PerformanceBreakdown';
 import RecommendationMatrix from './components/RecommendationMatrix';
@@ -11,12 +10,13 @@ import BacktestSimulation from './components/BacktestSimulation';
 import MonteCarloChart from '../../components/MonteCarloChart/MonteCarloChart';
 import VIXRegimeAnalyzer from '../../components/VIXRegimeAnalyzer/VIXRegimeAnalyzer';
 import FoldComparisonMatrix from './components/FoldComparisonMatrix';
-import { apiService } from '../../services/api';
+import MethodComparison from './components/MethodComparison';
+import CorrelationHeatmap from './components/CorrelationHeatmap';
+import { getApiV1BaseUrl, getApiBacktestingBaseUrl } from '../../services/api';
 import './Recommendations.css';
 import './MatrixOverride.css';
-import { fetchRecommendations } from '../../store/slices/recommendationsSlice';
 
-interface RecommendationMatrix {
+interface MatrixData {
   [timeSlot: string]: {
     [dayOfWeek: number]: {
       best_account: string;
@@ -79,33 +79,28 @@ interface FilterSettings {
   minAvgProfit: number;
   minWinRate: number;
   minTrades: number;
+  minPersistence: number;
 }
 
-interface CriteriaItem {
-  label: string;
-  current: number | string;
-  target: number | string;
-  unit?: string;
-  status: 'good' | 'warning' | 'poor';
-}
 
 const Recommendations: React.FC = () => {
   const [symbols, setSymbols] = useState<Symbol[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string>('');
-  const [matrix, setMatrix] = useState<RecommendationMatrix>({});
+  const [matrix, setMatrix] = useState<MatrixData>({});
   const [backtestData, setBacktestData] = useState<BacktestData[]>([]);
   const [backtestMetadata, setBacktestMetadata] = useState<any>(null);
   const [combinedStats, setCombinedStats] = useState<CombinedStats | null>(null);
-  const [timeFilteredStats, setTimeFilteredStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'matrix' | 'validation' | 'settings' | 'backtest' | 'vix' | 'probability' | 'walkforward'>('matrix');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'validation' | 'settings' | 'backtest' | 'vix' | 'probability' | 'walkforward' | 'comparison' | 'correlation'>('matrix');
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     minAvgProfit: 12.0,  // Set to $12
     minWinRate: 45.0,    // Set to 45%
-    minTrades: 100       // Set to 100 trades
+  minTrades: 100,      // Set to 100 trades
+  minPersistence: 60
   });
   const [timeHorizon, setTimeHorizon] = useState<string>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
 
   const [validationData, setValidationData] = useState<any>(null);
   const [isLoadingValidation, setIsLoadingValidation] = useState(false);
@@ -118,12 +113,31 @@ const Recommendations: React.FC = () => {
   const [walkForwardData, setWalkForwardData] = useState<any>(null);
   const [isLoadingWalkForward, setIsLoadingWalkForward] = useState(false);
   const [chartSource, setChartSource] = useState<'backtest' | 'walkforward'>('backtest');
-  const [showPredictorOverlay, setShowPredictorOverlay] = useState(false);
   const [lookbackWeeks, setLookbackWeeks] = useState<number>(13);
   const [testWeeks, setTestWeeks] = useState<number>(3);
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
-  const [matrixViewMode, setMatrixViewMode] = useState<'standard' | 'probability' | 'ensemble'>('standard');
+  const [matrixViewMode, setMatrixViewMode] = useState<'standard' | 'probability' | 'ensemble' | 'persistence'>('standard');
   const [expandedFold, setExpandedFold] = useState<number | null>(null);
+  const [wfTargetSlots, setWfTargetSlots] = useState<string | null>(null);
+
+  // Best Bins overlay state
+  const [bestBinsActive, setBestBinsActive] = useState(false);
+  const [bestBinsAccountSize, setBestBinsAccountSize] = useState(1000);
+  const [bestBinsData, setBestBinsData] = useState<any>(null);
+  const [bestBinsLoading, setBestBinsLoading] = useState(false);
+  const [bestBinsMap, setBestBinsMap] = useState<{ [key: string]: { composite_score: number; rank: number } }>({});
+
+  // Regime overlay state
+  const [regimeOverlayActive, setRegimeOverlayActive] = useState(false);
+  const [regimeMatrixData, setRegimeMatrixData] = useState<any>(null);
+  const [regimeLoading, setRegimeLoading] = useState(false);
+  const [selectedMatrixBins, setSelectedMatrixBins] = useState<Array<{ key: string; time_slot: string; day_of_week: number; account_name: string }>>([]);
+  const [selectionPending, setSelectionPending] = useState(false);
+
+  // On-Demand Deep Analytics state
+  const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+  const [staleAnalytics, setStaleAnalytics] = useState(false);
+  const [minReliability, setMinReliability] = useState<number>(0);
 
   const downloadCSV = (fold: any) => {
     if (!fold.oos_trade_list || fold.oos_trade_list.length === 0) {
@@ -164,15 +178,72 @@ const Recommendations: React.FC = () => {
     }, 100);
   };
 
-  const tabExplanations: Record<string, string> = {
-    matrix: "Aggregated view of the best performing models per time-slot and day of week. Identifies the optimal configuration for every trading hour.",
-    validation: "High-intensity statistical validation using t-stats and 10,000 Monte Carlo simulations to verify the edge is distinct from random noise.",
-    probability: "Direct expectancy model showing Confidence-Weighted Expected Value (CWEV) and risk metrics like Skewness and CVaR-95.",
-    walkforward: "Out-of-Sample (OOS) reality check. Iteratively tests the model on unseen data clusters to prevent over-fitting.",
-    vix: "Volatility-contextualized performance. Analyzes model efficiency across Low, Medium, and High VIX regimes.",
-    backtest: "Forward-looking ensemble simulation. Executes the combined recommendations to verify total strategy expectancy.",
-    settings: "Neural engine configuration. Adjust core filters to prioritize stability, absolute profit, or statistical significance."
+  const loadBestBins = async (accountSize: number) => {
+    if (!selectedSymbol) return;
+    setBestBinsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        account_size: String(accountSize),
+        selection_logic: matrixViewMode === 'ensemble' ? 'ensemble' : matrixViewMode === 'probability' ? 'statistical' : matrixViewMode === 'persistence' ? 'persistence' : 'classic',
+        min_trades: String(filterSettings.minTrades),
+        min_avg_profit: String(filterSettings.minAvgProfit),
+        min_win_rate: String(filterSettings.minWinRate),
+      });
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const resp = await fetch(`${getApiV1BaseUrl()}/analytics/recommendations/matrix/${selectedSymbol}/best-bins?${params}`, { headers });
+      const json = await resp.json();
+      if (json.status === 'success') {
+        setBestBinsData(json.data);
+        const bmap: { [key: string]: { composite_score: number; rank: number } } = {};
+        (json.data.qualified_bins || []).forEach((b: any, i: number) => {
+          bmap[`${b.time_slot}_${b.day_of_week}`] = { composite_score: b.composite_score, rank: i + 1 };
+        });
+        setBestBinsMap(bmap);
+      }
+    } catch (err) {
+      console.error('Best bins error:', err);
+    } finally {
+      setBestBinsLoading(false);
+    }
   };
+
+  const loadRegimeOverlay = async () => {
+    if (!selectedSymbol) return;
+    setRegimeLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const resp = await fetch(`${getApiV1BaseUrl()}/analytics/recommendations/matrix/${selectedSymbol}/vix-regime?days_back=180`, { headers });
+      const json = await resp.json();
+      if (json.status === 'success') {
+        setRegimeMatrixData(json.data.regime_matrix);
+      }
+    } catch (err) {
+      console.error('Regime overlay error:', err);
+    } finally {
+      setRegimeLoading(false);
+    }
+  };
+
+  const handleToggleMatrixBinSelection = (payload: { key: string; timeSlot: string; dayOfWeek: number; account: string }) => {
+    setSelectedMatrixBins(prev => {
+      const exists = prev.some(p => p.key === payload.key);
+      const next = exists
+        ? prev.filter(p => p.key !== payload.key)
+        : [...prev, { key: payload.key, time_slot: payload.timeSlot, day_of_week: payload.dayOfWeek, account_name: payload.account }];
+      setSelectionPending(next.length > 0);
+      return next;
+    });
+  };
+
+  const clearMatrixSelections = () => {
+    setSelectedMatrixBins([]);
+    setSelectionPending(false);
+  };
+
 
   // Sample data for Trading Readiness Assessment
   const getReadinessAssessmentData = () => {
@@ -479,64 +550,6 @@ const Recommendations: React.FC = () => {
     };
   };
 
-  // Dashboard items configuration
-  const getDashboardItems = () => {
-    const screenWidth = window.innerWidth;
-    const gap = 30;
-
-    // Start with smaller default sizes - auto-sizing will adjust them
-    const leftColumnWidth = Math.floor(screenWidth * 0.45);
-    const rightColumnWidth = Math.floor(screenWidth * 0.45);
-
-    return [
-      {
-        id: 'strategy-validation',
-        title: '🔬 Strategy Validation Summary',
-        component: (
-          <div>
-            <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-              <strong>Included in this strategy:</strong> {combinedStats?.recommended_accounts.length || 0} accounts across {Object.keys(matrix || {}).length || 0} optimized time slots for {selectedSymbol}.
-            </div>
-            <StrategyValidationAnalytics {...getStrategyValidationData()} subtitle={`${selectedSymbol} Multi-Account Time-Bin Strategy`} />
-          </div>
-        ),
-        defaultPosition: {
-          x: 20,
-          y: 20, // Start from top of dashboard
-          width: leftColumnWidth,
-          height: 400 // Will auto-size to content
-        },
-        minWidth: 400,
-        minHeight: 300
-      },
-      {
-        id: 'trading-readiness',
-        title: '🎯 Trading Readiness Assessment',
-        component: <TradingReadinessAssessment {...getReadinessAssessmentData()} />,
-        defaultPosition: {
-          x: leftColumnWidth + gap,
-          y: 20, // Start from top of dashboard
-          width: rightColumnWidth,
-          height: 250 // Will auto-size to content
-        },
-        minWidth: 350,
-        minHeight: 200
-      },
-      {
-        id: 'performance-breakdown',
-        title: '📊 Performance Breakdown',
-        component: <PerformanceBreakdown {...getPerformanceBreakdownData()} />,
-        defaultPosition: {
-          x: leftColumnWidth + gap,
-          y: 300, // Position below readiness widget
-          width: rightColumnWidth,
-          height: 400 // Will auto-size to content
-        },
-        minWidth: 350,
-        minHeight: 300
-      }
-    ];
-  };
 
   // Backtest state
   const [backtestConfig, setBacktestConfig] = useState({
@@ -561,6 +574,9 @@ const Recommendations: React.FC = () => {
   const [backtestError, setBacktestError] = useState<string | null>(null);
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  // In this dataset: 6 = Sunday evening session, 0..4 = Mon..Fri, 5 = Saturday (excluded)
+  const matrixDayIndices = [6, 0, 1, 2, 3, 4];
+  const dayNameByIndex: Record<number, string> = { 6: 'Sun', 0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri' };
 
   const timeHorizonOptions = [
     { value: '7', label: '7 Days' },
@@ -586,36 +602,13 @@ const Recommendations: React.FC = () => {
     return option ? option.label : '30 Days';
   };
 
-  const getExpectedTradingDays = (horizon: string): number | string => {
-    switch (horizon) {
-      case '7': return 5; // 5 trading days in a week
-      case '30': return 21; // ~21 trading days in a month (30 days × 5/7)
-      case '90': return 64; // ~64 trading days in 3 months (90 days × 5/7)
-      case '365': return 261; // ~261 trading days in a year (365 days × 5/7)
-      case 'all': return 'All Time';
-      default: return 21;
-    }
-  };
-
-  // Fetch available symbols
-  useEffect(() => {
-    fetchSymbols();
-  }, []);
-
-  // Fetch data when symbol, settings, or time horizon change
-  useEffect(() => {
-    if (selectedSymbol) {
-      fetchRecommendationData(selectedSymbol);
-    }
-  }, [selectedSymbol, filterSettings, timeHorizon, matrixViewMode]);
-
-  const fetchSymbols = async () => {
+  const fetchSymbols = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const response = await fetch('/api/v1/analytics/symbols', { headers });
+      const response = await fetch(`${getApiV1BaseUrl()}/analytics/symbols`, { headers });
       const result = await response.json();
 
       if (result.status === 'success' && result.data?.symbols) {
@@ -628,27 +621,25 @@ const Recommendations: React.FC = () => {
       console.error('Error fetching symbols:', err);
       setError('Failed to load symbols from server.');
     }
-  };
+  }, []);
 
-  const timeOptions = [
-    { label: '30 Days', value: '30d' },
-    { label: '90 Days', value: '90d' },
-    { label: 'All Time', value: 'all' }
-  ];
-
-  const fetchRecommendationData = async (symbol: string, settings?: FilterSettings) => {
+  const fetchRecommendationData = useCallback(async (symbol: string, settings?: FilterSettings) => {
     setIsLoading(true);
     setError(null);
+    setMatrix({});
+    setAnalyticsLoaded(false); // Reset analytics to locked state on mode/filter change
 
     const currentSettings = settings || filterSettings;
     let logic = 'classic';
     if (matrixViewMode === 'probability') logic = 'statistical';
     if (matrixViewMode === 'ensemble') logic = 'ensemble';
+    if (matrixViewMode === 'persistence') logic = 'persistence';
 
     const params = new URLSearchParams({
       min_avg_profit: currentSettings.minAvgProfit.toString(),
       min_win_rate: currentSettings.minWinRate.toString(),
       min_trades: currentSettings.minTrades.toString(),
+      min_persistence: currentSettings.minPersistence.toString(),
       selection_logic: logic
     });
 
@@ -658,52 +649,21 @@ const Recommendations: React.FC = () => {
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       // Fetch recommendation matrix with parameters
-      const matrixResponse = await fetch(`/api/v1/analytics/recommendations/matrix/${symbol}?${params}`, { headers });
+      const matrixResponse = await fetch(`${getApiV1BaseUrl()}/analytics/recommendations/matrix/${symbol}?${params}`, { headers });
       const matrixResult = await matrixResponse.json();
 
       if (matrixResult.status === 'success') {
         setMatrix(matrixResult.data.matrix || {});
-      }
-
-      // Proactively fetch probability matrix for integrated view
-      fetch(`/api/v1/analytics/recommendations/matrix/${symbol}/probability?days_back=90`, { headers })
-        .then(r => r.json())
-        .then(d => { if (d.status === 'success') setProbabilityData(d.data); })
-        .catch(console.error);
-
-      // Fetch backtest data with same filter parameters and time horizon
-      const daysBack = getDaysFromTimeHorizon(timeHorizon);
-      console.log('[BACKTEST] Fetching backtest data:', { symbol, daysBack, params: params.toString() });
-      const backtestResponse = await fetch(`/api/v1/analytics/recommendations/backtest/${symbol}?days_back=${daysBack}&${params}`, { headers });
-      const backtestResult = await backtestResponse.json();
-
-      console.log('[BACKTEST] Backtest result:', backtestResult);
-      if (backtestResult.status === 'success') {
-        setBacktestData(backtestResult.data.chart_data || []);
-        setBacktestMetadata(backtestResult.data);
-        console.log('[BACKTEST] Chart data set:', backtestResult.data.chart_data);
       } else {
-        console.error('[BACKTEST] Backtest failed:', backtestResult);
-        setBacktestData([]);
-        setBacktestMetadata(null);
+        setMatrix({});
+        setError(matrixResult.message || 'Failed to load recommendation matrix.');
       }
-
-      // Fetch combined statistics with same filter parameters and time horizon
-      const statsResponse = await fetch(`/api/v1/analytics/recommendations/combined-stats/${symbol}?days_back=${daysBack}&${params}`, { headers });
-      const statsResult = await statsResponse.json();
-
-      if (statsResult.status === 'success') {
-        setCombinedStats(statsResult.data);
-      }
-
-      // Automatically fetch strategy validation data for the integrated view
-      fetchStrategyValidationData(symbol);
 
       // If chartSource is explicitly set to Walk-Forward, we must refetch it as well because logic changed
       // This ensures chart and stats stay in sync when switching logic (Classic vs Stats)
       if (chartSource === 'walkforward') {
         // Use the current logic to fetch
-        fetch(`/api/v1/analytics/recommendations/walk-forward/${symbol}?selection_logic=${logic}`, { method: 'POST', headers })
+        fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${symbol}?selection_logic=${logic}`, { method: 'POST', headers })
           .then(r => r.json()).then(d => {
             if (d.status === 'success') {
               setWalkForwardData({ ...d.data, logic });
@@ -712,16 +672,25 @@ const Recommendations: React.FC = () => {
           .catch(console.error);
       }
 
-      // Fetch time-filtered statistics
-      await fetchTimeFilteredStats(symbol, daysBack);
-
     } catch (err) {
       console.error('Error fetching recommendation data:', err);
       setError('Failed to load recommendation data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterSettings, matrixViewMode, chartSource]);
+
+  // Fetch available symbols
+  useEffect(() => {
+    fetchSymbols();
+  }, [fetchSymbols]);
+
+  // Fetch data when symbol, settings, or time horizon change
+  useEffect(() => {
+    if (selectedSymbol) {
+      fetchRecommendationData(selectedSymbol);
+    }
+  }, [selectedSymbol, fetchRecommendationData]);
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -745,9 +714,6 @@ const Recommendations: React.FC = () => {
     return matrix[timeSlot]?.[dayOfWeek];
   };
 
-  const handleSettingsChange = (newSettings: FilterSettings) => {
-    setFilterSettings(newSettings);
-  };
 
   const handleApplySettings = () => {
     if (selectedSymbol) {
@@ -756,30 +722,62 @@ const Recommendations: React.FC = () => {
     }
   };
 
-  // Fetch time-filtered statistics
-  const fetchTimeFilteredStats = async (symbol: string, daysBack: number) => {
+  const fetchDeepAnalyticsProfile = async () => {
+    if (!selectedSymbol) return;
+    setIsAnalyticsLoading(true);
+    setStaleAnalytics(false);
+    
+    let logic = 'classic';
+    if (matrixViewMode === 'probability') logic = 'statistical';
+    if (matrixViewMode === 'ensemble') logic = 'ensemble';
+    if (matrixViewMode === 'persistence') logic = 'persistence';
+
+    const params = new URLSearchParams({
+      min_avg_profit: filterSettings.minAvgProfit.toString(),
+      min_win_rate: filterSettings.minWinRate.toString(),
+      min_trades: filterSettings.minTrades.toString(),
+      min_persistence: filterSettings.minPersistence.toString(),
+      selection_logic: logic
+    });
+
+    if (selectedMatrixBins.length > 0) {
+      params.append('target_slots', selectedMatrixBins.map(b => b.key).join(','));
+    }
+
     try {
       const token = localStorage.getItem('authToken');
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const params = new URLSearchParams({
-        days_back: daysBack.toString(),
-        min_avg_profit: filterSettings.minAvgProfit.toString(),
-        min_win_rate: filterSettings.minWinRate.toString(),
-        min_trades: filterSettings.minTrades.toString()
-      });
+      const daysBack = getDaysFromTimeHorizon(timeHorizon);
+      
+      // Parallel fetch for speed
+      const [backtestResp, statsResp] = await Promise.all([
+        fetch(`${getApiV1BaseUrl()}/analytics/recommendations/backtest/${selectedSymbol}?days_back=${daysBack}&${params}`, { headers }),
+        fetch(`${getApiV1BaseUrl()}/analytics/recommendations/combined-stats/${selectedSymbol}?days_back=${daysBack}&${params}`, { headers })
+      ]);
 
-      const response = await fetch(`/api/v1/analytics/recommendations/combined-stats/${symbol}?${params}`, { headers });
-      const result = await response.json();
+      const backtestJson = await backtestResp.json();
+      const statsJson = await statsResp.json();
 
-      if (result.status === 'success') {
-        setTimeFilteredStats(result.data);
+      if (backtestJson.status === 'success') {
+        setBacktestData(backtestJson.data.chart_data || []);
+        setBacktestMetadata(backtestJson.data);
       }
-    } catch (error) {
-      console.error('Error fetching time-filtered stats:', error);
+
+      if (statsJson.status === 'success') {
+        setCombinedStats(statsJson.data);
+      }
+
+      setAnalyticsLoaded(true);
+    } catch (err) {
+      console.error('Error fetching deep analytics:', err);
+      setError('Failed to load analytical profile.');
+    } finally {
+      setIsAnalyticsLoading(false);
     }
   };
+
 
   // Fetch validation data for the entire recommendation strategy
   const fetchStrategyValidationData = async (symbol: string = selectedSymbol) => {
@@ -803,7 +801,7 @@ const Recommendations: React.FC = () => {
       });
 
       // Fetch the complete trade list (same as CSV export)
-      const tradesResponse = await fetch(`/api/v1/analytics/recommendations/backtest/${symbol}?${params}`, { headers });
+      const tradesResponse = await fetch(`${getApiV1BaseUrl()}/analytics/recommendations/backtest/${symbol}?${params}`, { headers });
       if (!tradesResponse.ok) {
         throw new Error(`Trades API failed: ${tradesResponse.status}`);
       }
@@ -819,7 +817,7 @@ const Recommendations: React.FC = () => {
         // Try to fetch advanced analytics if available
         let advancedAnalytics = null;
         try {
-          const advancedResponse = await fetch(`/api/v1/recommendations/advanced?min_confidence=0.0`, { headers });
+          const advancedResponse = await fetch(`${getApiV1BaseUrl()}/recommendations/advanced?min_confidence=0.0`, { headers });
           if (advancedResponse.ok) {
             const advancedData = await advancedResponse.json();
             if (advancedData.status === 'success' && advancedData.data?.length > 0) {
@@ -1055,11 +1053,6 @@ const Recommendations: React.FC = () => {
     };
   };
 
-  // Handle showing validation for the entire strategy
-  const handleShowStrategyValidation = () => {
-    setActiveTab('validation');
-    fetchStrategyValidationData();
-  };
 
   // Backtest functions
   const runBacktest = async () => {
@@ -1080,7 +1073,7 @@ const Recommendations: React.FC = () => {
 
       for (const timeSlot of timeSlots) {
         const [hour, minute] = timeSlot.split(':').map(Number);
-        for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) { // Sun-Fri (0-5)
+        for (const dayOfWeek of matrixDayIndices) {
           const cellData = getCellData(timeSlot, dayOfWeek);
           if (cellData && cellData.best_account) {
             timeBins.push({
@@ -1130,7 +1123,7 @@ const Recommendations: React.FC = () => {
 
       // Start backtest
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/backtesting/run', {
+      const response = await fetch(`${getApiBacktestingBaseUrl()}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1166,7 +1159,7 @@ const Recommendations: React.FC = () => {
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const response = await fetch(`/api/backtesting/status/${backtestId}`, { headers });
+        const response = await fetch(`${getApiBacktestingBaseUrl()}/status/${backtestId}`, { headers });
         if (!response.ok) {
           throw new Error('Failed to get backtest status');
         }
@@ -1204,7 +1197,7 @@ const Recommendations: React.FC = () => {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const response = await fetch(`/api/backtesting/results/${backtestId}?include_trades=true&include_daily_returns=true`, { headers });
+      const response = await fetch(`${getApiBacktestingBaseUrl()}/results/${backtestId}?include_trades=true&include_daily_returns=true`, { headers });
       if (!response.ok) {
         throw new Error('Failed to fetch backtest results');
       }
@@ -1217,76 +1210,11 @@ const Recommendations: React.FC = () => {
     }
   };
 
-  // Export trades to CSV
-  const exportTradesToCSV = async () => {
-    if (!selectedSymbol || !backtestMetadata) return;
 
-    try {
-      const daysBack = getDaysFromTimeHorizon(timeHorizon);
-      const params = new URLSearchParams({
-        days_back: daysBack.toString(),
-        min_avg_profit: filterSettings.minAvgProfit.toString(),
-        min_win_rate: filterSettings.minWinRate.toString(),
-        min_trades: filterSettings.minTrades.toString(),
-        export: 'true'
-      });
-
-      const token = localStorage.getItem('authToken');
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch(`/api/v1/analytics/recommendations/backtest/${selectedSymbol}?${params}`, { headers });
-      const result = await response.json();
-
-      if (result.status === 'success' && result.data.trades) {
-        // Convert trades to CSV
-        const trades = result.data.trades;
-        const headers = ['Date', 'Time', 'Account', 'Symbol', 'Entry Time', 'Exit Time', 'Profit/Loss', 'Time Slot', 'Day of Week'];
-
-        const csvContent = [
-          headers.join(','),
-          ...trades.map((trade: any) => [
-            trade.date,
-            trade.entry_time,
-            trade.account_name,
-            trade.symbol,
-            trade.entry_time,
-            trade.exit_time || '',
-            trade.profit_loss,
-            trade.time_slot,
-            trade.day_of_week
-          ].join(','))
-        ].join('\n');
-
-        // Download CSV
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `${selectedSymbol}_strategy_trades_${timeHorizon}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (error) {
-      console.error('Error exporting trades:', error);
-      alert('Failed to export trades. Please try again.');
-    }
-  };
-
-  const getCellClass = (cellData: any) => {
-    if (!cellData) return 'matrix-cell empty';
-
-    if (cellData.avg_trade > 50) return 'matrix-cell excellent';
-    if (cellData.avg_trade > 0) return 'matrix-cell good';
-    if (cellData.avg_trade > -50) return 'matrix-cell neutral';
-    return 'matrix-cell poor';
-  };
 
   // Function to check if a time slot has any recommendations
   const hasRecommendations = (timeSlot: string): boolean => {
-    for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) { // 0-5 (Sun-Fri)
+    for (const dayOfWeek of matrixDayIndices) {
       if (getCellData(timeSlot, dayOfWeek)) {
         return true;
       }
@@ -1318,6 +1246,8 @@ const Recommendations: React.FC = () => {
         <div className="dashboard-tabs">
           {[
             { id: 'matrix', label: 'Matrix', icon: '📅' },
+            { id: 'comparison', label: 'Method Bake-Off', icon: '⚖️' },
+            { id: 'correlation', label: 'Correlation', icon: '🔗' },
             { id: 'walkforward', label: 'Walk-Forward', icon: '🔄' },
             { id: 'vix', label: 'VIX', icon: '🌊' },
             { id: 'backtest', label: 'Sim', icon: '🧪' },
@@ -1336,17 +1266,12 @@ const Recommendations: React.FC = () => {
                   const token = localStorage.getItem('authToken');
                   const headers: HeadersInit = { 'Content-Type': 'application/json' };
                   if (token) headers['Authorization'] = `Bearer ${token}`;
-                  fetch(`/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`, { headers })
+                  fetch(`${getApiV1BaseUrl()}/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`, { headers })
                     .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); })
                     .catch(console.error).finally(() => setIsLoadingProbability(false));
                 } else if (tab.id === 'walkforward' && !walkForwardData) {
-                  setIsLoadingWalkForward(true);
-                  const token = localStorage.getItem('authToken');
-                  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-                  if (token) headers['Authorization'] = `Bearer ${token}`;
-                  fetch(`/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST', headers })
-                    .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData(d.data); })
-                    .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                  // Do not auto-calculate. Let user click 'Run Validation' for either 'All Data' or 'Target Selection'
+                  console.log('Walk-Forward tab opened - waiting for user execution.');
                 }
               }}
             >
@@ -1354,6 +1279,19 @@ const Recommendations: React.FC = () => {
             </button>
           ))}
         </div>
+        {selectedMatrixBins.length > 0 && (
+          <div style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', background: '#7c3aed', color: 'white', padding: '1px 8px', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🕵️ Selection Audit Active ({selectedMatrixBins.length})
+            </span>
+            <button 
+              onClick={clearMatrixSelections}
+              style={{ marginLeft: '6px', fontSize: '10px', color: '#a78bfa', background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         <div className="header-controls">
           <div className="premium-select-group">
@@ -1379,41 +1317,49 @@ const Recommendations: React.FC = () => {
         <main className="dashboard-container">
           <div className="metrics-row">
             <div className="premium-card kpi-card">
-              <span className="metric-label">Net Cumulative Profit</span>
-              <span className={`metric-value ${backtestMetadata?.total_pnl >= 0 ? 'kpi-success' : 'kpi-error'}`}>
-                {formatCurrency(backtestMetadata?.total_pnl || 0)}
+              <span className="metric-label">{activeTab === 'walkforward' ? 'NET OOS PROFIT' : 'NET CUMULATIVE PROFIT'}</span>
+              <span className={`metric-value ${((() => {
+                if (activeTab === 'walkforward') {
+                  return walkForwardData?.aggregate?.total_oos_pnl
+                    ?? walkForwardData?.folds?.reduce((s: number, f: any) => s + (f.total_pnl || 0), 0)
+                    ?? 0;
+                }
+                return backtestMetadata?.total_pnl ?? 0;
+              })()) >= 0 ? 'kpi-success' : 'kpi-error'}`}>
+                {formatCurrency((() => {
+                  if (activeTab === 'walkforward') {
+                    return walkForwardData?.aggregate?.total_oos_pnl
+                      ?? walkForwardData?.folds?.reduce((s: number, f: any) => s + (f.total_pnl || 0), 0)
+                      ?? 0;
+                  }
+                  return backtestMetadata?.total_pnl ?? 0;
+                })())}
               </span>
               <div className="metric-icon-bg">💰</div>
             </div>
             <div className="premium-card kpi-card">
               <span className="metric-label">Ensemble Win Rate</span>
               <span className="metric-value kpi-success">
-                {(combinedStats?.combined_metrics.win_rate || 0).toFixed(1)}%
+                {((walkForwardData?.aggregate?.mean_win_rate ?? combinedStats?.combined_metrics.win_rate ?? 0)).toFixed(1)}%
               </span>
               <div className="metric-icon-bg">🎯</div>
             </div>
             <div className="premium-card kpi-card">
               <span className="metric-label">Annualized Sharpe</span>
               <span className="metric-value kpi-warning">
-                {(combinedStats?.combined_metrics.sharpe_ratio || 0).toFixed(2)}
+                {((walkForwardData?.aggregate?.mean_sharpe ?? combinedStats?.combined_metrics.sharpe_ratio ?? 0)).toFixed(2)}
               </span>
               <div className="metric-icon-bg">📈</div>
             </div>
             <div className="premium-card kpi-card">
               <span className="metric-label">Max Drawdown</span>
               <span className="metric-value kpi-error">
-                {combinedStats?.combined_metrics.max_drawdown_pct ? (
-                  `${combinedStats.combined_metrics.max_drawdown_pct.toFixed(1)}%`
-                ) : (
-                  backtestMetadata?.total_pnl > 0 ?
-                    `${(Math.abs(combinedStats?.combined_metrics.max_drawdown || 0) / backtestMetadata.total_pnl * 100).toFixed(1)}%` :
-                    formatCurrency(combinedStats?.combined_metrics.max_drawdown || 0)
-                )}
-                {combinedStats?.combined_metrics.max_drawdown_pct || backtestMetadata?.total_pnl > 0 ? (
-                  <span style={{ fontSize: '12px', marginLeft: '4px', verticalAlign: 'middle', fontWeight: 600, opacity: 0.8 }}>
-                    ({formatCurrency(combinedStats?.combined_metrics.max_drawdown || 0)})
-                  </span>
-                ) : null}
+                {walkForwardData?.aggregate?.max_drawdown
+                  ? formatCurrency(-walkForwardData.aggregate.max_drawdown)
+                  : combinedStats?.combined_metrics.max_drawdown_pct
+                    ? `${combinedStats.combined_metrics.max_drawdown_pct.toFixed(1)}%`
+                    : formatCurrency(combinedStats?.combined_metrics.max_drawdown || 0)
+                }
               </span>
               <div className="metric-icon-bg">📉</div>
             </div>
@@ -1422,13 +1368,30 @@ const Recommendations: React.FC = () => {
 
           <section className="tab-content-area">
             {activeTab === 'matrix' && (
-              <div style={{ marginBottom: '12px' }}>
-                <div className="premium-info-box" style={{ margin: 0, padding: '10px 16px', borderLeft: '4px solid var(--accent-color)', display: 'flex', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                    <span style={{ fontSize: '18px' }}>🧩</span> Strategy Ensemble Matrix
-                  </h4>
+              <>
+                <div style={{ marginBottom: '20px' }}>
+                  <div className="premium-info-box" style={{ margin: '0 0 15px 0', padding: '12px 20px', borderLeft: '4px solid #6366f1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 100%)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>🔮</span>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Weekly Prediction Outlook</h4>
+                        <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Active trading guidance based on recursive ensemble intelligence for {selectedSymbol}.</p>
+                      </div>
+                    </div>
+                    <div className="live-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>
+                      <span className="pulse-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></span>
+                      LIVE GUIDANCE
+                    </div>
+                  </div>
                 </div>
-              </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <div className="premium-info-box" style={{ margin: 0, padding: '10px 16px', borderLeft: '4px solid var(--accent-color)', display: 'flex', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                      <span style={{ fontSize: '18px' }}>🧩</span> Strategy Ensemble Matrix
+                    </h4>
+                  </div>
+                </div>
+              </>
             )}
 
 
@@ -1440,12 +1403,29 @@ const Recommendations: React.FC = () => {
                       <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Recommendation Matrix</h3>
                       <div className="dashboard-tabs" style={{ margin: 0, padding: '2px' }}>
                         <button
+                          className={`dashboard-tab ${matrixViewMode === 'persistence' ? 'active' : ''}`}
+                          onClick={() => {
+                            setMatrixViewMode('persistence');
+                            if (chartSource === 'walkforward') {
+                              setIsLoadingWalkForward(true);
+                              fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=persistence`, { method: 'POST' })
+                                .then(r => r.json()).then(d => {
+                                  if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'persistence' });
+                                })
+                                .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                            }
+                          }}
+                          style={{ padding: '4px 12px', fontSize: '11px' }}
+                        >
+                          Persistence
+                        </button>
+                        <button
                           className={`dashboard-tab ${matrixViewMode === 'standard' ? 'active' : ''}`}
                           onClick={() => {
                             setMatrixViewMode('standard');
                             if (chartSource === 'walkforward') {
                               setIsLoadingWalkForward(true);
-                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=classic`, { method: 'POST' })
+                              fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=classic`, { method: 'POST' })
                                 .then(r => r.json()).then(d => {
                                   if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'classic' });
                                 })
@@ -1461,12 +1441,12 @@ const Recommendations: React.FC = () => {
                           onClick={() => {
                             setMatrixViewMode('probability');
                             if (!probabilityData) {
-                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
+                              fetch(`${getApiV1BaseUrl()}/analytics/recommendations/matrix/${selectedSymbol}/probability?days_back=90`)
                                 .then(r => r.json()).then(d => { if (d.status === 'success') setProbabilityData(d.data); });
                             }
                             if (chartSource === 'walkforward') {
                               setIsLoadingWalkForward(true);
-                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=statistical`, { method: 'POST' })
+                              fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=statistical`, { method: 'POST' })
                                 .then(r => r.json()).then(d => {
                                   if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'statistical' });
                                 })
@@ -1483,7 +1463,7 @@ const Recommendations: React.FC = () => {
                             setMatrixViewMode('ensemble');
                             if (chartSource === 'walkforward') {
                               setIsLoadingWalkForward(true);
-                              fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=ensemble`, { method: 'POST' })
+                              fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=ensemble`, { method: 'POST' })
                                 .then(r => r.json()).then(d => {
                                   if (d.status === 'success') setWalkForwardData({ ...d.data, logic: 'ensemble' });
                                 })
@@ -1496,6 +1476,18 @@ const Recommendations: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                    {isLoading && (
+                      <div className="recalc-banner">
+                        <div className="recalc-banner-row">
+                          <div className="recalc-spinner"></div>
+                          <div className="recalc-label">Updating matrix for {selectedSymbol}</div>
+                          <div className="recalc-sub">{getTimeHorizonLabel(timeHorizon)}</div>
+                        </div>
+                        <div className="recalc-bar-track">
+                          <div className="recalc-bar-fill"></div>
+                        </div>
+                      </div>
+                    )}
 
                     <div style={{
                       padding: '10px 16px',
@@ -1508,9 +1500,11 @@ const Recommendations: React.FC = () => {
                       gap: '12px',
                       border: '1px solid rgba(99, 102, 241, 0.1)'
                     }}>
-                      <span style={{ fontSize: '14px' }}>{matrixViewMode === 'standard' ? '📊' : '📐'}</span>
+                      <span style={{ fontSize: '14px' }}>{matrixViewMode === 'standard' ? '📊' : matrixViewMode === 'persistence' ? '🧱' : '📐'}</span>
                       <div>
-                        {matrixViewMode === 'standard' ? (
+                        {matrixViewMode === 'persistence' ? (
+                          <span><strong>Persistence Selection:</strong> Ranks by <strong>Profitable Months %</strong> first, then avg trade. <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ Avg Trade</strong> | <strong>% Win Rate</strong></span></span>
+                        ) : matrixViewMode === 'standard' ? (
                           <span><strong>Classic Selection:</strong> Ranks models by <strong>Avg Profit → Win Rate</strong>. <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ Avg Trade</strong> | <strong>% Win Rate</strong></span></span>
                         ) : matrixViewMode === 'probability' ? (
                           <span><strong>Statistical Selection:</strong> Ranks models by <strong>CWEV</strong> (Confidence-Weighted EV). <span style={{ marginLeft: '8px', opacity: 0.9 }}>Values: <strong>$ CWEV</strong> | <strong>% Probability &gt; 0</strong></span></span>
@@ -1520,87 +1514,434 @@ const Recommendations: React.FC = () => {
                       </div>
                     </div>
 
-                    <RecommendationMatrix
-                      matrix={matrix}
-                      probabilityMatrix={probabilityData?.probability_matrix}
-                      viewMode={matrixViewMode}
-                      timeSlots={getTimeSlots()}
-                      dayNames={dayNames}
-                      formatCurrency={formatCurrency}
-                    />
+                    <div style={{
+                      fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, padding: '10px 14px',
+                      background: 'rgba(15, 23, 42, 0.35)', borderRadius: 8, border: '1px solid var(--border-color)', lineHeight: 1.5,
+                    }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Using this screen</strong>
+                      {' '}The matrix shows one winning permutation per time slot and day (Persistence / Classic / Statistical / Ensemble).{' '}
+                      <strong>Best Bins</strong> does not change rankings — it only highlights cells that pass a conservative risk screen for your account size; faded cells still have a winner, they just failed that screen (sample size, profit factor, or loss size vs account).{' '}
+                      Statistical vs Ensemble changes <em>who</em> wins each cell, not the Best Bins math (both use the same API filters).{' '}
+                      The “Weekly Prediction / LIVE GUIDANCE” banner is a label for this view, not a separate live data feed.
+                      <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><small style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></small> <strong>Stable</strong>: Healthy Performance</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><small style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }}></small> <strong>Drifting</strong>: Minor Variance</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><small style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}></small> <strong>Critical</strong>: Severe Degradation</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><small style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }}></small> <strong>New</strong>: Limited History</span>
+                      </div>
+                    </div>
+
+                    {/* Best Bins + Regime overlay toolbar */}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10, padding: '8px 12px', background: 'rgba(251,191,36,0.06)', borderRadius: 8, border: '1px solid rgba(251,191,36,0.15)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Account Size $</span>
+                        <input
+                          type="number"
+                          value={bestBinsAccountSize}
+                          min={500}
+                          step={500}
+                          onChange={e => setBestBinsAccountSize(Number(e.target.value))}
+                          style={{ width: 80, padding: '3px 7px', borderRadius: 6, border: '1px solid #3a4460', background: '#151c2e', color: '#e2e8f0', fontSize: 12 }}
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!bestBinsActive) {
+                            await loadBestBins(bestBinsAccountSize);
+                            setBestBinsActive(true);
+                          } else {
+                            setBestBinsActive(false);
+                            setBestBinsData(null);
+                            setBestBinsMap({});
+                          }
+                        }}
+                        disabled={bestBinsLoading}
+                        style={{
+                          padding: '5px 14px', borderRadius: 7,
+                          background: bestBinsActive ? '#fbbf24' : '#1e2a3a',
+                          color: bestBinsActive ? '#000' : '#fbbf24',
+                          border: '1px solid #fbbf24',
+                          fontWeight: 700, fontSize: 12, cursor: bestBinsLoading ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {bestBinsLoading ? 'Loading...' : bestBinsActive ? '★ Best Bins ON' : '☆ Best Bins for $' + bestBinsAccountSize}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!regimeOverlayActive) {
+                            if (!regimeMatrixData) await loadRegimeOverlay();
+                            setRegimeOverlayActive(true);
+                          } else {
+                            setRegimeOverlayActive(false);
+                          }
+                        }}
+                        disabled={regimeLoading}
+                        style={{
+                          padding: '5px 14px', borderRadius: 7,
+                          background: regimeOverlayActive ? '#10b981' : '#1e2a3a',
+                          color: regimeOverlayActive ? '#000' : '#10b981',
+                          border: '1px solid #10b981',
+                          fontWeight: 700, fontSize: 12, cursor: regimeLoading ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {regimeLoading ? 'Loading...' : regimeOverlayActive ? '🛡 Regime Risk ON' : '🛡 Show Regime Risk'}
+                      </button>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b' }}>
+                        Min Persistence %
+                        <input
+                          type="number"
+                          min={50}
+                          max={100}
+                          step={1}
+                          value={filterSettings.minPersistence}
+                          onChange={e => setFilterSettings(prev => ({ ...prev, minPersistence: Number(e.target.value) || 60 }))}
+                          style={{ width: 64, padding: '3px 6px', borderRadius: 6, border: '1px solid #3a4460', background: '#151c2e', color: '#e2e8f0', fontSize: 12 }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b' }}>
+                        Min Trades
+                        <input
+                          type="number"
+                          min={25}
+                          step={25}
+                          value={filterSettings.minTrades}
+                          onChange={e => setFilterSettings(prev => ({ ...prev, minTrades: Number(e.target.value) || 100 }))}
+                          style={{ width: 64, padding: '3px 6px', borderRadius: 6, border: '1px solid #3a4460', background: '#151c2e', color: '#e2e8f0', fontSize: 12 }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b' }}>
+                        Min Avg $
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={filterSettings.minAvgProfit}
+                          onChange={e => setFilterSettings(prev => ({ ...prev, minAvgProfit: Number(e.target.value) || 12 }))}
+                          style={{ width: 62, padding: '3px 6px', borderRadius: 6, border: '1px solid #3a4460', background: '#151c2e', color: '#e2e8f0', fontSize: 12 }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#0d9488', fontWeight: 600 }}>
+                        Min Stat Edge %
+                        <input
+                          type="number"
+                          min={0}
+                          max={99}
+                          step={5}
+                          value={minReliability}
+                          onChange={e => setMinReliability(Number(e.target.value))}
+                          style={{ width: 60, padding: '3px 6px', borderRadius: 6, border: '1px solid #0d9488', background: '#0d94881a', color: '#ecfdf5', fontSize: 12, fontWeight: 700 }}
+                        />
+                      </label>
+                      {bestBinsActive && bestBinsData && (
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                          {(bestBinsData.qualified_bins?.length ?? 0) === 0
+                            ? '0 bins passed filters — faded cells still show matrix winners; relax Filters or account size'
+                            : `${bestBinsData.qualified_bins?.length ?? 0} bin(s) pass risk filter — gold border + rank; faded = failed screen only`}
+                        </span>
+                      )}
+                      {regimeOverlayActive && (
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                          🛡=all regimes · ⚠=2/3 · 🚨=1 regime only
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: selectedMatrixBins.length > 0 ? '#2563eb' : '#94a3b8' }}>
+                        {selectedMatrixBins.length > 0
+                          ? `${selectedMatrixBins.length} bin(s) selected — right panels are paused until Apply/Clear`
+                          : 'Click a matrix cell to select custom bins for focused recalculation'}
+                      </span>
+                    </div>
+
+                    {bestBinsActive && bestBinsData && (bestBinsData.qualified_bins?.length ?? 0) === 0 && (
+                      <div style={{
+                        marginBottom: 12, padding: '12px 16px', borderRadius: 8, borderLeft: '4px solid #f59e0b',
+                        background: 'rgba(245, 158, 11, 0.08)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55,
+                      }}>
+                        <strong style={{ color: '#b45309' }}>No bins qualified for ${bestBinsAccountSize.toLocaleString()}</strong>
+                        {' '}with current rules (min trades, win rate, avg profit, profit factor, max loss vs account). The matrix is not empty — dimmed cells still contain the ranked winner; they did not pass the small-account safety filter. Try:{' '}
+                        <strong>Filters</strong> tab → lower Min Trades or Min Win Rate, or raise Account Size above, then turn Best Bins off and on again.
+                      </div>
+                    )}
+
+                    <div style={{
+                      position: 'relative',
+                      opacity: isLoading ? 0.35 : 1,
+                      filter: isLoading ? 'grayscale(0.5) blur(1px)' : 'none',
+                      transition: 'all 0.4s ease-in-out',
+                      pointerEvents: isLoading ? 'none' : 'auto'
+                    }}>
+                      <RecommendationMatrix
+                        matrix={matrix}
+                        probabilityMatrix={probabilityData?.probability_matrix}
+                        viewMode={matrixViewMode}
+                        timeSlots={getTimeSlots()}
+                        dayNames={dayNames}
+                        dayIndices={matrixDayIndices}
+                        formatCurrency={formatCurrency}
+                        bestBinsActive={bestBinsActive}
+                        bestBinsMap={bestBinsMap}
+                        regimeOverlayActive={regimeOverlayActive}
+                        regimeMatrix={regimeMatrixData}
+                        selectedBinKeys={new Set(selectedMatrixBins.map(b => b.key))}
+                        onToggleBinSelection={handleToggleMatrixBinSelection}
+                        minReliability={minReliability}
+                      />
+                    </div>
+                  {/* Best Bins Top 5 Summary Card */}
+                  {bestBinsActive && bestBinsData?.top_5?.length > 0 && (
+                    <div style={{ marginTop: 14, background: '#1a2535', border: '2px solid #fbbf24', borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontWeight: 700, color: '#fbbf24', fontSize: 14, marginBottom: 10 }}>
+                        Top {bestBinsData.top_5.length} of {bestBinsData.qualified_bins?.length ?? bestBinsData.top_5.length} Qualified Bins for ${bestBinsData.account_size?.toLocaleString()} Account
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                        {bestBinsData.top_5.map((b: any, i: number) => (
+                          <div key={i} style={{
+                            background: '#151c2e', borderRadius: 8, padding: '8px 14px',
+                            border: '1px solid rgba(251,191,36,0.3)', minWidth: 160,
+                          }}>
+                            <div style={{ fontSize: 10, color: '#fbbf24', fontWeight: 700, marginBottom: 3 }}>#{i + 1} — Score {b.composite_score.toFixed(3)}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>{b.time_slot} {dayNameByIndex[Number(b.day_of_week)] ?? ''}</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{b.best_account}</div>
+                            <div style={{ fontSize: 11, marginTop: 4, display: 'flex', gap: 8 }}>
+                              <span style={{ color: '#4ade80' }}>WR {b.win_rate.toFixed(0)}%</span>
+                              <span style={{ color: '#60a5fa' }}>PF {b.profit_factor.toFixed(1)}</span>
+                            </div>
+                            <div style={{ fontSize: 10, color: '#f87171', marginTop: 2 }}>
+                              Worst-case daily: {formatCurrency(b.worst_case_daily_loss)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
 
-                <div className="split-column">
-                  <div className="premium-card" style={{ padding: '16px' }}>
-                    <div className="chart-header" style={{ marginBottom: '12px' }}>
-                      <h2 style={{ fontSize: '15px', margin: 0 }}>Strategy Intelligence Curve (In-Sample)</h2>
-                    </div>
-
-                    {/* Date Range Display */}
-                    <div style={{ padding: '0 0 8px 0', marginTop: '-4px', fontSize: '11px', color: '#888', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ opacity: 0.7 }}>📅 Data Range:</span>
-                      <span style={{ fontWeight: 500, color: '#ccc' }}>
-                        {backtestMetadata?.start_date && backtestMetadata?.end_date ?
-                          `${backtestMetadata.start_date} — ${backtestMetadata.end_date}` : 'Loading...'}
-                      </span>
-                    </div>
-                    <InteractiveChart
-                      data={backtestData}
-                      formatCurrency={formatCurrency}
-                      height={400}
-                    />
-                  </div>
-
-                  {/* Integrated Validation & Risk Section */}
-                  <div style={{ marginTop: '20px' }}>
-                    <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '16px' }}>🔬</span> Deep Validation Audit
-                      </h3>
-                      <button
-                        className="premium-button secondary"
-                        style={{ padding: '2px 8px', fontSize: '11px', height: '24px' }}
-                        onClick={() => fetchStrategyValidationData(selectedSymbol)}
-                        disabled={isLoadingValidation}
+                 <div className="split-column">
+                  <div style={{ position: 'relative' }}>
+                  {!analyticsLoaded ? (
+                    <div className="premium-card analytics-unlock-card" style={{ 
+                      padding: '40px 20px', 
+                      textAlign: 'center', 
+                      minHeight: '600px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%)',
+                      border: '1px dashed var(--accent-color)',
+                    }}>
+                      <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔐</div>
+                      <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '10px' }}>Deep Analytics Locked</h3>
+                      <p style={{ maxWidth: '350px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.6, marginBottom: '30px' }}>
+                        The Recommendation Matrix is ready. To view the <strong>Strategy Intelligence Curve</strong> and <strong>Monte Carlo Risk Profile</strong>, click below to run the heavy analytical audit.
+                      </p>
+                      <button 
+                        className="premium-button" 
+                        style={{ padding: '12px 30px', fontSize: '14px' }}
+                        onClick={fetchDeepAnalyticsProfile}
+                        disabled={isAnalyticsLoading}
                       >
-                        {isLoadingValidation ? '...' : '🔄 Refresh Audit'}
+                        {isAnalyticsLoading ? '🧮 RUNNING AUDIT...' : '🚀 RUN STRATEGY INTELLIGENCE AUDIT'}
                       </button>
                     </div>
-
-                    <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
-                      <div className="premium-card" style={{ padding: '16px', minHeight: '180px' }}>
-                        {isLoadingValidation ? (
-                          <div className="monte-carlo-placeholder">
-                            <div className="loading-spinner" style={{ marginBottom: '15px' }}></div>
-                            <p>Performing deep statistical audit...</p>
-                          </div>
-                        ) : validationData ? (
-                          <StrategyValidation
-                            validationData={validationData}
-                            formatCurrency={formatCurrency}
-                            getTimeHorizonLabel={getTimeHorizonLabel}
-                            timeHorizon={timeHorizon}
-                          />
-                        ) : (
-                          <div className="monte-carlo-placeholder">
-                            <p>No validation data available for current filters.</p>
-                            <button className="premium-button" onClick={() => fetchStrategyValidationData(selectedSymbol)} style={{ marginTop: '12px' }}>
-                              Try Recalculating
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                  ) : (
+                    <div style={{
+                      filter: selectionPending ? 'blur(2px) grayscale(0.15)' : 'none',
+                      opacity: selectionPending ? 0.45 : 1,
+                      transition: 'all 140ms ease',
+                      pointerEvents: selectionPending ? 'none' : 'auto',
+                    }}>
+                      {staleAnalytics && (
+                        <div className="stale-analytics-warning" style={{
+                          padding: '8px 16px',
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          borderBottom: '1px solid rgba(245, 158, 11, 0.2)',
+                          color: '#f59e0b',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}>
+                          <span>⚠️ ANALYTICS MAY BE STALE</span>
+                          <button 
+                            onClick={fetchDeepAnalyticsProfile}
+                            style={{ 
+                              background: '#f59e0b', 
+                              color: '#fff', 
+                              border: 'none', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px', 
+                              fontSize: '10px', 
+                              cursor: 'pointer' 
+                            }}
+                          >
+                            REFRESH AUDIT
+                          </button>
+                        </div>
+                      )}
+                      
                       <div className="premium-card" style={{ padding: '16px' }}>
-                        <h3 style={{ marginBottom: '12px', fontSize: '15px' }}>🎲 Monte Carlo Risk Profile</h3>
-                        <MonteCarloChart
-                          accountName={selectedSymbol}
-                          showControls={true}
-                          height={300}
-                          simulationParams={{ num_simulations: 10000, time_horizon_days: 21 }}
+                        <div className="chart-header" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h2 style={{ fontSize: '15px', margin: 0 }}>
+                            Strategy Intelligence Curve (In-Sample)
+                            {selectedMatrixBins.length > 0 && (
+                              <span style={{ marginLeft: '10px', fontSize: '11px', background: 'rgba(37, 99, 235, 0.15)', color: '#2563eb', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(37, 99, 235, 0.2)' }}>
+                                🕵️ Filtered to {selectedMatrixBins.length} bin(s)
+                              </span>
+                            )}
+                          </h2>
+                          {selectedMatrixBins.length > 0 && backtestMetadata?.total_pnl !== undefined && (
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: backtestMetadata.total_pnl >= 0 ? '#10b981' : '#ef4444' }}>
+                              Selection PnL: {formatCurrency(backtestMetadata.total_pnl)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Date Range Display */}
+                        <div style={{ padding: '0 0 8px 0', marginTop: '-4px', fontSize: '11px', color: '#888', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ opacity: 0.7 }}>📅 Data Range:</span>
+                          <span style={{ fontWeight: 500, color: '#ccc' }}>
+                            {backtestMetadata?.start_date && backtestMetadata?.end_date ?
+                              `${backtestMetadata.start_date} — ${backtestMetadata.end_date}` : 'Loading...'}
+                          </span>
+                        </div>
+                        <InteractiveChart
+                          data={backtestData}
+                          formatCurrency={formatCurrency}
+                          height={400}
                         />
                       </div>
+
+                      {/* Integrated Validation & Risk Section */}
+                      <div style={{ marginTop: '20px' }}>
+                        <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '16px' }}>🔬</span> Deep Validation Audit
+                            {selectedMatrixBins.length > 0 && (
+                              <span style={{ fontSize: '11px', fontWeight: 500, opacity: 0.7 }}>(Filtered Selection)</span>
+                            )}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            {selectedMatrixBins.length > 0 && backtestMetadata?.total_pnl !== undefined && (
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: backtestMetadata.total_pnl >= 0 ? '#10b981' : '#ef4444', padding: '2px 10px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.05)' }}>
+                                Total PnL: {formatCurrency(backtestMetadata.total_pnl)}
+                              </div>
+                            )}
+                            <button
+                              className="premium-button secondary"
+                              style={{ padding: '2px 8px', fontSize: '11px', height: '24px' }}
+                              onClick={fetchDeepAnalyticsProfile}
+                              disabled={isAnalyticsLoading}
+                            >
+                              {isAnalyticsLoading ? '...' : '🔄 Refresh Audit'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
+                          <div className="premium-card" style={{ padding: '16px', minHeight: '180px' }}>
+                            {isAnalyticsLoading ? (
+                              <div className="monte-carlo-placeholder">
+                                <div className="loading-spinner" style={{ marginBottom: '15px' }}></div>
+                                <p>Performing deep statistical audit...</p>
+                              </div>
+                            ) : validationData ? (
+                              <StrategyValidation
+                                validationData={validationData}
+                                formatCurrency={formatCurrency}
+                                getTimeHorizonLabel={getTimeHorizonLabel}
+                                timeHorizon={timeHorizon}
+                              />
+                            ) : (
+                              <div className="monte-carlo-placeholder">
+                                <p>No validation data available for current filters.</p>
+                                <button className="premium-button" onClick={fetchDeepAnalyticsProfile} style={{ marginTop: '12px' }}>
+                                  Try Recalculating
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="premium-card" style={{ padding: '16px' }}>
+                            <h3 style={{ marginBottom: '12px', fontSize: '15px' }}>🎲 Monte Carlo Risk Profile</h3>
+                            <MonteCarloChart
+                              accountName={selectedSymbol}
+                              showControls={true}
+                              height={300}
+                              targetSlots={selectedMatrixBins.length > 0 ? selectedMatrixBins.map(b => b.key).join(',') : undefined}
+                              simulationParams={{ num_simulations: 10000, time_horizon_days: 21 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                  )}
+                  {selectionPending && (
+                    <div style={{
+                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      zIndex: 7, pointerEvents: 'auto',
+                    }}>
+                      <div style={{
+                        background: 'rgba(15, 23, 42, 0.93)', border: '1px solid #2563eb', borderRadius: 10, padding: '12px 14px',
+                        width: 'min(520px, 92%)', boxShadow: '0 12px 30px rgba(2,6,23,0.45)',
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', marginBottom: 6 }}>
+                          Matrix selection changed
+                        </div>
+                        <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.45, marginBottom: 10 }}>
+                          You selected {selectedMatrixBins.length} bin(s). The right panels currently show the last global run.
+                          Click Refresh Audit / Re-run Simulation after clearing, or clear selection to return to global view.
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button className="premium-button secondary" onClick={clearMatrixSelections} style={{ padding: '6px 12px', fontSize: 12 }}>
+                            Clear Selection
+                          </button>
+                          <button className="premium-button" style={{ padding: '6px 12px', fontSize: 12, background: '#7c3aed', display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => {
+                            // Snapshot bins before clearing selection state
+                            const snapshotBins = selectedMatrixBins.map(b => b.key);
+                            const targetSlotsStr = snapshotBins.join(',');
+                            let logic = 'classic';
+                            if (matrixViewMode === 'probability') logic = 'statistical';
+                            if (matrixViewMode === 'ensemble') logic = 'ensemble';
+                            if (matrixViewMode === 'persistence') logic = 'persistence';
+                            const wfParams = new URLSearchParams({
+                              selection_logic: logic,
+                              training_days: String(lookbackWeeks === 0 ? 0 : lookbackWeeks * 7),
+                              testing_days: String(testWeeks * 7),
+                              step_days: String(testWeeks * 7),
+                              target_slots: targetSlotsStr
+                            });
+                            setWfTargetSlots(targetSlotsStr);
+                            setIsLoadingWalkForward(true);
+                            setIsLoadingPredictor(true);
+                            setActiveTab('walkforward');
+                            // Ensure in-sample data is also fetched for the same selection
+                            fetchDeepAnalyticsProfile();
+                            clearMatrixSelections();
+                            // WF Validation fetch
+                            fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?${wfParams}`, { method: 'POST' })
+                              .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData({ ...d.data, logic, filtered: true }); })
+                              .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                            // ML Predictor fetch — filtered to selected bins
+                            const predictorParams = new URLSearchParams({ lookback_weeks: String(lookbackWeeks), target_slots: targetSlotsStr });
+                            fetch(`${getApiV1BaseUrl()}/analytics/recommendations/predict-week/${selectedSymbol}?${predictorParams}`)
+                              .then(r => r.json()).then(d => { if (d.status === 'success') setPredictorData(d.data); })
+                              .catch(console.error).finally(() => setIsLoadingPredictor(false));
+                          }}>
+                            <span>📊</span> Run WF for Selection ({selectedMatrixBins.length})
+                          </button>
+                          <button className="premium-button" onClick={() => {
+                            setSelectionPending(false);
+                            fetchDeepAnalyticsProfile();
+                          }} style={{ padding: '6px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>🚀</span> Deep Selection Audit ({selectedMatrixBins.length})
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               </div>
@@ -1608,6 +1949,27 @@ const Recommendations: React.FC = () => {
 
             {activeTab === 'walkforward' && (
               <div className="tab-content-area">
+                {/* Filtered Audit banner */}
+                {wfTargetSlots && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    background: 'linear-gradient(90deg, rgba(124,58,237,0.15) 0%, rgba(124,58,237,0.05) 100%)',
+                    border: '1px solid rgba(124,58,237,0.4)', borderRadius: '8px',
+                    padding: '10px 16px', marginBottom: '16px'
+                  }}>
+                    <span style={{ fontSize: '18px' }}>🕵️</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa' }}>Filtered Audit Active — {wfTargetSlots.split(',').length} selected bins</div>
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>All WF folds, ML Predictor, and OOS curve are scoped to your selection. Change test step and re-run to keep the filter.</div>
+                    </div>
+                    <button
+                      onClick={() => { setWfTargetSlots(null); setWalkForwardData(null); }}
+                      style={{ fontSize: '11px', color: '#a78bfa', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '4px', padding: '3px 10px', cursor: 'pointer' }}
+                    >
+                      ✕ Clear Filter
+                    </button>
+                  </div>
+                )}
                 {/* WF Setup and Logic Explanation */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 350px) 1fr 1fr', gap: '20px', marginBottom: '24px' }}>
                   <div className="premium-card" style={{ padding: '20px', border: '1px solid var(--accent-color)' }}>
@@ -1620,6 +1982,7 @@ const Recommendations: React.FC = () => {
                         className="premium-select"
                         style={{ width: '100%', padding: '8px', fontSize: '13px' }}
                       >
+                        <option value="persistence">Persistence (% profitable months)</option>
                         <option value="standard">Classic ($ Avg Trade)</option>
                         <option value="probability">Statistical (CWEV)</option>
                         <option value="ensemble">Ensemble (Consensus 2.0)</option>
@@ -1628,15 +1991,19 @@ const Recommendations: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                       <div className="filter-group">
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>Train Log (Weeks)</label>
-                        <input
-                          type="number"
-                          value={lookbackWeeks}
-                          onChange={(e) => setLookbackWeeks(parseInt(e.target.value) || 1)}
+                        <select
+                          value={lookbackWeeks === 0 ? '0' : String(lookbackWeeks)}
+                          onChange={(e) => setLookbackWeeks(parseInt(e.target.value))}
                           className="premium-input"
-                          style={{ width: '100%', padding: '8px', fontSize: '13px' }}
-                          min="4"
-                          max="52"
-                        />
+                          style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', color: 'var(--text-primary)' }}
+                        >
+                          <option value="0">📦 All Data</option>
+                          <option value="4">4 weeks</option>
+                          <option value="8">8 weeks</option>
+                          <option value="13">13 weeks</option>
+                          <option value="26">26 weeks</option>
+                          <option value="52">52 weeks</option>
+                        </select>
                       </div>
                       <div className="filter-group">
                         <label style={{ fontSize: '12px', display: 'block', marginBottom: '6px' }}>Test Step (Weeks)</label>
@@ -1651,33 +2018,72 @@ const Recommendations: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <button
-                      className="premium-button"
-                      style={{ width: '100%', marginTop: '5px' }}
-                      onClick={() => {
-                        setIsLoadingWalkForward(true);
-                        setIsLoadingPredictor(true);
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        className="premium-button"
+                        style={{ width: '100%', marginTop: '5px' }}
+                        onClick={() => {
+                          setIsLoadingWalkForward(true);
+                          setIsLoadingPredictor(true);
 
-                        let logic = 'classic';
-                        if (matrixViewMode === 'probability') logic = 'statistical';
-                        if (matrixViewMode === 'ensemble') logic = 'ensemble';
+                          let logic = 'classic';
+                          if (matrixViewMode === 'probability') logic = 'statistical';
+                          if (matrixViewMode === 'ensemble') logic = 'ensemble';
+                          if (matrixViewMode === 'persistence') logic = 'persistence';
 
-                        // Run WF
-                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}?selection_logic=${logic}&training_days=${lookbackWeeks * 7}&testing_days=${testWeeks * 7}&step_days=${testWeeks * 7}`, { method: 'POST' })
-                          .then(r => r.json()).then(d => {
-                            if (d.status === 'success') setWalkForwardData({ ...d.data, logic });
-                          })
-                          .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+                          // Run WF
+                          const wfParams = new URLSearchParams({
+                            selection_logic: logic,
+                            training_days: String(lookbackWeeks === 0 ? 0 : lookbackWeeks * 7),
+                            testing_days: String(testWeeks * 7),
+                            step_days: String(testWeeks * 7)
+                          });
+                          
+                          // Determine the effective target slots: either fresh selection or the persisted filter
+                          const effectiveSlots = selectedMatrixBins.length > 0
+                            ? selectedMatrixBins.map(b => b.key).join(',')
+                            : wfTargetSlots ?? null;
 
-                        // Run Predictor
-                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/predict-week/${selectedSymbol}?lookback_weeks=${lookbackWeeks}`)
-                          .then(r => r.json()).then(d => { if (d.status === 'success') setPredictorData(d.data); })
-                          .catch(console.error).finally(() => setIsLoadingPredictor(false));
-                      }}
-                      disabled={isLoadingWalkForward || isLoadingPredictor}
-                    >
-                      {isLoadingWalkForward ? '🔄 Running Analysis...' : '🚀 Run Full WF Validation'}
-                    </button>
+                          if (effectiveSlots) {
+                            wfParams.append('target_slots', effectiveSlots);
+                            setWfTargetSlots(effectiveSlots);
+                          } else {
+                            setWfTargetSlots(null);
+                          }
+
+                          // Run WF
+                          fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}?${wfParams}`, { method: 'POST' })
+                            .then(r => r.json()).then(d => {
+                              if (d.status === 'success') setWalkForwardData({ ...d.data, logic, filtered: !!effectiveSlots });
+                            })
+                            .catch(console.error).finally(() => setIsLoadingWalkForward(false));
+
+                          // Run Predictor — also pass effective slots
+                          const predictorParams = new URLSearchParams({ lookback_weeks: String(lookbackWeeks) });
+                          if (effectiveSlots) predictorParams.append('target_slots', effectiveSlots);
+                          
+                          fetch(`${getApiV1BaseUrl()}/analytics/recommendations/predict-week/${selectedSymbol}?${predictorParams}`)
+                            .then(r => r.json()).then(d => { if (d.status === 'success') setPredictorData(d.data); })
+                            .catch(console.error).finally(() => setIsLoadingPredictor(false));
+                        }}
+                        disabled={isLoadingWalkForward || isLoadingPredictor}
+                      >
+                        {isLoadingWalkForward ? '🔄 Running...' : (
+                          wfTargetSlots
+                            ? `🚀 Re-run Filtered Audit (${wfTargetSlots.split(',').length} bins)`
+                            : selectedMatrixBins.length > 0
+                              ? `🚀 Run Filtered Audit (${selectedMatrixBins.length} bins)`
+                              : '🚀 Run Full WF Validation'
+                        )}
+                      </button>
+                      <button 
+                        className="premium-button secondary" 
+                        style={{ marginTop: '5px', padding: '0 15px' }} 
+                        onClick={() => setActiveTab('matrix')}
+                      >
+                        Back to Matrix
+                      </button>
+                    </div>
                   </div>
 
                   <div className="premium-info-box" style={{ margin: 0, padding: '16px', borderLeft: '4px solid var(--accent-color)' }}>
@@ -1703,11 +2109,22 @@ const Recommendations: React.FC = () => {
                   <div className="premium-card" style={{ padding: '24px' }}>
                     <div className="chart-header">
                       <h2 style={{ fontSize: '16px' }}>Strategy Intelligence Curve (Out-of-Sample)</h2>
-                      {walkForwardData?.sharpe && (
-                        <div style={{ fontSize: '14px' }}>
-                          OOS Sharpe: <strong style={{ color: walkForwardData.sharpe > 1.5 ? '#00cc88' : '#ffaa00' }}>{walkForwardData.sharpe}</strong>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {(() => {
+                          const computedTotal = walkForwardData?.aggregate?.total_oos_pnl
+                            ?? walkForwardData?.folds?.reduce((sum: number, f: any) => sum + (f.total_pnl || 0), 0);
+                          return computedTotal !== undefined && computedTotal !== 0 ? (
+                            <div style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '6px', background: computedTotal >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: computedTotal >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                              Total OOS PnL: {formatCurrency(computedTotal)}
+                            </div>
+                          ) : null;
+                        })()}
+                        {walkForwardData?.sharpe && (
+                          <div style={{ fontSize: '14px' }}>
+                            OOS Sharpe: <strong style={{ color: walkForwardData.sharpe > 1.5 ? '#00cc88' : '#ffaa00' }}>{walkForwardData.sharpe}</strong>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div style={{ padding: '0 0 16px 0', marginTop: '-8px', fontSize: '12px', color: '#888' }}>
                       {walkForwardData?.folds?.length ? (
@@ -1731,6 +2148,9 @@ const Recommendations: React.FC = () => {
                         predictions={predictorData.predictions}
                         dayNames={dayNames}
                         timeSlots={getTimeSlots()}
+                        minReliability={minReliability}
+                        selectedBinKeys={new Set(selectedMatrixBins.map(b => b.key))}
+                        onToggleBinSelection={handleToggleMatrixBinSelection}
                       />
                     ) : (
                       <div className="monte-carlo-placeholder" style={{ height: '400px' }}>
@@ -1745,29 +2165,49 @@ const Recommendations: React.FC = () => {
                   <div className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
                     <div className="matrix-card-header" style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: '#fcfcfc' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <h3 style={{ fontSize: '18px', margin: 0 }}>Walk-Forward Reality Check (Folds Detail)</h3>
+                        <h3 style={{ fontSize: '18px', margin: 0 }}>
+                          Walk-Forward Reality Check (Folds Detail)
+                          {walkForwardData?.filtered && (
+                            <span style={{ marginLeft: '12px', fontSize: '12px', background: '#7c3aed', color: 'white', padding: '2px 8px', borderRadius: '4px', verticalAlign: 'middle' }}>
+                              🕵️ Filtered Run
+                            </span>
+                          )}
+                        </h3>
                         <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
                           Out-of-sample (WF) results reflect realistic future expectancy.
                         </p>
                       </div>
-                      <div className={`metric-value ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`} style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', backgroundColor: walkForwardData.aggregate.statistically_significant ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)' }}>
-                        {walkForwardData.aggregate.statistically_significant ? '✅ Confirmed Edge' : '⚠️ Insufficient Alpha'}
+                      <div className={`metric-value ${walkForwardData.aggregate?.statistically_significant ? 'success' : 'warning'}`} style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '30px', backgroundColor: walkForwardData.aggregate?.statistically_significant ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)' }}>
+                        {walkForwardData.aggregate?.statistically_significant ? '✅ Confirmed Edge' : '⚠️ Insufficient Alpha'}
                       </div>
                     </div>
 
                     <div style={{ padding: '24px' }}>
-                      <div className={`aggregate-panel ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`} style={{ marginTop: 0, marginBottom: '24px' }}>
-                        <div className="aggregate-main">
-                          <strong>{walkForwardData.aggregate.recommendation}</strong>
+                      {walkForwardData.aggregate ? (
+                        <div className={`aggregate-panel ${walkForwardData.aggregate.statistically_significant ? 'success' : 'warning'}`} style={{ marginTop: 0, marginBottom: '24px' }}>
+                          <div className="aggregate-main">
+                            <strong>{walkForwardData.aggregate.recommendation}</strong>
+                          </div>
+                          <div className="aggregate-metrics">
+                            <div className="metric"><span>Folds</span><strong>{walkForwardData.aggregate.total_folds}</strong></div>
+                            <div className="metric"><span>Consistency</span><strong>{(walkForwardData.aggregate.consistency_ratio * 100).toFixed(0)}%</strong></div>
+                            <div className="metric">
+                              <span>Total OOS Profit</span>
+                              <strong className={((walkForwardData.aggregate.total_oos_pnl ?? walkForwardData.folds?.reduce((s: number, f: any) => s + (f.total_pnl || 0), 0) ?? 0)) >= 0 ? "success-text" : "error-text"}>
+                                {formatCurrency(walkForwardData.aggregate.total_oos_pnl ?? walkForwardData.folds?.reduce((s: number, f: any) => s + (f.total_pnl || 0), 0) ?? 0)}
+                              </strong>
+                            </div>
+                            <div className="metric"><span>Mean OOS PnL</span><strong className={walkForwardData.aggregate.mean_fold_pnl >= 0 ? "success-text" : "error-text"}>${walkForwardData.aggregate.mean_fold_pnl?.toFixed(0)}</strong></div>
+                            <div className="metric"><span>Mean Sharpe</span><strong className={walkForwardData.aggregate.mean_sharpe >= 0 ? "success-text" : "error-text"}>{walkForwardData.aggregate.mean_sharpe?.toFixed(2)}</strong></div>
+                            <div className="metric"><span>p-value</span><strong title="Permutation test p-value. < 0.05 = statistically significant edge">{walkForwardData.aggregate.permutation_p_value}</strong></div>
+                          </div>
                         </div>
-                        <div className="aggregate-metrics">
-                          <div className="metric"><span>Folds</span><strong>{walkForwardData.aggregate.total_folds}</strong></div>
-                          <div className="metric"><span>Consistency</span><strong>{(walkForwardData.aggregate.consistency_ratio * 100).toFixed(0)}%</strong></div>
-                          <div className="metric"><span>Mean OOS PnL</span><strong className={walkForwardData.aggregate.mean_fold_pnl >= 0 ? "success-text" : "error-text"}>${walkForwardData.aggregate.mean_fold_pnl?.toFixed(0)}</strong></div>
-                          <div className="metric"><span>Mean Sharpe</span><strong className={walkForwardData.aggregate.mean_sharpe >= 0 ? "success-text" : "error-text"}>{walkForwardData.aggregate.mean_sharpe?.toFixed(2)}</strong></div>
-                          <div className="metric"><span>p-value</span><strong>{walkForwardData.aggregate.permutation_p_value}</strong></div>
+                      ) : (
+                        <div className="premium-info-box warning" style={{ marginBottom: '24px' }}>
+                          <h4 style={{ margin: 0 }}>⚠️ No Significant Data</h4>
+                          <p style={{ margin: '8px 0 0 0', fontSize: '13px' }}>The walk-forward analysis did not find enough trades in the selected period to generate aggregate statistics. Try a longer lookback or more inclusive filters.</p>
                         </div>
-                      </div>
+                      )}
 
                       <div className="table-responsive">
                         <table className="premium-table wf-folds-table">
@@ -1914,6 +2354,7 @@ const Recommendations: React.FC = () => {
                         viewMode="probability"
                         timeSlots={getTimeSlots()}
                         dayNames={dayNames}
+                        dayIndices={matrixDayIndices}
                         formatCurrency={formatCurrency}
                       />
                     </div>
@@ -1956,6 +2397,53 @@ const Recommendations: React.FC = () => {
               </div>
             )}
 
+            {activeTab === 'comparison' && (
+              <div className="premium-card" style={{ padding: '24px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: 6 }}>Method Bake-Off: Persistence vs Classic vs Statistical vs Ensemble</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
+                    Runs all 4 selection methods through identical walk-forward splits on {selectedSymbol} and compares out-of-sample performance.
+                    Use the recommended method in the Matrix tab for live trading decisions.
+                  </p>
+                </div>
+                <MethodComparison
+                  symbol={selectedSymbol}
+                  formatCurrency={formatCurrency}
+                  onSelectMethod={(method) => {
+                    if (method === 'ensemble') setMatrixViewMode('ensemble');
+                    else if (method === 'statistical') setMatrixViewMode('probability');
+                    else if (method === 'persistence') setMatrixViewMode('persistence');
+                    else setMatrixViewMode('standard');
+                    setActiveTab('matrix');
+                  }}
+                />
+              </div>
+            )}
+
+            {activeTab === 'correlation' && (
+              <div className="premium-card" style={{ padding: '24px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: 6 }}>Permutation Correlation Heatmap</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
+                    Check if your candidate bins move together. Correlated permutations do NOT provide diversification —
+                    trading both simultaneously doubles your risk. Pairs above 0.7 should not be traded at the same time.
+                  </p>
+                </div>
+                <CorrelationHeatmap
+                  symbol={selectedSymbol}
+                  candidateAccounts={(() => {
+                    const fromBest = bestBinsData?.top_5?.map((b: any) => b.best_account).filter(Boolean) ?? [];
+                    if (fromBest.length >= 2) return Array.from(new Set(fromBest.map(String)));
+                    const flat = Object.values(matrix).flatMap(slots =>
+                      Object.values(slots as Record<number, { best_account?: string }>).map((c) => c.best_account)
+                    ).filter(Boolean) as string[];
+                    return Array.from(new Set(flat)).slice(0, 12);
+                  })()}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+            )}
+
             {activeTab === 'settings' && (
               <div className="premium-card" style={{ padding: '32px' }}>
                 <div style={{ marginBottom: '24px' }}>
@@ -1989,7 +2477,7 @@ const Recommendations: React.FC = () => {
                       setChartSource('walkforward');
                       if (!walkForwardData) {
                         setIsLoadingWalkForward(true);
-                        fetch(`http://localhost:8000/api/v1/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST' })
+                        fetch(`${getApiV1BaseUrl()}/analytics/recommendations/walk-forward/${selectedSymbol}`, { method: 'POST' })
                           .then(r => r.json()).then(d => { if (d.status === 'success') setWalkForwardData(d.data); })
                           .catch(console.error).finally(() => setIsLoadingWalkForward(false));
                       }
