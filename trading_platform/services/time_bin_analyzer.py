@@ -4,10 +4,10 @@ TimeBinAnalyzer core functionality for advanced trading analytics.
 This module implements comprehensive time-bin analysis for account/30-minute
 time window combinations with statistical significance testing.
 
-Requirements: 1.1, 1.2, 1.3, 5.1
+Requirements: 1.1, 1.2, 1.3, 5.1, 5.2 (BH multiple-comparison correction)
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time
 from typing import List, Optional, Tuple, Dict, Any
 import numpy as np
@@ -17,6 +17,65 @@ from sqlalchemy.orm import Session
 
 from ..models.database import ProcessedTrade as ProcessedTradeORM
 from ..database.connection import get_db_session
+from ..utils.timezone_utils import NY_TZ
+
+
+def benjamini_hochberg(
+    p_values: List[Optional[float]],
+    alpha: float = 0.05,
+) -> List[Optional[float]]:
+    """
+    Apply Benjamini-Hochberg (1995) FDR correction to a list of raw p-values.
+
+    Operates only on the non-None entries (slots with enough data); None entries
+    are returned unchanged so callers don't need to pre-filter.
+
+    Returns adjusted p-values (q-values) in the **same positional order** as
+    the input list.  A test is considered significant when its q-value <= alpha.
+
+    Algorithm (step-up procedure):
+      1. Sort valid p-values ascending and assign ranks 1..m.
+      2. Compute raw q_i = p_i * m / rank_i, capped at 1.
+      3. Enforce monotonicity by sweeping right-to-left and applying a
+         cumulative minimum, so q-values are non-decreasing in the original
+         p-value order.
+
+    Args:
+        p_values: Raw p-values in any order. None = insufficient data.
+        alpha:    FDR threshold (default 0.05).
+
+    Returns:
+        List of adjusted p-values (q-values) with None for missing entries.
+    """
+    # Collect positions and values where p is available
+    valid: List[Tuple[int, float]] = [
+        (i, p) for i, p in enumerate(p_values) if p is not None
+    ]
+    m = len(valid)
+
+    # Build output with None for all positions initially
+    adjusted: List[Optional[float]] = [None] * len(p_values)
+
+    if m == 0:
+        return adjusted
+
+    # Sort by raw p-value ascending to assign BH ranks
+    sorted_valid = sorted(valid, key=lambda x: x[1])
+
+    # Compute q_i = p_i * m / rank_i (rank is 1-indexed)
+    q_pairs: List[Tuple[int, float]] = []
+    for rank, (orig_idx, p) in enumerate(sorted_valid, start=1):
+        q = min(p * m / rank, 1.0)
+        q_pairs.append((orig_idx, q))
+
+    # Enforce monotonicity: sweep from highest rank to lowest, apply cummin
+    # so that q-values only decrease (or stay the same) as rank decreases.
+    min_q = 1.0
+    for orig_idx, q in reversed(q_pairs):
+        min_q = min(min_q, q)
+        adjusted[orig_idx] = round(min_q, 8)
+
+    return adjusted
 
 
 @dataclass
@@ -80,11 +139,22 @@ class TimeBin:
         return f"{self.account_name}_{self.hour:02d}:{self.minute_bin:02d}{day_str}"
     
     def matches_trade_time(self, trade_time: datetime) -> bool:
-        """Check if a trade time falls within this time bin."""
-        trade_time_only = trade_time.time()
+        """Check if a trade time falls within this time bin.
         
-        # Check day of week if specified
-        if self.day_of_week is not None and trade_time.weekday() != self.day_of_week:
+        DB stores entry_time as UTC; hour_of_day and day_of_week are in NY.
+        Convert to NY before comparing.
+        """
+        import datetime as _dt
+        # Convert to NY timezone for correct hour/minute comparison
+        if trade_time.tzinfo is None:
+            trade_time_ny = trade_time.replace(tzinfo=_dt.timezone.utc).astimezone(NY_TZ)
+        else:
+            trade_time_ny = trade_time.astimezone(NY_TZ)
+        
+        trade_time_only = trade_time_ny.time()
+        
+        # Check day of week if specified (using NY weekday)
+        if self.day_of_week is not None and trade_time_ny.weekday() != self.day_of_week:
             return False
         
         # Check if trade time falls within the 30-minute window
@@ -116,17 +186,22 @@ class TimeBinMetrics:
     # Statistical significance metrics
     confidence_interval_95: Optional[Tuple[float, float]]
     p_value_vs_random: Optional[float]
-    statistical_significance: bool
+    statistical_significance: bool       # Raw gate: p_value_vs_random < 0.05 (kept for transparency)
     minimum_sample_size_met: bool
-    
+
+    # Multiple-comparison corrected significance (Benjamini-Hochberg FDR)
+    # Set by analyze_all_bins_with_bh(); None when computed in isolation.
+    adjusted_p_value: Optional[float] = None   # BH-adjusted p-value (q-value)
+    bh_significant: Optional[bool] = None      # True only when adjusted_p_value <= 0.05
+
     # Additional metrics
-    volatility: float
-    largest_win: float
-    largest_loss: float
-    winning_trades: int
-    losing_trades: int
-    average_win: float
-    average_loss: float
+    volatility: float = 0.0
+    largest_win: float = 0.0
+    largest_loss: float = 0.0
+    winning_trades: int = 0
+    losing_trades: int = 0
+    average_win: float = 0.0
+    average_loss: float = 0.0
     
     @property
     def expectancy(self) -> float:
@@ -166,8 +241,9 @@ class TimeBinAnalyzer:
         else:
             self.db_session = db_session
             self._db_context = None
-        self.minimum_sample_size = 30  # Minimum trades for statistical significance
-        self.risk_free_rate = 0.02  # 2% annual risk-free rate for Sharpe calculation
+        self.minimum_sample_size = 30   # Minimum total trades for statistical significance
+        self.min_trades_per_week = 3    # Minimum frequency for real-time model evaluation
+        self.risk_free_rate = 0.02      # 2% annual risk-free rate for Sharpe calculation
     
     def get_time_bin_trades(self, time_bin: TimeBin) -> List[SimpleTrade]:
         """
@@ -179,7 +255,6 @@ class TimeBinAnalyzer:
             """Process trades with a given session."""
             # Query only the columns that exist in the database
             query = session.query(
-                ProcessedTradeORM.id,
                 ProcessedTradeORM.trade_id,
                 ProcessedTradeORM.account_name,
                 ProcessedTradeORM.symbol,
@@ -496,14 +571,84 @@ class TimeBinAnalyzer:
     def analyze_time_bin(self, time_bin: TimeBin) -> Tuple[TimeBinMetrics, List[SignificanceTest]]:
         """
         Complete analysis of a time bin including metrics and significance tests.
-        
-        Returns tuple of (metrics, significance_tests)
+
+        Returns tuple of (metrics, significance_tests).
+        Note: adjusted_p_value and bh_significant are NOT set here; they require
+        the full family of p-values (see analyze_all_bins_with_bh).
         """
         trades = self.get_time_bin_trades(time_bin)
         metrics = self.calculate_time_bin_metrics(trades)
         significance_tests = self.test_statistical_significance(metrics)
-        
+
         return metrics, significance_tests
+
+    def analyze_all_bins_with_bh(
+        self,
+        account: str,
+        hour_minute_pairs: Optional[List[Tuple[int, int]]] = None,
+        day_of_week: Optional[int] = None,
+        bh_alpha: float = 0.05,
+    ) -> List[Tuple[TimeBinMetrics, List[SignificanceTest]]]:
+        """
+        Analyze every requested time-bin for *account*, then apply
+        Benjamini-Hochberg FDR correction across all their p-values.
+
+        This is the correct entry-point for the recommendations endpoint
+        because BH correction requires the full family of tests to be
+        evaluated together — not slot-by-slot in isolation.
+
+        Args:
+            account:          Account name (e.g. "TM_7").
+            hour_minute_pairs: List of (hour, minute_bin) tuples to evaluate.
+                              Defaults to all 48 half-hour slots (0-23 × {0,30}).
+            day_of_week:      Optional DOW filter passed to every TimeBin.
+            bh_alpha:         FDR threshold (default 0.05).
+
+        Returns:
+            List of (TimeBinMetrics, List[SignificanceTest]) in the same order
+            as hour_minute_pairs.  adjusted_p_value and bh_significant are
+            populated on every metrics object that had a non-None p_value.
+        """
+        if hour_minute_pairs is None:
+            hour_minute_pairs = [
+                (h, m) for h in range(24) for m in [0, 30]
+            ]
+
+        results: List[Tuple[TimeBinMetrics, List[SignificanceTest]]] = []
+
+        for hour, minute_bin in hour_minute_pairs:
+            try:
+                tb = TimeBin(
+                    account_name=account,
+                    hour=hour,
+                    minute_bin=minute_bin,
+                    day_of_week=day_of_week,
+                )
+                metrics, sig_tests = self.analyze_time_bin(tb)
+                results.append((metrics, sig_tests))
+            except Exception:
+                # Append a sentinel so positional order is preserved
+                results.append((None, []))  # type: ignore[arg-type]
+
+        # --- BH correction across the family of p-values ---
+        raw_p_values: List[Optional[float]] = [
+            r[0].p_value_vs_random if r[0] is not None else None
+            for r in results
+        ]
+        adjusted = benjamini_hochberg(raw_p_values, alpha=bh_alpha)
+
+        # Write corrected values back onto each metrics object
+        for i, (metrics, sig_tests) in enumerate(results):
+            if metrics is None:
+                continue
+            metrics.adjusted_p_value = adjusted[i]
+            if adjusted[i] is not None:
+                metrics.bh_significant = adjusted[i] <= bh_alpha
+            else:
+                # No p-value (insufficient data) → not significant
+                metrics.bh_significant = False
+
+        return results
     
     def compare_time_bins(self, time_bin1: TimeBin, time_bin2: TimeBin) -> Dict[str, Any]:
         """

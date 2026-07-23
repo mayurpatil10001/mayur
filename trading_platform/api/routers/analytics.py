@@ -5745,3 +5745,164 @@ async def get_live_validation(
                 pass
         logger.error(f"[LIVE VALIDATION] ERROR: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SORTINO RANKING ENDPOINT
+# Target: high Sortino + high trade frequency + low PnL volatility
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/sortino-ranking",
+    summary="Rank accounts by Sortino ratio with frequency filter",
+    tags=["analytics"],
+)
+def get_sortino_ranking(
+    min_trades_per_week: float = Query(
+        default=3.0,
+        description="Minimum trades per week required for real-time model evaluation",
+    ),
+    min_total_trades: int = Query(
+        default=30,
+        description="Minimum total trade count for statistical significance",
+    ),
+    max_pnl_std_dev: Optional[float] = Query(
+        default=None,
+        description="Maximum PnL std-dev (volatility cap). None = no cap.",
+    ),
+    limit: int = Query(default=50, description="Max results to return"),
+):
+    """
+    Return all account/symbol combinations ranked by annualized Sortino ratio.
+
+    Filters:
+    - min_trades_per_week: ensures enough signal for real-time model evaluation
+    - min_total_trades: ensures statistical significance
+    - max_pnl_std_dev: cap on PnL volatility (low volatility target)
+
+    Sortino formula: (mean_pnl / downside_dev) * sqrt(trades_per_year)
+    """
+    conn = None
+    try:
+        db_path = str(_sqlite_db_path())
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+
+        # Pull all trades grouped by account/symbol with aggregate stats
+        query = """
+        SELECT
+            account_name,
+            symbol,
+            COUNT(*)                                    AS total_trades,
+            AVG(profit_loss)                            AS mean_pnl,
+            SUM(profit_loss)                            AS total_pnl,
+            -- downside deviation: std of negative PnL only
+            -- SQLite has no conditional stddev so we approximate via variance components
+            AVG(CASE WHEN profit_loss < 0 THEN profit_loss * profit_loss ELSE NULL END)  AS neg_sq_avg,
+            AVG(CASE WHEN profit_loss < 0 THEN profit_loss ELSE NULL END)                AS neg_avg,
+            COUNT(CASE WHEN profit_loss < 0 THEN 1 END)                                  AS neg_count,
+            COUNT(CASE WHEN profit_loss > 0 THEN 1 END)                                  AS win_count,
+            -- overall std dev approximation
+            AVG(profit_loss * profit_loss)               AS sq_avg,
+            -- date span for frequency computation
+            MIN(entry_time)                              AS first_trade,
+            MAX(exit_time)                               AS last_trade,
+            -- profit factor components
+            SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) AS gross_profit,
+            ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)) AS gross_loss
+        FROM processed_trades
+        GROUP BY account_name, symbol
+        HAVING total_trades >= ?
+        """
+
+        rows = conn.execute(query, (min_total_trades,)).fetchall()
+        conn.close()
+        conn = None
+
+        results = []
+        for row in rows:
+            total = row["total_trades"]
+            mean_pnl = row["mean_pnl"] or 0.0
+            neg_sq_avg = row["neg_sq_avg"] or 0.0
+            neg_avg = row["neg_avg"] or 0.0
+            neg_count = row["neg_count"] or 0
+            sq_avg = row["sq_avg"] or 0.0
+            gross_profit = row["gross_profit"] or 0.0
+            gross_loss = row["gross_loss"] or 0.0
+
+            # Downside deviation (population std of losses)
+            if neg_count > 1:
+                downside_var = neg_sq_avg - neg_avg * neg_avg
+                downside_dev = float(np.sqrt(max(downside_var, 0.0)))
+            else:
+                downside_dev = 0.0
+
+            # Overall PnL std dev
+            overall_var = sq_avg - mean_pnl * mean_pnl
+            pnl_std_dev = float(np.sqrt(max(overall_var, 0.0)))
+
+            # Date span
+            try:
+                first = datetime.fromisoformat(row["first_trade"])
+                last = datetime.fromisoformat(row["last_trade"])
+                span_days = max((last - first).days, 1)
+            except Exception:
+                span_days = 252  # fallback
+
+            trades_per_week = round((total / span_days) * 5, 2)
+            trades_per_year = (total / span_days) * 252
+            annualization = float(np.sqrt(max(trades_per_year, 1)))
+
+            # Annualized Sortino
+            per_trade_sortino = mean_pnl / downside_dev if downside_dev > 0 else 0.0
+            sortino = round(per_trade_sortino * annualization, 4)
+
+            win_rate = round(row["win_count"] / total, 4) if total > 0 else 0.0
+            profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else None
+
+            # Apply filters
+            if trades_per_week < min_trades_per_week:
+                continue
+            if max_pnl_std_dev is not None and pnl_std_dev > max_pnl_std_dev:
+                continue
+
+            results.append({
+                "account_name":     row["account_name"],
+                "symbol":           row["symbol"],
+                "sortino_ratio":    sortino,
+                "trades_per_week":  trades_per_week,
+                "total_trades":     total,
+                "mean_pnl":         round(mean_pnl, 2),
+                "total_pnl":        round(row["total_pnl"] or 0.0, 2),
+                "win_rate":         win_rate,
+                "profit_factor":    profit_factor,
+                "downside_dev":     round(downside_dev, 2),
+                "pnl_std_dev":      round(pnl_std_dev, 2),
+                "span_days":        span_days,
+            })
+
+        # Sort by Sortino descending (primary), then trades_per_week descending (secondary)
+        results.sort(key=lambda x: (-x["sortino_ratio"], -x["trades_per_week"]))
+        results = results[:limit]
+
+        return {
+            "status": "success",
+            "filters": {
+                "min_trades_per_week": min_trades_per_week,
+                "min_total_trades": min_total_trades,
+                "max_pnl_std_dev": max_pnl_std_dev,
+            },
+            "total_qualifying": len(results),
+            "rankings": results,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        logger.error(f"[SORTINO RANKING] ERROR: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -141,6 +141,9 @@ def _crosses_daily_close_ny(entry_dt: datetime.datetime, exit_dt: datetime.datet
         day += datetime.timedelta(days=1)
     return False
 
+# Set to True to enable verbose per-fill ghost debug logging (warning: creates large ghost_all.log)
+_GHOST_DEBUG = False
+
 def _is_ghost_fill(acc: str, note: str, ts_str: str, msgtxt: str = "", is_open: bool = True, qty: float = 0) -> bool:
     """
     Returns True if the fill should be dropped as a "Ghost".
@@ -150,8 +153,9 @@ def _is_ghost_fill(acc: str, note: str, ts_str: str, msgtxt: str = "", is_open: 
     """
     # Universal Exemption: 1-lots are almost always legitimate stop-outs or automated trades.
     # The known massive ghosts (e.g. 04:05) are multi-lot.
-    with open("ghost_all.log", "a") as f:
-        f.write(f"DEBUG GHOST: ts={ts_str}, is_open={is_open}, qty={qty}, note='{note}', msg='{msgtxt}'\n")
+    if _GHOST_DEBUG:
+        with open("ghost_all.log", "a") as f:
+            f.write(f"DEBUG GHOST: ts={ts_str}, is_open={is_open}, qty={qty}, note='{note}', msg='{msgtxt}'\n")
     if qty == 1:
         return False
 
@@ -232,80 +236,97 @@ def _scan_position_fill_order(file_path: str) -> List[str]:
 
 
 def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint: str = None) -> tuple[List[Dict], List[Dict]]:
-    """CANARY_VERSION: 2026-02-26_TAG_126_FIX_V1"""
+    """CANARY_VERSION: 2026-02-26_TAG_126_FIX_V2"""
     with open("import_debug.log", "a") as fld:
         fld.write(f"DEBUG: Running _parse_file_nitro on {file_path} with Adaptive Ghost logic...\n")
     raw_candidates = [] # Buffer for all potential fills in this file
     fills = []
-    ghosts = [] 
+    ghosts = []
     seen_keys = set()
     try:
         fn = os.path.basename(file_path).upper()
         if not os.path.exists(file_path):
             return [], []
-            
-        if os.path.getsize(file_path) == 0: 
+
+        if os.path.getsize(file_path) == 0:
             return [], []
-        
+
         with open(file_path, "rb") as bf:
             # Limit read to 200MB per file to prevent RAM blowout in parallel
-            d = bf.read(200 * 1024 * 1024) 
+            d = bf.read(200 * 1024 * 1024)
 
         pts = fn.split('.')
         acc = re.sub(r'_UTC$', '', pts[-2] if len(pts) > 1 else fn)
         acc_u = acc.upper()
-        
+
         # Filter by account if acc_filter is provided
         if acc_filter and acc_u not in [a.upper() for a in acc_filter]:
             return [], []
 
-        # Priority 1: Use provided target symbol as the primary context if available
-        # The acc_filter parameter is now used for filtering accounts, not symbols.
-        # The symbol inference logic below will determine the symbol.
-        sh = "Unknown" 
+        sh = "Unknown"
         filename_symbol_inferred = False
-        
+
         # Priority 2: Refine from filename if possible
         for s in SYMBOL_METADATA.keys():
             if re.search(rf"[._]{s}[.\-_]", fn) or fn.startswith(f"{s}-") or acc.startswith(f"{s}_"):
                 sh = s
                 filename_symbol_inferred = True
                 break
-        
+
         # Priority 3: Fallback to symbol_hint if provided and inference failed
         if sh == "Unknown" and symbol_hint:
             sh = symbol_hint.upper()
-        
+
         # Root Cause Fix: Extract Date from Filename to Lock Timestamp Window
         file_date_match = re.search(r'(\d{4}-\d{2}-\d{2})', fn)
-        min_valid_ts, max_valid_ts = 1600000000, 2000000000
-        f_dt = None # Initialize f_dt
-        
+        f_dt = None
+
         if file_date_match:
             try:
                 f_dt = datetime.datetime.strptime(file_date_match.group(1), "%Y-%m-%d")
-            except: pass
+            except:
+                pass
+
+        # ── Bug 5 Fix ─────────────────────────────────────────────────────────────
+        # Pre-scan the binary for SC's "Updated Internal Position ... Fill of
+        # InternalOrderID: X" markers (Tag 104). These appear in strict SC execution
+        # order and are used to stamp _position_order on each fill so the FIFO pairing
+        # sort in _pairs_to_trades matches SC's exact sequence rather than wall-clock time.
+        position_order_map: dict = {}  # internal_order_id -> position_index
+        try:
+            fill_order_ids = _scan_position_fill_order(file_path)
+            position_order_map = {oid: idx for idx, oid in enumerate(fill_order_ids)}
+        except Exception:
+            pass
+        # ──────────────────────────────────────────────────────────────────────────
 
         offset = 0
         file_len = len(d)
-        
+
         # High-Performance TLV Nitro Grouping Loop
-        # Strategy: Group multiple records with identical timestamps into a single logical fill.
-        # This handles SC's multi-record reporting (Modify, Fill, Signal) for the same event.
         pending_fill = None
         current_ts_val = 0
         current_ts_str = None
-        
+
         # Temp state for current record (Reset on Tag 102/0x66)
         current_note = ""
         current_msg = ""
         current_tag107 = ""
         current_side_hint = None
-        current_oid = None  # OrderID/ServiceOrderID for current record (used to mark canceled orders)
+        current_oid = None
         current_internal_oid = None
-        canceled_order_ids = set()  # Order IDs that were "Internally marking as canceled" (rolled-back fills)
-        current_record_is_cancel = False  # True if this record's message says order was canceled (Tag 104 may come before Tag 100)
-        
+        canceled_order_ids = set()
+        current_record_is_cancel = False
+
+        # ── Bug 4 Fix ─────────────────────────────────────────────────────────────
+        # Pre-timestamp note buffer: captures Tag 0x82 notes that arrive *before*
+        # their record's Tag 0x66 timestamp. On 0x66 reset, the buffer is transferred
+        # to the new record's note only if the new record has no note of its own.
+        # This preserves the Identity Shield (no cross-record note inheritance) while
+        # handling SC files where note tags precede the timestamp in the byte stream.
+        _pre_ts_note_buf = ""
+        # ──────────────────────────────────────────────────────────────────────────
+
         # Default fallback is the date in the filename (start of UTC day)
         base_time = f_dt.timestamp() if f_dt else datetime.datetime.now().replace(hour=0, minute=0, second=0).timestamp()
         
@@ -347,22 +368,39 @@ def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint:
                             is_v = acc_u.startswith("V_")
                             if not is_v or pf.get('confirmed'):
                                 pf["_record_index"] = len(raw_candidates)
+                                # Bug 5: stamp SC execution order from position_order_map
+                                ioid = pf.get("internal_order_id") or pf.get("order_id")
+                                pf["_position_order"] = position_order_map.get(str(ioid), 999999) if ioid else 999999
                                 raw_candidates.append(pf)
                             pending_fill = None
 
                     if new_dt:
                         current_ts_val, current_ts_str = new_ts_val, new_dt.isoformat()
-                    
+
                     # IDENTITY SHIELD: Reset EVERY record's transient data.
                     # Fills MUST carry their own Tag 0x82 Note to be valid.
                     # This prevents ghosts from inheriting notes from real trades.
-                    current_msg = ""; current_tag107 = ""; current_note = ""; current_side_hint = None; current_oid = None; current_internal_oid = None; current_record_is_cancel = False
-                
+                    # Bug 4 fix: transfer pre-timestamp note buffer into the new record
+                    # ONLY if no note exists yet for this record — never overwrites a
+                    # real note, and never carries across more than one record boundary.
+                    prev_pre_ts_note = _pre_ts_note_buf
+                    _pre_ts_note_buf = ""
+                    current_msg = ""; current_tag107 = ""
+                    current_note = prev_pre_ts_note  # seeded from buffer (empty string if none)
+                    current_side_hint = None; current_oid = None
+                    current_internal_oid = None; current_record_is_cancel = False
+
                 elif tag == 0x82: # 130: Order Note
                     val = d[val_start:val_end].decode(errors='ignore').strip()
                     if val:
-                        current_note = (current_note + " " + val).strip()
-                        if pending_fill: pending_fill['note'] = (pending_fill.get('note','') + " " + val).strip()
+                        if current_ts_str is None:
+                            # Note arrived before any timestamp in this record — buffer it.
+                            # It will be transferred to current_note on the next Tag 0x66.
+                            _pre_ts_note_buf = (_pre_ts_note_buf + " " + val).strip()
+                        else:
+                            current_note = (current_note + " " + val).strip()
+                        if pending_fill:
+                            pending_fill['note'] = (pending_fill.get('note', '') + " " + val).strip()
 
                 elif tag == 107: # Tag 107: Order Type / Internal Info (e.g. "Market", "Limit", "Stop Limit")
                     val = d[val_start:val_end].decode(errors='ignore').strip()
@@ -661,6 +699,9 @@ def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint:
                 is_v = acc_u.startswith("V_")
                 if not is_v or pf.get('confirmed'):
                     pf["_record_index"] = len(raw_candidates)
+                    # Bug 5: stamp SC execution order from position_order_map
+                    ioid = pf.get("internal_order_id") or pf.get("order_id")
+                    pf["_position_order"] = position_order_map.get(str(ioid), 999999) if ioid else 999999
                     raw_candidates.append(pf)
 
         # Drop fills whose order was later canceled (rolled-back simulated fills at 03:05/03:23/03:43)
@@ -678,6 +719,10 @@ def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint:
         if bypass_ghost_filter:
             with open("import_debug.log", "a") as fld:
                 fld.write(f"INFO: Low Note-Rate ({note_rate:.1%}) for {acc_u} on {fn}. Bypassing ghost filter.\n")
+            # Explicitly mark all fills as non-ghost in bypass mode to prevent
+            # accidental drops if suggests_ghost was set upstream.
+            for pf in raw_candidates:
+                pf['suggests_ghost'] = False
 
         # --- PRE-DEDUP ---
         # Note: We now keep ALL potential fills, flagging them as 'suggests_ghost' 
@@ -762,20 +807,16 @@ def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint:
                             if existing.get(k) in (None, "", 0, False) and pf.get(k) not in (None, "", 0, False):
                                 existing[k] = pf.get(k)
                         break
-        
-        return fills, [] # ghosts list is now empty as filtering is deferred
-        # The original code had a target_sym check here, which is removed as acc_filter is now the second arg.
-        # if sh == "Unknown" and target_sym:
-        #     sh = target_sym.upper()
-        #     filename_symbol_inferred = True
 
         with open("import_debug.log", "a") as fld:
-            fld.write(f"FILE: {fn} | ACC: {acc} | SYMBOL: {sh} | FILLS: {len(fills)}\n")
+            fld.write(f"FILE: {fn} | ACC: {acc} | SYMBOL: {sh} | RAW: {len(raw_candidates)} | FILLS: {len(fills)}\n")
+
+        return fills, []  # ghosts list is deferred to run_import post-dedup stage
 
     except Exception as e:
         with open("import_debug.log", "a") as fld:
             fld.write(f"ERROR: {os.path.basename(file_path)} -> {str(e)}\n")
-            
+
     return fills, ghosts
 
 class BinaryLogParser:
@@ -947,14 +988,14 @@ class BinaryLogParser:
                         fn = os.path.basename(f)
                         if "TradeActivityLog" not in fn: continue
                         
-                        # Case 1: Filename contains date (e.g. 2024-06-02)
+                        # Case 1: Filename contains date (e.g. 2024-06-02) — primary filter
                         date_match = re.search(r'(\d{4}-\d{2}-\d{2})', fn)
                         if date_match and cutoff_date_str:
                             if date_match.group(1) < cutoff_date_str:
                                 continue
-                        
-                        # Case 2: No date in filename or no lookback, check mtime
-                        if cutoff_time and os.path.getmtime(f) < cutoff_time:
+                        # Case 2: No date in filename — fall back to mtime
+                        # Use elif so dated files are not double-filtered by mtime
+                        elif cutoff_time and os.path.getmtime(f) < cutoff_time:
                             continue
                             
                         filtered_files.append(f)
@@ -1250,6 +1291,36 @@ class BinaryLogParser:
                     # We MUST skip their impact on position and pairing if flagged.
                     is_ghost = f.get('suggests_ghost', False)
                     if is_ghost:
+                        # GHOST SEQUENCE RESYNC:
+                        # If a ghost fill is an exit (or opposite side to open_legs),
+                        # we MUST purge the matching orphaned open_legs entries so that
+                        # future real entries are not corrupted or misidentified as exits.
+                        ghost_qty = f.get('quantity', 0)
+                        ghost_side = f.get('side', '')
+                        
+                        rem_ghost = ghost_qty
+                        while rem_ghost > 0 and open_legs:
+                            idx_to_pop = -1
+                            for i_leg, leg_item in enumerate(open_legs):
+                                if leg_item['side'] != ghost_side:
+                                    idx_to_pop = i_leg
+                                    break
+                            if idx_to_pop == -1:
+                                idx_to_pop = 0
+                                
+                            popped = open_legs[idx_to_pop]
+                            take_qty = min(rem_ghost, popped['qty'])
+                            popped['qty'] -= take_qty
+                            rem_ghost -= take_qty
+                            
+                            if popped['side'] == 'BUY':
+                                running_position -= take_qty
+                            else:
+                                running_position += take_qty
+                                
+                            if popped['qty'] <= 0:
+                                open_legs.pop(idx_to_pop)
+                                
                         continue
                     
                     # RULE 9: Session-Boundary FIFO Reset (17:00 NY)

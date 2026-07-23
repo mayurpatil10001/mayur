@@ -242,7 +242,7 @@ async def get_current_user(
     from ..config import config
     
     # In development mode, return a default user without checking credentials
-    if getattr(config, 'DEVELOPMENT_MODE', True):
+    if getattr(config, 'DEVELOPMENT_MODE', False):
         return {
             "user_id": "dev_user",
             "username": "developer",

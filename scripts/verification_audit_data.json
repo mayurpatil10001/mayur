@@ -1,0 +1,14 @@
+{
+  "parser_fix": "ghost_exit_orphan_purge_active",
+  "processing_mode": "single_threaded_sequential",
+  "total_files_found": 47628,
+  "files_ok": 47628,
+  "files_failed": 0,
+  "total_fills_extracted": 3311010,
+  "total_ghost_fills_at_parser": 0,
+  "unpaired_fill_qty": 4828023,
+  "position_warnings": 112,
+  "session_boundary_trades_dropped": 0,
+  "total_verification_trades": 126991,
+  "ghost_sample": []
+}

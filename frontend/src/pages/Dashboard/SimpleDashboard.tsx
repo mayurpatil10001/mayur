@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import SortinoLeaderboard from '../../components/SortinoLeaderboard';
+
 
 interface Account {
   name: string;
@@ -93,8 +95,14 @@ const SimpleDashboard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>🚀 Simple Trading Dashboard</h1>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', background: '#0d1117', minHeight: '100vh', color: '#e6edf3' }}>
+      <h1 style={{ color: '#58a6ff', marginBottom: 8 }}>🚀 Trading Optimization Platform</h1>
+      <p style={{ color: '#8b949e', marginBottom: 24, fontSize: 13 }}>
+        Target: High Sortino · High Trade Frequency · Low Volatility
+      </p>
+
+      {/* ── SORTINO LEADERBOARD (primary target panel) ── */}
+      <SortinoLeaderboard />
 
       <div style={{ marginBottom: '20px' }}>
         <h3>Status</h3>

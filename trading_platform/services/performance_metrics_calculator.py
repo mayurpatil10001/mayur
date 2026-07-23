@@ -39,8 +39,10 @@ class RiskMetrics:
     expected_shortfall_95: float
     expected_shortfall_99: float
     downside_deviation: float
-    sortino_ratio: float
+    sortino_ratio: float          # Annualized Sortino (target: high Sortino = good)
     calmar_ratio: float
+    trades_per_week: float        # Trade frequency for real-time model evaluation
+    pnl_std_dev: float            # Overall PnL volatility (target: low = good)
 
 
 class PerformanceMetricsCalculatorError(Exception):
@@ -138,10 +140,40 @@ class PerformanceMetricsCalculator:
             returns = [t.profit_loss for t in period_trades]
             volatility = self._calculate_volatility(returns)
             sharpe_ratio = self._calculate_sharpe_ratio(returns, volatility)
-            
+
             # Calculate maximum drawdown
             max_drawdown = self._calculate_max_drawdown(period_trades)
-            
+
+            # --- Win/loss magnitude metrics ---
+            # win_loss_ratio: average win divided by the absolute value of average loss.
+            # A value < 1 means losses are on average larger than wins.
+            if wins and losses:
+                win_loss_ratio: Optional[float] = average_win / abs(average_loss)
+            else:
+                win_loss_ratio = None  # Cannot compute when one side is empty
+
+            # payoff_adjusted_expectancy: the true per-trade expected value when
+            # both win probability AND magnitude are accounted for.
+            # Formula: E[P&L] = win_rate * E[win] + (1 - win_rate) * E[loss]
+            # (average_loss is already negative, so no sign change needed)
+            if wins and losses:
+                payoff_adjusted_expectancy: Optional[float] = (
+                    win_rate * average_win + (1.0 - win_rate) * average_loss
+                )
+            elif wins:
+                payoff_adjusted_expectancy = average_win  # 100% win rate
+            else:
+                payoff_adjusted_expectancy = average_loss  # 0% win rate
+
+            # risk_flag: True when win_rate is high (>55%) but losses dominate
+            # in magnitude (win_loss_ratio < 1.0). This flags the "high win-rate
+            # trap" where frequent small wins mask occasional large losses.
+            risk_flag: bool = (
+                win_rate > 0.55
+                and win_loss_ratio is not None
+                and win_loss_ratio < 1.0
+            )
+
             return PerformanceMetrics(
                 account_name=account_name,
                 symbol=symbol,
@@ -159,7 +191,10 @@ class PerformanceMetricsCalculator:
                 sharpe_ratio=sharpe_ratio,
                 volatility=volatility,
                 largest_win=largest_win,
-                largest_loss=largest_loss
+                largest_loss=largest_loss,
+                win_loss_ratio=win_loss_ratio,
+                payoff_adjusted_expectancy=payoff_adjusted_expectancy,
+                risk_flag=risk_flag,
             )
             
         except Exception as e:
@@ -168,38 +203,55 @@ class PerformanceMetricsCalculator:
     def calculate_risk_metrics(self, trades: List[ProcessedTrade]) -> RiskMetrics:
         """
         Calculate advanced risk metrics for a set of trades.
-        
+
+        Sortino ratio is annualized so high-frequency, consistent accounts
+        score higher than low-frequency ones with the same per-trade mean.
+        Formula: (mean_pnl / downside_dev) * sqrt(trades_per_year)
+
         Args:
             trades: List of processed trades to analyze
-            
+
         Returns:
             RiskMetrics object with risk-related calculations
         """
         if not trades:
             raise PerformanceMetricsCalculatorError("Cannot calculate risk metrics for empty trade list")
-        
+
         returns = [t.profit_loss for t in trades]
         negative_returns = [r for r in returns if r < 0]
-        
+
         # Value at Risk calculations
         var_95 = self._calculate_var(returns, 0.95)
         var_99 = self._calculate_var(returns, 0.99)
-        
+
         # Expected Shortfall (Conditional VaR)
         es_95 = self._calculate_expected_shortfall(returns, 0.95)
         es_99 = self._calculate_expected_shortfall(returns, 0.99)
-        
+
         # Downside deviation (volatility of negative returns only)
-        downside_deviation = np.std(negative_returns) if negative_returns else 0.0
-        
-        # Sortino ratio (return / downside deviation)
-        mean_return = np.mean(returns)
-        sortino_ratio = mean_return / downside_deviation if downside_deviation > 0 else 0.0
-        
+        downside_deviation = float(np.std(negative_returns)) if negative_returns else 0.0
+
+        # --- Annualized Sortino (core target metric) ---
+        # Determine span of trades to compute trades-per-year annualization factor
+        sorted_trades = sorted(trades, key=lambda t: t.entry_time)
+        span_days = max((sorted_trades[-1].exit_time - sorted_trades[0].entry_time).days, 1)
+        total_trades = len(trades)
+        trades_per_year = (total_trades / span_days) * 252  # 252 trading days
+        trades_per_week = (total_trades / span_days) * 5    # 5 trading days per week
+        annualization_factor = float(np.sqrt(max(trades_per_year, 1)))
+
+        mean_return = float(np.mean(returns))
+        # Annualized Sortino: per-trade Sortino scaled to annual frequency
+        per_trade_sortino = mean_return / downside_deviation if downside_deviation > 0 else 0.0
+        sortino_ratio = per_trade_sortino * annualization_factor
+
+        # PnL standard deviation (low = good for our target)
+        pnl_std_dev = float(np.std(returns, ddof=1)) if len(returns) > 1 else 0.0
+
         # Calmar ratio (return / max drawdown)
         max_drawdown = abs(self._calculate_max_drawdown(trades))
         calmar_ratio = mean_return / max_drawdown if max_drawdown > 0 else 0.0
-        
+
         return RiskMetrics(
             value_at_risk_95=var_95,
             value_at_risk_99=var_99,
@@ -207,7 +259,9 @@ class PerformanceMetricsCalculator:
             expected_shortfall_99=es_99,
             downside_deviation=downside_deviation,
             sortino_ratio=sortino_ratio,
-            calmar_ratio=calmar_ratio
+            calmar_ratio=calmar_ratio,
+            trades_per_week=round(trades_per_week, 2),
+            pnl_std_dev=pnl_std_dev,
         )
     
     def calculate_drawdown_periods(self, trades: List[ProcessedTrade]) -> List[DrawdownPeriod]:

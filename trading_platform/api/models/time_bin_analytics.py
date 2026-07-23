@@ -166,17 +166,31 @@ class TimeBinMetricsResponse(BaseModel):
         description="95% confidence interval for average P&L",
         example=[35.25, 64.77]
     )
-    
+
     p_value_vs_random: Optional[float] = Field(
-        description="P-value testing against random trading",
+        description="Raw p-value testing against random trading (NOT corrected for multiple comparisons)",
         example=0.032
     )
-    
+
     statistical_significance: bool = Field(
-        description="Whether performance is statistically significant",
+        description="Raw significance gate: p_value_vs_random < 0.05. Kept for transparency; use bh_significant for decisions.",
         example=True
     )
-    
+
+    # Benjamini-Hochberg FDR-corrected significance
+    # Populated by the recommendations endpoint; None for single-bin lookups.
+    adjusted_p_value: Optional[float] = Field(
+        default=None,
+        description="BH-adjusted p-value (q-value). None when slot was analyzed in isolation.",
+        example=0.041
+    )
+
+    bh_significant: Optional[bool] = Field(
+        default=None,
+        description="True only when adjusted_p_value <= 0.05 (FDR-corrected). Use this — not statistical_significance — as the recommendation gate.",
+        example=True
+    )
+
     minimum_sample_size_met: bool = Field(
         description="Whether minimum sample size is met for statistical tests",
         example=True
@@ -453,6 +467,17 @@ class AccountRecommendationsResponse(BaseModel):
     warnings: List[str] = Field(
         description="Any warnings about the analysis",
         example=["Some time bins had insufficient data for statistical significance testing"]
+    )
+
+    # --- Walk-Forward Validation Gating (Task 3) ---
+    pending_validation: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Time bins meeting statistical criteria but awaiting Walk-Forward Analysis (WFA) execution."
+    )
+
+    failed_wfa: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Time bins meeting statistical criteria but failing Walk-Forward out-of-sample validation."
     )
 
 

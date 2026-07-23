@@ -8,7 +8,7 @@ Requirements: 1.1, 1.6, 4.4, 10.1
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 import logging
@@ -60,6 +60,67 @@ def get_time_bin_analyzer(db: Session = Depends(get_database_session)) -> TimeBi
 def get_benchmark_analyzer(db: Session = Depends(get_database_session)) -> BenchmarkComparisonAnalyzer:
     """Dependency to get BenchmarkComparisonAnalyzer instance."""
     return BenchmarkComparisonAnalyzer(db_session=db)
+
+
+def _check_wfa_gate(db: Session, account_name: str, hour: int, minute_bin: int) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Check if a time-bin passes Walk-Forward Analysis (WFA) out-of-sample gating.
+
+    Returns:
+        (is_passed, status_code, details_dict)
+        status_code: 'validated', 'pending_validation', or 'failed_validation'
+    """
+    try:
+        from ...models.time_bin_analytics import TimeBinAnalysis, WalkForwardResult
+
+        wfr = (
+            db.query(WalkForwardResult)
+            .join(TimeBinAnalysis, WalkForwardResult.time_bin_analysis_id == TimeBinAnalysis.id)
+            .filter(
+                TimeBinAnalysis.account_name == account_name,
+                TimeBinAnalysis.hour == hour,
+                TimeBinAnalysis.minute_bin == minute_bin
+            )
+            .order_by(WalkForwardResult.created_timestamp.desc())
+            .first()
+        )
+
+        if not wfr:
+            return False, "pending_validation", {
+                "reason": "No Walk-Forward validation record found in database. Validation run required."
+            }
+
+        # Check OOS performance gates
+        sharpe_ok = wfr.oos_sharpe_ratio is not None and wfr.oos_sharpe_ratio > 0.0
+
+        drawdown_bound = -500.0
+        if wfr.oos_avg_pnl_per_trade is not None and wfr.oos_avg_pnl_per_trade > 0:
+            drawdown_bound = -3.0 * wfr.oos_avg_pnl_per_trade
+
+        drawdown_ok = True
+        if wfr.oos_max_drawdown is not None:
+            drawdown_ok = wfr.oos_max_drawdown > drawdown_bound
+
+        details = {
+            "oos_sharpe_ratio": wfr.oos_sharpe_ratio,
+            "oos_max_drawdown": wfr.oos_max_drawdown,
+            "validation_scheme": wfr.validation_scheme,
+            "prediction_error": wfr.prediction_error
+        }
+
+        if sharpe_ok and drawdown_ok:
+            return True, "validated", details
+        else:
+            details["failure_reason"] = (
+                f"OOS Sharpe={wfr.oos_sharpe_ratio} (must be > 0) or "
+                f"OOS MaxDD={wfr.oos_max_drawdown} (must be > {drawdown_bound:.2f})"
+            )
+            return False, "failed_validation", details
+
+    except Exception as e:
+        logger.warning(f"Error checking WFA gate for {account_name} {hour}:{minute_bin:02d}: {e}")
+        return False, "pending_validation", {"reason": f"WFA gate query error: {str(e)}"}
+
 
 
 def get_vix_analyzer(db: Session = Depends(get_database_session)) -> VIXDataIntegration:
@@ -445,130 +506,174 @@ async def get_account_recommendations(
     """
     
     logger.info(f"[ACCOUNT RECOMMENDATIONS] Getting recommendations for {account}")
-    
+
     try:
-        # Generate all possible time bins for the account (48 half-hour slots)
-        all_time_bins = []
-        for hour in range(24):
-            for minute_bin in [0, 30]:
-                time_bin = TimeBin(
-                    account_name=account,
-                    hour=hour,
-                    minute_bin=minute_bin
-                )
-                all_time_bins.append(time_bin)
-        
+        # --- Collect all slots and apply BH correction in one family ---
+        # BH requires the complete set of p-values to be evaluated together.
+        # analyze_all_bins_with_bh() does this correctly and sets
+        # metrics.adjusted_p_value and metrics.bh_significant on each result.
+        all_results = analyzer.analyze_all_bins_with_bh(account=account)
+
         # Analyze each time bin and filter by criteria
         candidate_recommendations = []
         total_analyzed = 0
         meeting_criteria = 0
         warnings = []
-        
-        for time_bin in all_time_bins:
-            try:
-                metrics, significance_tests = analyzer.analyze_time_bin(time_bin)
-                total_analyzed += 1
-                
-                # Skip if no trades
-                if metrics.total_trades == 0:
-                    continue
-                
-                # Apply filters
-                meets_criteria = True
-                
-                # Minimum trades filter
-                if metrics.total_trades < min_trades:
-                    meets_criteria = False
-                
-                # Win rate filter
-                if metrics.win_rate * 100 < min_win_rate:
-                    meets_criteria = False
-                
-                # Average P&L filter
-                if metrics.average_pnl < min_average_pnl:
-                    meets_criteria = False
-                
-                # Statistical significance filter
-                if include_statistical_significance and not metrics.statistical_significance:
-                    meets_criteria = False
-                
-                if meets_criteria:
-                    meeting_criteria += 1
-                    
-                    # Calculate recommendation score (weighted combination of metrics)
-                    score = (
-                        metrics.average_pnl * 0.4 +  # 40% weight on average P&L
-                        (metrics.win_rate * 100) * 0.3 +  # 30% weight on win rate
-                        (metrics.sharpe_ratio or 0) * 10 * 0.2 +  # 20% weight on Sharpe ratio
-                        metrics.profit_factor * 5 * 0.1  # 10% weight on profit factor
-                    )
-                    
-                    # Determine confidence level
-                    if metrics.statistical_significance and metrics.minimum_sample_size_met:
-                        if metrics.total_trades >= 100:
-                            confidence = "High"
-                        elif metrics.total_trades >= 50:
-                            confidence = "Medium"
-                        else:
-                            confidence = "Low"
+
+        for metrics, significance_tests in all_results:
+            # Skip sentinel entries (exceptions during individual slot analysis)
+            if metrics is None:
+                continue
+
+            total_analyzed += 1
+            time_bin = metrics.time_bin
+
+            # Skip if no trades
+            if metrics.total_trades == 0:
+                continue
+
+            # Apply filters
+            meets_criteria = True
+
+            # Minimum trades filter
+            if metrics.total_trades < min_trades:
+                meets_criteria = False
+
+            # Win rate filter
+            if metrics.win_rate * 100 < min_win_rate:
+                meets_criteria = False
+
+            # Average P&L filter
+            if metrics.average_pnl < min_average_pnl:
+                meets_criteria = False
+
+            # Statistical significance filter (BH-corrected gate)
+            if include_statistical_significance and not metrics.bh_significant:
+                meets_criteria = False
+
+            if meets_criteria:
+                meeting_criteria += 1
+
+                # Calculate recommendation score (weighted combination of metrics)
+                score = (
+                    metrics.average_pnl * 0.4 +
+                    (metrics.win_rate * 100) * 0.3 +
+                    (metrics.sharpe_ratio or 0) * 10 * 0.2 +
+                    metrics.profit_factor * 5 * 0.1
+                )
+
+                # Determine confidence level
+                if metrics.bh_significant and metrics.minimum_sample_size_met:
+                    if metrics.total_trades >= 100:
+                        confidence = "High"
+                    elif metrics.total_trades >= 50:
+                        confidence = "Medium"
                     else:
                         confidence = "Low"
-                    
-                    # Determine risk assessment
-                    if abs(metrics.max_drawdown) > metrics.average_pnl * 10:
-                        risk = "High"
-                    elif abs(metrics.max_drawdown) > metrics.average_pnl * 5:
-                        risk = "Medium"
-                    else:
-                        risk = "Low"
-                    
-                    # Create recommendation reason
-                    reasons = []
-                    if metrics.average_pnl > min_average_pnl * 2:
-                        reasons.append("strong average P&L")
-                    if metrics.win_rate > 0.6:
-                        reasons.append("good win rate")
-                    if metrics.statistical_significance:
-                        reasons.append("statistical significance")
-                    if metrics.sharpe_ratio and metrics.sharpe_ratio > 1.0:
-                        reasons.append("good risk-adjusted returns")
-                    
-                    recommendation_reason = f"Recommended due to {', '.join(reasons) if reasons else 'meeting basic criteria'}"
-                    
-                    candidate_recommendations.append({
-                        "time_bin": time_bin,
-                        "metrics": metrics,
-                        "score": score,
-                        "confidence": confidence,
-                        "risk": risk,
-                        "reason": recommendation_reason
-                    })
-                
-            except Exception as e:
-                logger.warning(f"[ACCOUNT RECOMMENDATIONS] Error analyzing {time_bin}: {str(e)}")
-                continue
+                else:
+                    confidence = "Low"
+
+                # Determine risk assessment
+                if abs(metrics.max_drawdown) > metrics.average_pnl * 10:
+                    risk = "High"
+                elif abs(metrics.max_drawdown) > metrics.average_pnl * 5:
+                    risk = "Medium"
+                else:
+                    risk = "Low"
+
+                # Create recommendation reason
+                reasons = []
+                if metrics.average_pnl > min_average_pnl * 2:
+                    reasons.append("strong average P&L")
+                if metrics.win_rate > 0.6:
+                    reasons.append("good win rate")
+                if metrics.bh_significant:
+                    reasons.append("FDR-corrected statistical significance")
+                if metrics.sharpe_ratio and metrics.sharpe_ratio > 1.0:
+                    reasons.append("good risk-adjusted returns")
+
+                recommendation_reason = (
+                    f"Recommended due to {', '.join(reasons) if reasons else 'meeting basic criteria'}"
+                )
+
+                candidate_recommendations.append({
+                    "time_bin": time_bin,
+                    "metrics": metrics,
+                    "score": score,
+                    "confidence": confidence,
+                    "risk": risk,
+                    "reason": recommendation_reason
+                })
         
         # Sort by score and take top recommendations
         candidate_recommendations.sort(key=lambda x: x["score"], reverse=True)
-        top_recommendations = candidate_recommendations[:max_recommendations]
-        
+
+        # --- Walk-Forward Analysis (WFA) Gating ---
+        # Gate recommendations: candidates must pass out-of-sample validation.
+        # Candidates without WFA records go to pending_validation.
+        # Candidates with failing OOS Sharpe/MaxDD go to failed_wfa.
+        validated_candidates = []
+        pending_validation_list = []
+        failed_wfa_list = []
+
+        for rec in candidate_recommendations:
+            tb = rec["time_bin"]
+            is_passed, status, wfa_details = _check_wfa_gate(db, account, tb.hour, tb.minute_bin)
+
+            slot_info = {
+                "time_bin_id": str(tb),
+                "hour": tb.hour,
+                "minute_bin": tb.minute_bin,
+                "score": rec["score"],
+                "average_pnl": rec["metrics"].average_pnl,
+                "win_rate": rec["metrics"].win_rate * 100,
+                "wfa_details": wfa_details
+            }
+
+            if is_passed:
+                validated_candidates.append(rec)
+            elif status == "pending_validation":
+                pending_validation_list.append(slot_info)
+            else:
+                failed_wfa_list.append(slot_info)
+
+        top_recommendations = validated_candidates[:max_recommendations]
+
         # Check for warnings
         if meeting_criteria < 5:
-            warnings.append("Few time bins met the specified criteria. Consider relaxing filters.")
-        
+            warnings.append(
+                "Few time bins met the specified criteria (BH-corrected). "
+                "Consider relaxing filters or running more trades."
+            )
+
+        if pending_validation_list:
+            warnings.append(
+                f"{len(pending_validation_list)} time bins met statistical criteria but are pending Walk-Forward Analysis (WFA) validation."
+            )
+
+        if failed_wfa_list:
+            warnings.append(
+                f"{len(failed_wfa_list)} time bins were rejected due to failing Walk-Forward out-of-sample validation."
+            )
+
         if total_analyzed < 48:
             warnings.append("Some time bins could not be analyzed due to data issues.")
-        
-        insufficient_data_count = sum(1 for rec in candidate_recommendations if not rec["metrics"].minimum_sample_size_met)
+
+        insufficient_data_count = sum(
+            1 for rec in candidate_recommendations
+            if not rec["metrics"].minimum_sample_size_met
+        )
         if insufficient_data_count > 0:
-            warnings.append(f"{insufficient_data_count} time bins had insufficient data for statistical significance testing")
-        
+            warnings.append(
+                f"{insufficient_data_count} time bins had insufficient data for statistical significance testing"
+            )
+
         # Convert to response models
         recommendations = []
         for rank, rec in enumerate(top_recommendations, 1):
             time_bin = rec["time_bin"]
             metrics = rec["metrics"]
-            
+
             recommendation = TimeBinRecommendation(
                 rank=rank,
                 time_bin_id=str(time_bin),
@@ -579,8 +684,12 @@ async def get_account_recommendations(
                 key_metrics={
                     "average_pnl": metrics.average_pnl,
                     "win_rate": metrics.win_rate * 100,
-                    "total_trades": metrics.total_trades,
-                    "sharpe_ratio": metrics.sharpe_ratio or 0.0
+                    "total_trades": float(metrics.total_trades),
+                    "sharpe_ratio": float(metrics.sharpe_ratio or 0.0),
+                    # BH-corrected significance (the decision field)
+                    "adjusted_p_value": float(metrics.adjusted_p_value) if metrics.adjusted_p_value is not None else -1.0,
+                    "raw_p_value": float(metrics.p_value_vs_random) if metrics.p_value_vs_random is not None else -1.0,
+                    "bh_significant": 1.0 if metrics.bh_significant else 0.0,
                 },
                 confidence_level=rec["confidence"],
                 risk_assessment=rec["risk"],
@@ -592,8 +701,11 @@ async def get_account_recommendations(
         analysis_summary = {
             "total_time_bins_analyzed": total_analyzed,
             "time_bins_meeting_criteria": meeting_criteria,
+            "time_bins_wfa_validated": len(validated_candidates),
+            "time_bins_wfa_pending": len(pending_validation_list),
+            "time_bins_wfa_failed": len(failed_wfa_list),
             "best_overall_metric": "average_pnl",
-            "analysis_period_days": 365  # Placeholder - could be calculated from actual data
+            "analysis_period_days": 365
         }
         
         # Create filters applied summary
@@ -601,7 +713,8 @@ async def get_account_recommendations(
             "min_trades": min_trades,
             "min_win_rate": min_win_rate,
             "min_average_pnl": min_average_pnl,
-            "statistical_significance_required": include_statistical_significance
+            "statistical_significance_required": include_statistical_significance,
+            "walk_forward_gating_enabled": True
         }
         
         # Create response
@@ -610,7 +723,9 @@ async def get_account_recommendations(
             recommendations=recommendations,
             analysis_summary=analysis_summary,
             filters_applied=filters_applied,
-            warnings=warnings
+            warnings=warnings,
+            pending_validation=pending_validation_list,
+            failed_wfa=failed_wfa_list
         )
         
         logger.info(f"[ACCOUNT RECOMMENDATIONS] SUCCESS: {account} - {len(recommendations)} recommendations")

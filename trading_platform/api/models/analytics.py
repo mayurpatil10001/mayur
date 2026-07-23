@@ -115,12 +115,30 @@ class PerformanceMetricsResponse(BaseModel):
         description="Largest winning trade",
         example=750.00
     )
-    
+
     largest_loss: float = Field(
         description="Largest losing trade",
         example=-425.50
     )
 
+    # --- Win/loss magnitude metrics ---
+    win_loss_ratio: Optional[float] = Field(
+        default=None,
+        description="Average win divided by |average loss|. Values < 1.0 indicate losses are larger than wins on average.",
+        example=2.28
+    )
+
+    payoff_adjusted_expectancy: Optional[float] = Field(
+        default=None,
+        description="True expected P&L per trade: win_rate × avg_win + (1 - win_rate) × avg_loss. Negative value means the strategy loses money on average.",
+        example=95.50
+    )
+
+    risk_flag: bool = Field(
+        default=False,
+        description="True when win_rate > 55% but win_loss_ratio < 1.0. This is the high win-rate trap: frequent small wins masked by occasional large losses.",
+        example=False
+    )
 
 class TemporalAnalysisResponse(BaseModel):
     """Temporal analysis response model."""

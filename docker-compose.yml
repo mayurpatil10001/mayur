@@ -12,12 +12,13 @@ services:
       - ./demo_data:/app/demo_data
       - ./trading_platform.db:/app/trading_platform.db
       - ./logs:/app/logs
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=sqlite:///./trading_platform.db
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - LOG_LEVEL=INFO
-      - SECRET_KEY=docker-secret-key-change-in-production
       # Update these if you have actual SierraChart data mounted
       - SIERRA_CHART_SIMULATED_PATH=/app/demo_data/simulated
       - SIERRA_CHART_DELAYED_PATH=/app/demo_data/delayed

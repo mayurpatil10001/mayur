@@ -41,6 +41,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Config validation error: {e}")
     
+    # Security warning log for development mode
+    if getattr(config, 'DEVELOPMENT_MODE', True):
+        logger.warning(
+            "SECURITY WARNING: DEVELOPMENT_MODE=true — JWT authentication is DISABLED. "
+            "Set DEVELOPMENT_MODE=false in production environment."
+        )
+
     logger.info("API startup sequence completed (services on-demand)")
     
     yield
@@ -150,11 +157,14 @@ def create_app() -> FastAPI:
 def setup_middleware(app: FastAPI) -> None:
     """Configure application middleware."""
     
-    # CORS middleware
+    # CORS middleware using env-driven allowed origins
+    allowed_origins = getattr(config, 'ALLOWED_ORIGINS', ["*"])
+    allow_credentials = "*" not in allowed_origins
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Allow all origins for development
-        allow_credentials=False,  # Set to False when using allow_origins=["*"]
+        allow_origins=allowed_origins,
+        allow_credentials=allow_credentials,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )

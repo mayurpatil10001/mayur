@@ -11,8 +11,8 @@ class Config:
     """Application configuration."""
     
     # Data source paths
-    SIERRA_CHART_SIMULATED_PATH = Path(r"D:\SierraChart_Simulated_Feed\SavedTradeActivity")
-    SIERRA_CHART_DELAYED_PATH = Path(r"D:\SierraChart_Delayed_Simulated\SavedTradeActivity")
+    SIERRA_CHART_SIMULATED_PATH = Path(os.getenv("SIERRA_CHART_SIMULATED_PATH", r"D:\SierraChart_Simulated_Feed\SavedTradeActivity"))
+    SIERRA_CHART_DELAYED_PATH = Path(os.getenv("SIERRA_CHART_DELAYED_PATH", r"D:\SierraChart_Delayed_Simulated\SavedTradeActivity"))
     
     # Database configuration
     ROOT_DIR = Path(__file__).parent.parent
@@ -32,6 +32,17 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE", "true").lower() == "true"
+
+    # CORS Origins (comma-separated list in ALLOWED_ORIGINS env var)
+    # Default: ["*"] when DEVELOPMENT_MODE=true, [] (strict/blocked) when false.
+    _raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+    if _raw_origins.strip():
+        ALLOWED_ORIGINS: List[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    elif DEVELOPMENT_MODE:
+        ALLOWED_ORIGINS: List[str] = ["*"]
+    else:
+        ALLOWED_ORIGINS: List[str] = []
+
     
     # Analysis parameters
     RISK_FREE_RATE = float(os.getenv("RISK_FREE_RATE", "0.02"))  # 2% annual

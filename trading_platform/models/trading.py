@@ -217,7 +217,7 @@ class Account:
 @dataclass
 class PerformanceMetrics:
     """Performance metrics for an account or strategy with validation."""
-    
+
     account_name: str
     symbol: str
     period_start: datetime
@@ -235,7 +235,21 @@ class PerformanceMetrics:
     volatility: float
     largest_win: float
     largest_loss: float
-    
+
+    # --- Win/loss magnitude metrics (Task 2) ---
+    # win_loss_ratio: avg_win / |avg_loss|. > 1 means wins are larger than losses.
+    # None when one side has zero trades.
+    win_loss_ratio: Optional[float] = None
+
+    # payoff_adjusted_expectancy: win_rate * avg_win + (1 - win_rate) * avg_loss
+    # (avg_loss is already negative, so this is the true expected P&L per trade).
+    payoff_adjusted_expectancy: Optional[float] = None
+
+    # risk_flag: True when win_rate > 0.55 but win_loss_ratio < 1.0.
+    # This is the "high win-rate trap" pattern (TM_7/NQ style) where frequent
+    # small wins are overwhelmed by infrequent large losses.
+    risk_flag: bool = False
+
     def __post_init__(self):
         """Validate performance metrics after initialization."""
         self._validate_metrics()

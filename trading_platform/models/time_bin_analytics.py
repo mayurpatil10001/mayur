@@ -192,7 +192,12 @@ class WalkForwardResult(Base):
     actual_performance = Column(Float, nullable=False)
     prediction_error = Column(Float, nullable=False)
     trades_in_out_sample = Column(Integer, nullable=False)
-    
+
+    # Out-of-Sample metrics (used by WFA recommendation gate)
+    oos_sharpe_ratio = Column(Float, nullable=True)
+    oos_max_drawdown = Column(Float, nullable=True)
+    oos_avg_pnl_per_trade = Column(Float, nullable=True)
+
     # Metadata
     created_timestamp = Column(DateTime, nullable=False, default=func.now())
     

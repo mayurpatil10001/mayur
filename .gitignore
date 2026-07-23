@@ -1,37 +1,74 @@
-# Virtual Environment
+# ==============================================================================
+# Git Ignore Configuration for Sierra Chart Trade Optimization Platform
+# ==============================================================================
+
+# Virtual Environments
 venv/
 env/
 ENV/
+.venv/
 
-# Node.js
+# Environment Variables & Credentials
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env.example
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+trading_platform.db
+scratch_parser_test.db
+
+# Large Log Files & Diagnostics
+*.log
+*.log.*
+ghost_all.log
+import_debug.log
+import_files_trace.log
+trading_platform.log*
+logs/
+
+# Data Directories & Binary Datasets
+dataset/
+data/
+rar_extract/
+scratch/
+debug/
+"New folder"/
+
+# PDF Audit Artifacts (Generated locally)
+*.pdf
+
+# IDE & Editor Directories
+.vscode/
+.claude/
+.cursor/
+.kiro/
+.bmad-core/
+.idea/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Node.js / Frontend
 node_modules/
 frontend/node_modules/
+frontend/build/
+frontend/.next/
+frontend/out/
+frontend/node_modules/.cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.eslintcache
 
-# Build
+# Build Artifacts
 build/
 dist/
-frontend/build/
-
-# Environment variables
-.env
-.env.*
-
-# Logs and Caches
-*.log
-*.pack
-.pytest_cache/
-__pycache__/
-.eslintcache
-frontend/node_modules/.cache/
-.git-error-*
-
-# Database
-*.db
-*.db-shm
-*.db-wal
-
-# Data samples
-data/samples/
+*.egg-info/

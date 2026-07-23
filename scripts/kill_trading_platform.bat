@@ -1,37 +1,36 @@
 @echo off
+setlocal
+title Stop - Trading Platform
+cd /d "%~dp0.."
+
 echo ========================================
 echo   Stopping Trading Platform
 echo ========================================
 echo.
+echo Freeing ports 8000 (backend) and 3001 (frontend)...
+echo.
 
-echo Terminating all trading platform processes...
+REM Kill by port only - safer than killing all python.exe / node.exe
+set killed=0
 
-REM Kill Python processes (backend)
-echo Stopping backend processes...
-taskkill /f /im python.exe >nul 2>&1
-taskkill /f /im uvicorn.exe >nul 2>&1
-
-REM Kill Node processes (frontend)
-echo Stopping frontend processes...
-taskkill /f /im node.exe >nul 2>&1
-taskkill /f /im npm.exe >nul 2>&1
-
-REM Kill any processes using our ports
-echo Freeing up ports 8000 and 3001...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000') do (
-    echo Killing process on port 8000: %%a
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8000 "') do (
+    echo   Stopping backend  (PID %%a)...
     taskkill /f /pid %%a >nul 2>&1
+    set killed=1
 )
 
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001') do (
-    echo Killing process on port 3001: %%a
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":3001 "') do (
+    echo   Stopping frontend (PID %%a)...
     taskkill /f /pid %%a >nul 2>&1
+    set killed=1
+)
+
+if "%killed%"=="0" (
+    echo   Nothing was running on ports 8000 / 3001.
 )
 
 echo.
-echo ✅ All trading platform processes terminated
-echo Ports 8000 and 3001 are now free
-echo.
-echo You can now run start_trading_platform.bat for a fresh start
+echo Done. Ports 8000 and 3001 are now free.
+echo Run START.bat to launch the platform again.
 echo.
 pause

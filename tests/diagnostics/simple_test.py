@@ -8,16 +8,16 @@ try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     
     from trading_platform.services.free_market_data import FreeMarketDataService
-    print("✅ Import successful")
-    
+    print("[OK] Import successful")
+
     service = FreeMarketDataService()
-    print("✅ Service initialized")
-    
+    print("[OK] Service initialized")
+
     # Test connection
     result = service.test_connection()
-    print(f"Connection test: {'✅ Success' if result else '❌ Failed'}")
-    
+    print(f"Connection test: {'[OK] Success' if result else '[ERROR] Failed'}")
+
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"[ERROR] Error: {e}")
     import traceback
     traceback.print_exc()
