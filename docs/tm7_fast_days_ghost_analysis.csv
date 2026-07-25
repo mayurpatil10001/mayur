@@ -1,0 +1,5 @@
+﻿=== HIGH-VOLUME FAST DAYS GHOST RESYNCHRONIZATION AUDIT ===
+Date,File_Size_MB,Total_Fills,Real_Fills,Ghost_Fills,First_Ghost_Fill_#,Dirty_Direction_Flips,Clean_Direction_Flips,Resync_Success
+2024-09-30,201.9,18,18,0,None,0,0,YES (100% Clean)
+2024-10-01,126.9,6,6,0,None,0,0,YES (100% Clean)
+2025-06-23,159.0,0,0,0,None,0,0,YES (100% Clean)
