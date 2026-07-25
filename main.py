@@ -3,9 +3,9 @@ Main entry point for the Trading Optimization Platform.
 """
 
 import uvicorn
-from trading_platform.config import config
-from trading_platform.utils.logging import app_logger
-from trading_platform.api.main import app
+from backend.config import config
+from backend.utils.logging import app_logger
+from backend.api.main import app
 
 
 if __name__ == "__main__":

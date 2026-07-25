@@ -1,0 +1,61 @@
+/* frontend/src/pages/WalkForward/WalkForward.css */
+
+.wf-page { padding: 24px; max-width: 1600px; margin: 0 auto; font-family: 'Inter', sans-serif; }
+
+.wf-form-card {
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
+  padding: 20px 24px; margin-bottom: 24px;
+}
+.wf-form-card h2 { font-size: 1rem; color: #e2e8f0; margin-top: 0; }
+
+.form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 20px;
+}
+.form-grid label {
+  display: flex; flex-direction: column; gap: 6px; color: #94a3b8; font-size: 0.8rem;
+}
+
+.input {
+  background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+  padding: 8px 12px; color: #f1f5f9; font-size: 0.85rem; outline: none;
+}
+.input:focus { border-color: #6366f1; }
+
+.btn-primary {
+  background: #6366f1; border: none; border-radius: 6px; padding: 10px 20px;
+  color: #fff; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #4f46e5; }
+.btn-disabled { background: #334155; cursor: not-allowed; }
+
+.job-status {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  color: #a5b4fc; font-size: 0.85rem;
+}
+.spinner-sm {
+  width: 16px; height: 16px; border: 2px solid #334155; border-top-color: #6366f1;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+
+.result-banner {
+  display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.result-item {
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 10px;
+  padding: 14px 20px; display: flex; flex-direction: column; gap: 4px; min-width: 140px;
+}
+.result-item span { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+.result-item label { font-size: 0.7rem; text-transform: uppercase; color: #64748b; }
+
+.decay-warning { border-color: #ef444480; }
+.decay-warning span { color: #ef4444; }
+.decay-ok { border-color: #10b98180; }
+.decay-ok span { color: #10b981; }
+
+.panel {
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
+  padding: 20px 24px; margin-bottom: 24px;
+}
+.panel h2 { font-size: 1rem; color: #e2e8f0; margin-top: 0; margin-bottom: 16px; }

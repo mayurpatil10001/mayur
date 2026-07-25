@@ -1,22 +1,18 @@
+/**
+ * frontend/src/store/store.ts
+ */
+
 import { configureStore } from '@reduxjs/toolkit';
-import dashboardReducer from './slices/dashboardSlice';
 import analyticsReducer from './slices/analyticsSlice';
-import recommendationsReducer from './slices/recommendationsSlice';
-import accountsReducer from './slices/accountsSlice';
+import walkForwardReducer from './slices/walkForwardSlice';
 
 export const store = configureStore({
   reducer: {
-    dashboard: dashboardReducer,
     analytics: analyticsReducer,
-    recommendations: recommendationsReducer,
-    accounts: accountsReducer,
+    walkforward: walkForwardReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
-      },
-    }),
+    getDefaultMiddleware({ serializableCheck: { ignoredActions: [] } }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

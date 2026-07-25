@@ -1,38 +1,30 @@
+/**
+ * frontend/src/App.tsx
+ */
+
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import './App.css';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
-import SimpleDashboard from './pages/Dashboard/SimpleDashboard';
 import Analytics from './pages/Analytics/Analytics';
 import Recommendations from './pages/Recommendations/Recommendations';
-import AccountsByHour from './pages/AccountsByHour/AccountsByHour';
-import Monitoring from './pages/Monitoring/Monitoring';
-import TradeImport from './pages/TradeImport/TradeImport';
-import AccountManagement from './pages/AccountManagement/AccountManagement';
-import DiscoveryExplorer from './pages/Discovery/DiscoveryExplorer';
-import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import WalkForward from './pages/WalkForward/WalkForward';
+import MonteCarlo from './pages/MonteCarlo/MonteCarlo';
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <ErrorBoundary>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<SimpleDashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/discovery" element={<DiscoveryExplorer />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/recommendations" element={<Recommendations />} />
-            <Route path="/accounts-by-hour" element={<AccountsByHour />} />
-            <Route path="/monitoring" element={<Monitoring />} />
-            <Route path="/trade-import" element={<TradeImport />} />
-            <Route path="/account-management" element={<AccountManagement />} />
-          </Routes>
-        </Layout>
-      </ErrorBoundary>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="recommendations" element={<Recommendations />} />
+          <Route path="walkforward" element={<WalkForward />} />
+          <Route path="montecarlo" element={<MonteCarlo />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
-}
+};
 
 export default App;

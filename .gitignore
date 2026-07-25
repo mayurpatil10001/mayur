@@ -72,3 +72,24 @@ yarn-error.log*
 build/
 dist/
 *.egg-info/
+# === SC Results WF additions ===
+# Database files - never commit
+# Log files - never commit
+*.log.old
+# Python cache
+*.pyo
+*.pyd
+.Python
+.eggs/
+# IDE configs - local only
+.qodo/
+# Test artifacts
+.coverage
+htmlcov/
+coverage.xml
+# Frontend build
+frontend/dist/
+frontend/.env.local
+# Archive (don't track debug scripts)
+archive/
+# Scratch artifacts
