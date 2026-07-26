@@ -1,65 +1,67 @@
-name: CI — Lint, Type-Check & Test
+name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, master ]
   pull_request:
-    branches: [main, develop]
+    branches: [ main, master ]
 
 jobs:
-  test:
-    name: Python ${{ matrix.python-version }}
+  lint-and-test-backend:
+    name: Backend Lint & Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov flake8 ruff
-
-      - name: Copy .env.example to .env (for CI environment)
-        run: cp .env.example .env
+          pip install ruff mypy pytest pytest-cov
+          pip install -r backend/requirements.txt
 
       - name: Lint with ruff
-        run: |
-          ruff check trading_platform/ scripts/ --ignore E501,W503
+        run: ruff check backend/
 
-      - name: Lint with flake8 (secondary)
-        run: |
-          flake8 trading_platform/ scripts/ --max-line-length=130 --extend-ignore=E501,W503,E722
+      - name: Run pytest
+        run: pytest tests/ -v --cov=backend
 
-      - name: Run unit & integration tests
-        run: |
-          pytest tests/ \
-            --ignore=tests/old_unused_tests/ \
-            --ignore=tests/ui/ \
-            --ignore=tests/frontend_integration/ \
-            -v --tb=short \
-            --cov=trading_platform \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
-            -x
+  lint-and-test-frontend:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
 
-      - name: Run out-of-sample audit (CI validation)
-        run: |
-          python scripts/run_out_of_sample_audit.py
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4
-        if: always()
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
         with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    needs: [lint-and-test-backend, lint-and-test-frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t sc-trade-optimization:latest .
