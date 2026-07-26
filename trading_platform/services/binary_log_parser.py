@@ -524,10 +524,7 @@ def _parse_file_nitro(file_path: str, acc_filter: List[str] = None, symbol_hint:
                         pass
 
                     
-                elif tag == 0x6b: # Tag 107 decimal - ALREADY HANDLED ABOVE
-                    pass
-                    side = None
-                    if any(x in st for x in ["BUY", "LONG"]): side = "BUY"
+                elif tag == 0x6b:  # Tag 107 decimal - ALREADY HANDLED ABOVE
                     pass
 
                 elif tag == 104 or tag == 0x68: # Message String

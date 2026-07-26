@@ -1,9 +1,0 @@
-/* frontend/src/pages/MonteCarlo/MonteCarlo.css */
-/* Uses common panel/form layout styles */
-.mc-page { padding: 24px; max-width: 1600px; margin: 0 auto; font-family: 'Inter', sans-serif; }
-
-.mc-form-card {
-  background: #0f172a; border: 1px solid #1e293b; border-radius: 12px;
-  padding: 20px 24px; margin-bottom: 24px;
-}
-.mc-form-card h2 { font-size: 1rem; color: #e2e8f0; margin-top: 0; }

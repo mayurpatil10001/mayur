@@ -1,155 +1,176 @@
-/**
- * frontend/src/store/slices/analyticsSlice.ts
- */
-
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { get } from '../../api/client';
-import type {
-  PerformanceSnapshot,
-  TimeBinGrid,
-  AccountRanking,
-  PnLCurvePoint,
-  DrawdownPoint,
-} from '../../types/analytics';
-
-export interface AnalyticsFilters {
-  account: string | null;
-  symbol: string | null;
-  dateFrom: string | null;
-  dateTo: string | null;
-  isPromoted: boolean | null;
-}
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { TemporalAnalysis, MonteCarloResults, MonteCarloRequest } from '../../types/api';
 
 interface AnalyticsState {
-  filters: AnalyticsFilters;
-  summary: PerformanceSnapshot | null;
-  timeBinGrid: TimeBinGrid | null;
-  leaderboard: AccountRanking[];
-  pnlCurve: PnLCurvePoint[];
-  drawdown: DrawdownPoint[];
-  status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
+  // Temporal analysis data by account
+  temporalAnalysis: Record<string, TemporalAnalysis>;
+  // Monte Carlo results by account
+  monteCarloResults: Record<string, MonteCarloResults>;
+  // Correlation data
+  correlationData: any | null;
+  // Loading states
+  isLoadingTemporal: boolean;
+  isLoadingMonteCarlo: boolean;
+  isLoadingCorrelation: boolean;
+  // Error states
+  temporalError: string | null;
+  monteCarloError: string | null;
+  correlationError: string | null;
+  // Selected accounts for analysis
+  selectedAccounts: string[];
+  // Date range filter
+  dateRange: {
+    start_date?: string;
+    end_date?: string;
+  };
 }
 
 const initialState: AnalyticsState = {
-  filters: { account: null, symbol: null, dateFrom: null, dateTo: null, isPromoted: null },
-  summary: null,
-  timeBinGrid: null,
-  leaderboard: [],
-  pnlCurve: [],
-  drawdown: [],
-  status: 'idle',
-  error: null,
+  temporalAnalysis: {},
+  monteCarloResults: {},
+  correlationData: null,
+  isLoadingTemporal: false,
+  isLoadingMonteCarlo: false,
+  isLoadingCorrelation: false,
+  temporalError: null,
+  monteCarloError: null,
+  correlationError: null,
+  selectedAccounts: [],
+  dateRange: {},
 };
 
-function buildParams(filters: AnalyticsFilters): Record<string, string> {
-  const p: Record<string, string> = {};
-  if (filters.account) p['account'] = filters.account;
-  if (filters.symbol) p['symbol'] = filters.symbol;
-  if (filters.dateFrom) p['date_from'] = filters.dateFrom;
-  if (filters.dateTo) p['date_to'] = filters.dateTo;
-  if (filters.isPromoted !== null) p['is_promoted'] = String(filters.isPromoted);
-  return p;
-}
-
-// ── Async thunks ─────────────────────────────────────────────────────────────
-
-export const fetchSummary = createAsyncThunk(
-  'analytics/fetchSummary',
-  async (filters: AnalyticsFilters) => {
-    return get<PerformanceSnapshot>('/analytics/summary', buildParams(filters));
-  },
+// Async thunks
+export const fetchTemporalAnalysis = createAsyncThunk(
+  'analytics/fetchTemporalAnalysis',
+  async ({ accountName, dateRange }: { accountName: string; dateRange?: { start_date?: string; end_date?: string } }) => {
+    const queryParams = new URLSearchParams();
+    if (dateRange?.start_date) queryParams.append('start_date', dateRange.start_date);
+    if (dateRange?.end_date) queryParams.append('end_date', dateRange.end_date);
+    
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`http://localhost:8000/api/v1/analytics/temporal/${accountName}${query}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    if (result.status === 'success' && result.data) {
+      return { accountName, analysis: result.data };
+    }
+    throw new Error(result.message || 'Failed to fetch temporal analysis');
+  }
 );
 
-export const fetchTimeBinGrid = createAsyncThunk(
-  'analytics/fetchTimeBinGrid',
-  async (filters: AnalyticsFilters) => {
-    return get<TimeBinGrid>('/analytics/time-slots', {
-      ...buildParams(filters),
-      include_heatmap: true,
-    });
-  },
+export const runMonteCarloSimulation = createAsyncThunk(
+  'analytics/runMonteCarloSimulation',
+  async (request: MonteCarloRequest) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('simulations', (request.num_simulations || 10000).toString());
+    queryParams.append('time_horizon_days', (request.time_horizon_days || 30).toString());
+    if (request.confidence_levels?.[0]) queryParams.append('confidence_level', request.confidence_levels[0].toString());
+    if (request.target_slots) queryParams.append('target_slots', request.target_slots);
+    
+    const response = await fetch(`http://localhost:8000/api/v1/analytics/monte-carlo/${request.account_name}?${queryParams.toString()}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    if (result.status === 'success' && result.data) {
+      return { accountName: request.account_name, results: result.data };
+    }
+    throw new Error(result.message || 'Failed to run Monte Carlo simulation');
+  }
 );
 
-export const fetchLeaderboard = createAsyncThunk(
-  'analytics/fetchLeaderboard',
-  async (filters: AnalyticsFilters) => {
-    return get<AccountRanking[]>('/analytics/by-account', {
-      ...buildParams(filters),
-      sort_by: 'sortino_ratio',
-      top_n: 20,
-    });
-  },
+export const fetchAccountCorrelation = createAsyncThunk(
+  'analytics/fetchAccountCorrelation',
+  async (accountNames: string[]) => {
+    const query = `?account_names=${accountNames.join(',')}`;
+    const response = await fetch(`http://localhost:8000/api/v1/analytics/correlation${query}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    if (result.status === 'success' && result.data) {
+      return result.data;
+    }
+    throw new Error(result.message || 'Failed to fetch account correlation');
+  }
 );
-
-export const fetchPnLCurve = createAsyncThunk(
-  'analytics/fetchPnLCurve',
-  async (filters: AnalyticsFilters) => {
-    return get<PnLCurvePoint[]>('/analytics/pnl-curve', buildParams(filters));
-  },
-);
-
-export const fetchDrawdown = createAsyncThunk(
-  'analytics/fetchDrawdown',
-  async (filters: AnalyticsFilters) => {
-    return get<DrawdownPoint[]>('/analytics/drawdown', buildParams(filters));
-  },
-);
-
-// ── Slice ─────────────────────────────────────────────────────────────────────
 
 const analyticsSlice = createSlice({
   name: 'analytics',
   initialState,
   reducers: {
-    setFilters(state, action: PayloadAction<Partial<AnalyticsFilters>>) {
-      state.filters = { ...state.filters, ...action.payload };
+    setSelectedAccounts: (state, action: PayloadAction<string[]>) => {
+      state.selectedAccounts = action.payload;
     },
-    resetFilters(state) {
-      state.filters = initialState.filters;
+    setDateRange: (state, action: PayloadAction<{ start_date?: string; end_date?: string }>) => {
+      state.dateRange = action.payload;
     },
-    clearError(state) {
-      state.error = null;
+    clearAnalyticsData: (state) => {
+      state.temporalAnalysis = {};
+      state.monteCarloResults = {};
+      state.correlationData = null;
+    },
+    clearErrors: (state) => {
+      state.temporalError = null;
+      state.monteCarloError = null;
+      state.correlationError = null;
     },
   },
   extraReducers: (builder) => {
-    const pending = (state: AnalyticsState) => {
-      state.status = 'loading';
-      state.error = null;
-    };
-    const failed = (state: AnalyticsState, action: any) => {
-      state.status = 'failed';
-      state.error = action.error.message ?? 'Unknown error';
-    };
-
+    // Temporal analysis
     builder
-      .addCase(fetchSummary.pending, pending)
-      .addCase(fetchSummary.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.summary = action.payload;
+      .addCase(fetchTemporalAnalysis.pending, (state) => {
+        state.isLoadingTemporal = true;
+        state.temporalError = null;
       })
-      .addCase(fetchSummary.rejected, failed)
-
-      .addCase(fetchTimeBinGrid.pending, pending)
-      .addCase(fetchTimeBinGrid.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.timeBinGrid = action.payload;
+      .addCase(fetchTemporalAnalysis.fulfilled, (state, action) => {
+        state.isLoadingTemporal = false;
+        state.temporalAnalysis[action.payload.accountName] = action.payload.analysis;
       })
-      .addCase(fetchTimeBinGrid.rejected, failed)
+      .addCase(fetchTemporalAnalysis.rejected, (state, action) => {
+        state.isLoadingTemporal = false;
+        state.temporalError = action.error.message || 'Failed to fetch temporal analysis';
+      });
 
-      .addCase(fetchLeaderboard.fulfilled, (state, action) => {
-        state.leaderboard = action.payload;
+    // Monte Carlo simulation
+    builder
+      .addCase(runMonteCarloSimulation.pending, (state) => {
+        state.isLoadingMonteCarlo = true;
+        state.monteCarloError = null;
       })
-
-      .addCase(fetchPnLCurve.fulfilled, (state, action) => {
-        state.pnlCurve = action.payload;
+      .addCase(runMonteCarloSimulation.fulfilled, (state, action) => {
+        state.isLoadingMonteCarlo = false;
+        state.monteCarloResults[action.payload.accountName] = action.payload.results;
       })
+      .addCase(runMonteCarloSimulation.rejected, (state, action) => {
+        state.isLoadingMonteCarlo = false;
+        state.monteCarloError = action.error.message || 'Failed to run Monte Carlo simulation';
+      });
 
-      .addCase(fetchDrawdown.fulfilled, (state, action) => {
-        state.drawdown = action.payload;
+    // Account correlation
+    builder
+      .addCase(fetchAccountCorrelation.pending, (state) => {
+        state.isLoadingCorrelation = true;
+        state.correlationError = null;
+      })
+      .addCase(fetchAccountCorrelation.fulfilled, (state, action) => {
+        state.isLoadingCorrelation = false;
+        state.correlationData = action.payload;
+      })
+      .addCase(fetchAccountCorrelation.rejected, (state, action) => {
+        state.isLoadingCorrelation = false;
+        state.correlationError = action.error.message || 'Failed to fetch correlation data';
       });
   },
 });
 
-export const { setFilters, resetFilters, clearError } = analyticsSlice.actions;
+export const { setSelectedAccounts, setDateRange, clearAnalyticsData, clearErrors } = analyticsSlice.actions;
 export default analyticsSlice.reducer;
