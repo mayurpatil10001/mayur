@@ -146,13 +146,11 @@ _GHOST_DEBUG = False
 
 def _is_ghost_fill(acc: str, note: str, ts_str: str, msgtxt: str = "", is_open: bool = True, qty: float = 0) -> bool:
     """
+    DEPRECATED: Use ghost_fill_engine.classify_fill instead.
     Returns True if the fill should be dropped as a "Ghost".
     Rule: All accounts require an Order Note (Tag 0x82) OR must be EOD (16:55-17:05 NY).
     If message contains "Text: Tag" / "Tag: AT_", SC embedded the strategy tag in the message (valid).
-    EXCEPT: Do NOT discard if it's a CLOSE (is_open=False), as these are often real stops.
     """
-    # Universal Exemption: 1-lots are almost always legitimate stop-outs or automated trades.
-    # The known massive ghosts (e.g. 04:05) are multi-lot.
     if _GHOST_DEBUG:
         with open("ghost_all.log", "a") as f:
             f.write(f"DEBUG GHOST: ts={ts_str}, is_open={is_open}, qty={qty}, note='{note}', msg='{msgtxt}'\n")
@@ -162,8 +160,7 @@ def _is_ghost_fill(acc: str, note: str, ts_str: str, msgtxt: str = "", is_open: 
     note_u = (note or "").strip()
     msg_l = (msgtxt or "").lower()
 
-    # EOD Exception (16:55 - 17:05 NY) for session flattenings
-    # These often lack strategy tags and must never be considered ghosts.
+    # EOD Exception (16:55 - 17:05 NY)
     try:
         dt_obj = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         if dt_obj.tzinfo is None:
@@ -174,27 +171,23 @@ def _is_ghost_fill(acc: str, note: str, ts_str: str, msgtxt: str = "", is_open: 
     except:
         pass
 
-    # Rule: If it's a "Trading Evaluator" Filled record, it MUST have a strategy tag
-    # either in the Note or in the Message Text.
-    # 04:05 Ghost: msg contains "Trading Evaluator (Filled)" but no strategy tag.
-    # We apply this even if is_open=False because SC often marks ghosts as CLOSE.
+    # Exit Exemption: Exits are almost always legitimate.
+    if not is_open:
+        return False
+
+    # Trading Evaluator Check: If it's a "Trading Evaluator" Filled record, it MUST have a strategy tag
     if "trading evaluator" in msg_l and "filled" in msg_l:
-        # Robust tag detection: Look for "AT_" anywhere in msg if it follows "Tag" or similar.
         has_tag_in_msg = "at_" in msg_l
         has_tag_in_note = bool(re.search(r'[A-Za-z0-9]', note_u))
         if has_tag_in_msg or has_tag_in_note:
             return False
-        return True # Discard as Ghost
-        
-    # Exit Exemption: For non-Trading Evaluator fills, exits are almost always legitimate.
-    if not is_open:
-        return False
+        return True 
         
     # General Rule: All other fills require an Order Note (Tag 0x82) or strategy in message.
     if re.search(r'[A-Za-z0-9]', note_u) or "at_" in msg_l:
         return False
         
-    return True # Discard as Ghost
+    return True 
 
 
 def _scan_position_fill_order(file_path: str) -> List[str]:

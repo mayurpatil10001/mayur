@@ -14,6 +14,21 @@ Stage 3 -- Per-Batch Deduplication      : _dedup_fills()
 Stage 4 -- FIFO Position Resynchronizer : pair_fills_to_trades()
 Stage 5 -- Sequence Integrity Verifier  : verify_sequence()
 
+Classifier Design Note (v2 — 2026-07-28)
+-----------------------------------------
+Rule 3 (Trading Evaluator fills) now exempts CLOSE-flagged fills from the
+ghost test.  Evidence from empirical binary-log analysis of IPS_TM_7 NQ
+(Jun-23 and Jul-02 2026) established that SC's Trade Evaluator processes
+limit-target and stop-loss exits WITHOUT copying the C++ strategy's Order
+Note (Tag 0x82) to the generated fill record.  These are therefore
+legitimate exits that happen to have an empty note — NOT ghost fills.
+Dropping them (the v1 behaviour) produced a $10–35k single-fill cascade
+swing by leaving the FIFO queue inflated, causing all downstream sells to
+pair against wrong LONG legs.  Real ghost fills are always OPEN fills
+(they inject unintended new position changes); a fill SC itself marks
+as CLOSE is by definition reducing an existing position and cannot be a
+phantom injection.
+
 Quick Usage
 -----------
     from trading_platform.services.ghost_fill_engine import GhostFillEngine, resync
@@ -294,8 +309,14 @@ def classify_fill(fill: FillRecord) -> bool:
        are almost always legitimate stop-outs or 1-lot strategy entries).
     2. EOD window (16:55-17:05 NY): Always retain (session flattenings
        often lack tags).
-    3. Trading Evaluator signature in message: MUST have strategy tag
-       in note or message text. Missing tag --> ghost.
+    3. Trading Evaluator signature in message:
+       - CLOSE flag: Always retain.  SC's Trade Evaluator processes
+         limit-target and stop-loss exits WITHOUT propagating the
+         strategy's Tag 0x82 note.  These are real exits, not ghosts.
+         Empirical evidence: both large cascade swings (Jun-23 -$10,620
+         and Jul-02 -$35,835) were caused by dropping CLOSE TE fills.
+       - OPEN flag with no strategy tag: ghost.
+       - OPEN/unknown with strategy tag: retain.
     4. Non-Evaluator fills:
        - CLOSE (exit): Always retain.
        - OPEN/unknown with no tag: ghost.
@@ -309,6 +330,10 @@ def classify_fill(fill: FillRecord) -> bool:
     is_evaluator = EVALUATOR_FILL_SIGNATURE in msg_l
 
     if is_evaluator:
+        # FIX v2: CLOSE exits from TE are real exits — always retain.
+        # Only OPEN TE fills that lack a strategy tag are ghosts.
+        if fill.open_close == "CLOSE":
+            return False
         return not _has_strategy_tag(fill.note, fill.msgtxt)
 
     if fill.open_close == "CLOSE":
@@ -413,11 +438,18 @@ def _make_round_trip(entry: _OpenLeg, exit_fill: FillRecord) -> RoundTrip:
 
 
 def _duration_min(entry_ts: str, exit_ts: str) -> float:
-    """Trade duration in minutes between two ISO timestamp strings."""
+    """
+    Trade duration in minutes between two ISO timestamp strings.
+
+    NOTE: Returns a SIGNED value (negative = inverted trade where exit
+    is before entry).  Callers that need to detect corruption should
+    check for duration_min < 0.  Do NOT silently abs() this value —
+    negative durations are data-integrity signals.
+    """
     try:
         e = datetime.datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
         x = datetime.datetime.fromisoformat(exit_ts.replace("Z", "+00:00"))
-        return abs((x - e).total_seconds()) / 60.0
+        return (x - e).total_seconds() / 60.0   # FIX v2: removed abs()
     except Exception:
         return 0.0
 
@@ -520,11 +552,12 @@ def verify_sequence(
     """
     Stage 5 -- Sequence Integrity Verifier.
 
-    Three checks on the cleaned trade sequence:
+    Four checks on the cleaned trade sequence:
 
     1. Position Balance  : Net delta of clean fills == 0 (or unpaired qty).
     2. Direction Flips   : Count sign reversals in clean fill stream (target=0).
-    3. Pairing Report    : Log counts for trade/unpaired/ghost summary.
+    3. Inverted Trades   : Any RoundTrip with exit_time < entry_time (FIX v2).
+    4. Pairing Report    : Log counts for trade/unpaired/ghost summary.
 
     Returns (ok, messages, flip_count).
     """
@@ -554,7 +587,26 @@ def verify_sequence(
     else:
         messages.append("Direction sequence OK (0 flips)")
 
-    # Check 3: Pairing report
+    # Check 3: Inverted trades (FIX v2 — previously hidden by abs() in _duration_min)
+    inverted = [
+        t for t in trades
+        if t.duration_min < 0
+    ]
+    if inverted:
+        ok = False
+        inv_detail = "; ".join(
+            f"{t.direction} {t.quantity}x entry={t.entry_time[:19]} exit={t.exit_time[:19]} "
+            f"dur={t.duration_min:.1f}min"
+            for t in inverted
+        )
+        messages.append(
+            f"INVERTED TRADES DETECTED: {len(inverted)} trade(s) have exit_time < entry_time. "
+            f"Details: {inv_detail}"
+        )
+    else:
+        messages.append(f"Inverted-trade check OK (0 inverted trades)")
+
+    # Check 4: Pairing report
     messages.append(
         f"Pairing summary: {len(trades)} completed trades | "
         f"{len(unpaired)} unpaired entries | "
