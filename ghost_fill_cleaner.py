@@ -67,6 +67,20 @@ EXCLUDE_ACCOUNTS = {
 # Review flag threshold: |clean_net - dirty_net| / max(|dirty_net|, 500) > 15%
 FLAG_THRESH = 0.15
 
+# Absolute PnL plausibility ceilings (FIX v3 — August 2026)
+# Derived from: max_qty=50, realistic worst-day point ranges per symbol:
+#   CL  : $1,000/pt x 200 pt range x 50 lots = $10,000,000  -> cap $5,000,000
+#   NQ  : $20/pt    x 3,000 pt range x 50    = $3,000,000   -> cap $2,000,000
+#   ES  : $50/pt    x 1,000 pt range x 50    = $2,500,000   -> cap $2,000,000
+#   FDAX: EUR25/pt  x 2,000 pt range x 50    = EUR2,500,000 -> cap $2,000,000
+# A single trade with |pnl_dollars| > ABSOLUTE_TRADE_PNL_CEILING is impossible.
+# A file with |clean_net| > ABSOLUTE_FILE_PNL_CEILING is impossible.
+# These ceilings catch corrupted-price fills that affect BOTH dirty and clean
+# streams (so relative delta == 0%) — the gap that let the billion-dollar
+# values through undetected in the prior run.
+ABSOLUTE_TRADE_PNL_CEILING = 2_000_000.0   # $2M per single round-trip trade
+ABSOLUTE_FILE_PNL_CEILING  = 10_000_000.0  # $10M aggregate per daily file
+
 _stop_requested = False
 
 def _handle_sigint(sig, frame):
@@ -203,9 +217,11 @@ def _process_file(fp: str):
 
     from trading_platform.services.binary_log_parser import _parse_file_nitro as _pfn
     from trading_platform.services.ghost_fill_engine import (
-        GhostFillEngine as _GFE, classify_fill as _cf,
-        pair_fills_to_trades as _pft, verify_sequence as _vs
+        GhostFillEngine as _GFE,
+        get_rejected_fills as _get_rejected,
+        clear_rejected_fills as _clr_rejected,
     )
+    import collections as _col, json as _json
 
     fname    = _os.path.basename(fp)
     m        = DATE_RE.match(fname)
@@ -236,92 +252,128 @@ def _process_file(fp: str):
         }
 
     try:
+        _clr_rejected()   # reset per-file rejected list before parsing
         fills = _GFE.from_dicts(raw)
         n_raw = len(fills)
 
-        # Note coverage
-        has_note = sum(1 for f in fills if f.note and f.note.strip())
-        nc = has_note / n_raw if n_raw > 0 else 0.0
-        bypass = nc < 0.25
-
-        # Dirty run
-        dirty_fills = list(fills)
-        for f in dirty_fills:
+        # ---- Dirty run: per-symbol FIFO, no ghost filter -------------------
+        # Group by base_symbol and run pair_fills_to_trades independently so
+        # that cross-symbol contamination is absent from the dirty baseline too.
+        dirty_net   = 0.0
+        _dirty_sym  = _col.defaultdict(list)
+        for f in list(fills):
             f.suggests_ghost = False
-        dirty_trades, _ = _pft(dirty_fills)
-        dirty_net  = sum(t.pnl_dollars for t in dirty_trades)
+            _dirty_sym[f.base_symbol].append(f)
+        _dirty_fills_count = 0
+        for _bs, _sf in _dirty_sym.items():
+            _sf_s = sorted(_sf, key=lambda _f: (_f.ts_val, _f.position_order))
+            from trading_platform.services.ghost_fill_engine import pair_fills_to_trades as _pft
+            _dt, _ = _pft(_sf_s)
+            dirty_net += sum(_t.pnl_dollars for _t in _dt)
+            _dirty_fills_count += len(_dt)
 
-        # Clean run (v2 classifier)
+        # ---- Clean run: full per-symbol engine (v3) ------------------------
+        _clr_rejected()   # clear again before clean run's from_dicts
         fills2        = _GFE.from_dicts(raw)
-        ghosts        = [f for f in fills2 if _cf(f)]
-        clean         = [f for f in fills2 if not _cf(f)]
-        c_trades, c_unpaired = _pft(clean)
-        clean_net     = sum(t.pnl_dollars for t in c_trades)
+        _engine       = _GFE()
+        _clean_result = _engine.process(fills2)
+        c_trades      = _clean_result.trades
+        c_unpaired    = _clean_result.unpaired_fills
+        clean_net     = sum(_t.pnl_dollars for _t in c_trades)
+        int_ok        = _clean_result.integrity_ok
+        int_notes     = "; ".join(_clean_result.notes[-6:])   # last 6 summary lines
+        n_ghosts      = _clean_result.ghost_fills_dropped
+        bypass        = _clean_result.bypass_mode
+        nc            = sum(sr.note_rate * sr.total_fills
+                           for sr in _clean_result.per_symbol.values()) / n_raw \
+                        if n_raw else 0.0
 
-        # Integrity check — verify_sequence(raw, clean, trades, unpaired) -> (bool, msgs, flips)
-        int_ok, int_msgs, _ = _vs(list(fills2), clean, c_trades, c_unpaired)
-        int_notes = "; ".join(int_msgs) if int_msgs else ""
+        # Per-symbol summary for audit (JSON)
+        per_sym_summary = _json.dumps(
+            {bs: sr.as_dict() for bs, sr in _clean_result.per_symbol.items()},
+            separators=(',', ':')
+        )
 
-        # Flag threshold
+        # ---- Relative flag threshold (original) -------------------------
         delta     = clean_net - dirty_net
         denom     = max(abs(dirty_net), 500.0)
         delta_pct = abs(delta) / denom
         flagged   = delta_pct > FLAG_THRESH
-        flag_reason = f"delta={delta:+,.0f} ({delta_pct:.0%})" if flagged else ""
+        flag_reason = "delta={:+,.0f} ({:.0%})".format(delta, delta_pct) if flagged else ""
         if not int_ok:
             flagged = True
             flag_reason = (flag_reason + " | integrity_fail").strip(" | ")
 
-        # Collect asset list
-        assets = sorted(set(
-            _base_symbol(f.symbol) for f in clean if f.symbol
-        ))
+        # ---- Absolute PnL ceiling check (FIX v3) -------------------------
+        worst_trade_pnl = max((abs(_t.pnl_dollars) for _t in c_trades), default=0.0)
+        if worst_trade_pnl > ABSOLUTE_TRADE_PNL_CEILING:
+            flagged = True
+            flag_reason = (flag_reason + " | IMPOSSIBLE_TRADE_PNL={:,.0f}".format(
+                worst_trade_pnl)).strip(" | ")
+        if abs(clean_net) > ABSOLUTE_FILE_PNL_CEILING:
+            flagged = True
+            flag_reason = (flag_reason + " | IMPOSSIBLE_FILE_NET={:,.0f}".format(
+                clean_net)).strip(" | ")
+
+        # ---- Collect rejected_fills produced by this file's is_valid() ---
+        rejected    = _get_rejected()
+        _clr_rejected()
+        n_rejected  = len(rejected)
+
+        # Collect asset list from per_symbol keys
+        assets = sorted(_clean_result.per_symbol.keys())
+        if n_rejected:
+            flag_reason = (flag_reason + " | rejected_fills={}".format(n_rejected)).strip(" | ")
+            flagged = True
 
         # Serialize clean trades for DB insertion
         clean_rows = []
         for t in c_trades:
-            base = _base_symbol(getattr(t, "symbol", ""))
             clean_rows.append({
-                "account":     acct,
-                "symbol":      getattr(t, "symbol", ""),
-                "base_symbol": base,
-                "trade_date":  date_str,
-                "entry_time":  str(t.entry_time),
-                "exit_time":   str(t.exit_time),
-                "direction":   t.direction,
-                "quantity":    t.quantity,
-                "entry_price": t.entry_price,
-                "exit_price":  t.exit_price,
-                "pnl_dollars": t.pnl_dollars,
-                "pnl_points":  getattr(t, "pnl_points", None),
+                "account":      acct,
+                "symbol":       getattr(t, "symbol", ""),
+                "base_symbol":  t.base_symbol,
+                "trade_date":   date_str,
+                "entry_time":   str(t.entry_time),
+                "exit_time":    str(t.exit_time),
+                "direction":    t.direction,
+                "quantity":     t.quantity,
+                "entry_price":  t.entry_price,
+                "exit_price":   t.exit_price,
+                "pnl_dollars":  t.pnl_dollars,
+                "pnl_points":   getattr(t, "pnl_points", None),
                 "duration_min": getattr(t, "duration_min", None),
-                "entry_note":  getattr(t, "entry_note", ""),
-                "exit_note":   getattr(t, "exit_note", ""),
-                "source_file": fname,
-                "imported_at": datetime.datetime.utcnow().isoformat(),
+                "entry_note":   getattr(t, "entry_note", ""),
+                "exit_note":    getattr(t, "exit_note", ""),
+                "source_file":  fname,
+                "imported_at":  datetime.datetime.utcnow().isoformat(),
             })
 
         return {
             "file": fname, "account": acct, "date": date_str,
-            "n_raw": n_raw, "n_ghosts": len(ghosts), "n_bypass": int(bypass),
+            "n_raw": n_raw, "n_ghosts": n_ghosts, "n_bypass": int(bypass),
             "note_coverage": round(nc, 3),
-            "dirty_trades": dirty_trades, "clean_trades": clean_rows,
+            "dirty_trades": [], "clean_trades": clean_rows,
             "dirty_net": round(dirty_net, 2), "clean_net": round(clean_net, 2),
             "pnl_delta": round(delta, 2), "pnl_delta_pct": round(delta_pct, 4),
             "integrity_ok": int_ok, "integrity_notes": int_notes,
             "flagged": flagged, "flag_reason": flag_reason,
             "assets": assets, "ok": True,
+            "per_symbol_summary": per_sym_summary,
         }
 
     except Exception as e:
+        import traceback as _tb
+        _clr_rejected()
         return {"file": fname, "account": acct, "date": date_str,
-                "error": f"process_error: {e}",
+                "error": "process_error: {}".format(e),
                 "n_raw": 0, "n_ghosts": 0, "n_bypass": 0, "note_coverage": 0.0,
                 "dirty_trades": [], "clean_trades": [],
                 "dirty_net": 0.0, "clean_net": 0.0,
-                "integrity_ok": False, "integrity_notes": f"process_error: {e}",
-                "flagged": True, "flag_reason": f"process_error: {e}",
-                "assets": [], "ok": True}  # ok=True so it gets written to audit
+                "integrity_ok": False, "integrity_notes": "process_error: {}".format(e),
+                "flagged": True, "flag_reason": "process_error: {}".format(e),
+                "assets": [], "ok": True,
+                "per_symbol_summary": "{}"}
 
 
 def _base_symbol(raw: str) -> str:

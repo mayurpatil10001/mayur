@@ -37,6 +37,8 @@ logs/
 # Data Directories & Binary Datasets
 dataset/
 data/
+data_clean/
+.gfre_checkpoint.json
 rar_extract/
 scratch/
 debug/

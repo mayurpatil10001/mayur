@@ -65,18 +65,89 @@ ADAPTIVE_MIN_FILLS           = 5
 STRATEGY_TAG_PATTERNS        = ("autotrader_", "at_", "text: tag:")
 EVALUATOR_FILL_SIGNATURE     = "trading evaluator"
 
+# ---------------------------------------------------------------------------
+# Plausibility bounds (FIX v3 — August 2026)
+# ---------------------------------------------------------------------------
+# MAX_SANE_QUANTITY: justified by inspecting 2,781,631 clean_trades across the
+# full 49GB dataset.  Distribution: qty=1 (42.3%), qty=2 (18.5%), qty=3 (39.2%),
+# qty=4..15 (<0.1% combined, max observed = 15).  A cap of 50 gives 3x headroom
+# above the observed max before rejecting corrupted binary reads where a price
+# or timestamp field is misread as a quantity.
+MAX_SANE_QUANTITY = 50
+
+# rejected_fills is a module-level audit list.  Call clear_rejected_fills() at
+# the start of each batch run.  Each entry is a dict with keys:
+#   account, trade_date, timestamp, symbol, field, actual_value, bound, reason
+# This list is intentionally NOT thread-safe — callers must use a lock or
+# collect per-thread lists and merge, as ghost_fill_cleaner.py already does.
+rejected_fills: List[Dict] = []
+
+
+def clear_rejected_fills() -> None:
+    """Reset the module-level rejected_fills audit list for a new batch run."""
+    global rejected_fills
+    rejected_fills = []
+
+
+def get_rejected_fills() -> List[Dict]:
+    """Return a copy of the current rejected_fills audit list."""
+    return list(rejected_fills)
+
+
+def _record_rejected(
+    fill    : "FillRecord",
+    field   : str,
+    actual  : float,
+    bound   : float,
+    reason  : str,
+) -> None:
+    """
+    Record a fill that failed a plausibility bound check.
+    Appends to the module-level rejected_fills list.
+    """
+    rejected_fills.append({
+        "account"     : fill.account,
+        "trade_date"  : fill.timestamp[:10] if fill.timestamp else "",
+        "timestamp"   : fill.timestamp,
+        "symbol"      : fill.symbol,
+        "base_symbol" : fill.base_symbol,
+        "side"        : fill.side,
+        "price"       : fill.price,
+        "quantity"    : fill.quantity,
+        "field"       : field,
+        "actual_value": actual,
+        "bound"       : bound,
+        "reason"      : reason,
+    })
+    logger.warning(
+        "FILL REJECTED [%s] acct=%s sym=%s ts=%s %s=%s bound=%s",
+        reason, fill.account, fill.symbol, fill.timestamp,
+        field, actual, bound,
+    )
+
 SYMBOL_METADATA: Dict[str, Dict] = {
+    # Full-size equity index futures
     "ES":   {"multiplier": 50,    "price_min": 500,    "price_max": 10_000},
-    "MES":  {"multiplier": 5,     "price_min": 50,     "price_max": 1_000},
     "NQ":   {"multiplier": 20,    "price_min": 1_000,  "price_max": 50_000},
-    "MNQ":  {"multiplier": 2,     "price_min": 100,    "price_max": 5_000},
-    "CL":   {"multiplier": 1000,  "price_min": 20,     "price_max": 200},
-    "MCL":  {"multiplier": 100,   "price_min": 20,     "price_max": 200},
-    "FDAX": {"multiplier": 25,    "price_min": 1_000,  "price_max": 50_000},
-    "RTY":  {"multiplier": 50,    "price_min": 200,    "price_max": 5_000},
-    "M2K":  {"multiplier": 5,     "price_min": 20,     "price_max": 500},
-    "GC":   {"multiplier": 100,   "price_min": 500,    "price_max": 5_000},
     "YM":   {"multiplier": 5,     "price_min": 5_000,  "price_max": 100_000},
+    "RTY":  {"multiplier": 50,    "price_min": 200,    "price_max": 5_000},
+    "FDAX": {"multiplier": 25,    "price_min": 1_000,  "price_max": 50_000},
+    # Micro equity index futures (same price range as full-size, smaller multiplier)
+    "MES":  {"multiplier": 5,     "price_min": 500,    "price_max": 10_000},
+    "MNQ":  {"multiplier": 2,     "price_min": 1_000,  "price_max": 50_000},
+    "MYM":  {"multiplier": 0.5,   "price_min": 5_000,  "price_max": 100_000},
+    "M2K":  {"multiplier": 5,     "price_min": 200,    "price_max": 5_000},
+    # Energy futures
+    "CL":   {"multiplier": 1_000, "price_min": 20,     "price_max": 200},
+    "MCL":  {"multiplier": 100,   "price_min": 20,     "price_max": 200},
+    # Metals
+    "GC":   {"multiplier": 100,   "price_min": 500,    "price_max": 5_000},
+    "SI":   {"multiplier": 5_000, "price_min": 10,     "price_max": 100},
+    # Treasury bond futures (32nds-based prices, 90–140 typical)
+    "ZB":   {"multiplier": 1_000, "price_min": 50,     "price_max": 200},
+    "ZN":   {"multiplier": 1_000, "price_min": 50,     "price_max": 200},
+    "ZF":   {"multiplier": 1_000, "price_min": 50,     "price_max": 200},
+    "ZT":   {"multiplier": 2_000, "price_min": 90,     "price_max": 120},
 }
 
 # ---------------------------------------------------------------------------
@@ -125,8 +196,65 @@ class FillRecord:
         )
 
     def is_valid(self) -> bool:
-        """Returns True if fill has minimum required fields."""
-        return self.side in ("BUY", "SELL") and self.price > 0 and self.quantity > 0
+        """
+        Returns True if fill passes all minimum-field and plausibility checks.
+
+        Checks (FIX v3 — August 2026):
+        1. side must be BUY or SELL
+        2. price must be > 0
+        3. quantity must be in (0, MAX_SANE_QUANTITY]
+        4. If base_symbol is in SYMBOL_METADATA, price must be within
+           [price_min, price_max] for that symbol.
+        5. If base_symbol is NOT in SYMBOL_METADATA, the fill is accepted
+           but recorded in rejected_fills with reason='UNKNOWN_SYMBOL' so
+           unrecognised symbols are visible and reviewable.
+
+        Rejected fills are recorded via _record_rejected() for audit.
+        Callers that skip invalid fills MUST NOT silently discard them —
+        the _record_rejected() call here ensures they appear in the audit.
+        """
+        if self.side not in ("BUY", "SELL"):
+            return False
+        if self.price <= 0:
+            return False
+        # Quantity cap
+        if self.quantity <= 0:
+            return False
+        if self.quantity > MAX_SANE_QUANTITY:
+            _record_rejected(self, "quantity", self.quantity, MAX_SANE_QUANTITY,
+                             "QUANTITY_EXCEEDS_MAX")
+            return False
+        # Price bounds from SYMBOL_METADATA
+        meta = SYMBOL_METADATA.get(self.base_symbol)
+        if meta is not None:
+            p_min = meta.get("price_min", 0)
+            p_max = meta.get("price_max", float("inf"))
+            if self.price < p_min:
+                _record_rejected(self, "price", self.price, p_min,
+                                 "PRICE_BELOW_MIN")
+                return False
+            if self.price > p_max:
+                _record_rejected(self, "price", self.price, p_max,
+                                 "PRICE_ABOVE_MAX")
+                return False
+        else:
+            # Unknown symbol — accept but log so it is reviewable
+            if self.base_symbol:
+                rejected_fills.append({
+                    "account"     : self.account,
+                    "trade_date"  : self.timestamp[:10] if self.timestamp else "",
+                    "timestamp"   : self.timestamp,
+                    "symbol"      : self.symbol,
+                    "base_symbol" : self.base_symbol,
+                    "side"        : self.side,
+                    "price"       : self.price,
+                    "quantity"    : self.quantity,
+                    "field"       : "base_symbol",
+                    "actual_value": self.base_symbol,
+                    "bound"       : "NOT_IN_SYMBOL_METADATA",
+                    "reason"      : "UNKNOWN_SYMBOL",
+                })
+        return True
 
 
 @dataclass
@@ -171,17 +299,63 @@ class RoundTrip:
 
 
 @dataclass
+class SymbolGFREResult:
+    """
+    Per-symbol GFRE processing result (FIX v3 — August 2026).
+
+    Produced by GhostFillEngine.process() for every distinct base_symbol
+    found in the fill stream.  Each symbol's fills are processed through
+    all 5 GFRE stages with a completely independent position counter and
+    FIFO queue — cross-symbol contamination is structurally impossible.
+    """
+    base_symbol         : str              = ""
+    total_fills         : int              = 0
+    ghost_fills_dropped : int              = 0
+    clean_fills         : int              = 0
+    trades              : List[RoundTrip]  = field(default_factory=list)
+    unpaired_fills      : List[FillRecord] = field(default_factory=list)
+    direction_flips     : int              = 0
+    bypass_mode         : bool             = False
+    note_rate           : float            = 0.0
+    integrity_ok        : bool             = True
+    integrity_notes     : List[str]        = field(default_factory=list)
+
+    def net_pnl(self) -> float:
+        return sum(t.pnl_dollars for t in self.trades)
+
+    def as_dict(self) -> Dict:
+        """JSON-safe dict for per-symbol audit records."""
+        net = self.net_pnl()
+        return {
+            "base_symbol":          self.base_symbol,
+            "total_fills":          self.total_fills,
+            "ghost_fills_dropped":  self.ghost_fills_dropped,
+            "clean_fills":          self.clean_fills,
+            "total_trades":         len(self.trades),
+            "net_pnl_dollars":      round(net, 2),
+            "direction_flips":      self.direction_flips,
+            "bypass_mode":          self.bypass_mode,
+            "note_rate":            round(self.note_rate, 4),
+            "integrity_ok":         self.integrity_ok,
+            "integrity_notes":      self.integrity_notes,
+            "unpaired_fills":       len(self.unpaired_fills),
+        }
+
+
+@dataclass
 class GFREResult:
     """Complete output of a GFRE processing run."""
-    total_raw_fills     : int               = 0
-    ghost_fills_dropped : int               = 0
-    clean_fills         : int               = 0
-    trades              : List[RoundTrip]   = field(default_factory=list)
-    unpaired_fills      : List[FillRecord]  = field(default_factory=list)
-    direction_flips     : int               = 0
-    bypass_mode         : bool              = False
-    integrity_ok        : bool              = True
-    notes               : List[str]         = field(default_factory=list)
+    total_raw_fills     : int                          = 0
+    ghost_fills_dropped : int                          = 0
+    clean_fills         : int                          = 0
+    trades              : List[RoundTrip]              = field(default_factory=list)
+    unpaired_fills      : List[FillRecord]             = field(default_factory=list)
+    direction_flips     : int                          = 0
+    bypass_mode         : bool                         = False
+    integrity_ok        : bool                         = True
+    notes               : List[str]                    = field(default_factory=list)
+    # FIX v3: per-symbol breakdown — each entry is an independent result
+    per_symbol          : Dict[str, SymbolGFREResult]  = field(default_factory=dict)
 
     def summary(self) -> str:
         """One-line human-readable summary of the run."""
@@ -189,8 +363,9 @@ class GFREResult:
         losses = len(self.trades) - wins
         net    = sum(t.pnl_dollars for t in self.trades)
         sign   = "+" if net >= 0 else ""
+        syms   = ", ".join(sorted(self.per_symbol.keys())) if self.per_symbol else "?"
         return (
-            f"GFRE | Raw: {self.total_raw_fills} | "
+            f"GFRE | Symbols: [{syms}] | Raw: {self.total_raw_fills} | "
             f"Ghost dropped: {self.ghost_fills_dropped} | "
             f"Clean: {self.clean_fills} | "
             f"Trades: {len(self.trades)} ({wins}W/{losses}L) | "
@@ -217,6 +392,7 @@ class GFREResult:
             "unpaired_fills":       len(self.unpaired_fills),
             "notes":                self.notes,
             "trades":               [t.as_dict() for t in self.trades],
+            "per_symbol":           {k: v.as_dict() for k, v in self.per_symbol.items()},
         }
 
 
@@ -228,13 +404,37 @@ def _base_symbol(raw: str) -> str:
     """Normalize a Sierra Chart raw symbol to its base instrument code."""
     s = raw.upper()
     overrides = {
+        # Crude oil
         "CLN": "CL", "CLH": "CL", "CLQ": "CL", "CLU": "CL", "CLV": "CL", "CLZ": "CL",
+        # Micro crude
+        "MCL": "MCL",
+        # S&P 500
         "ESM": "ES", "ESU": "ES", "ESZ": "ES", "ESH": "ES",
+        # Micro S&P
+        "MES": "MES",
+        # Nasdaq-100
         "NQM": "NQ", "NQU": "NQ", "NQZ": "NQ", "NQH": "NQ",
-        "MNQ": "MNQ", "MES": "MES",
-        "GCM": "GC", "GCZ": "GC", "GCQ": "GC",
-        "YMM": "YM", "YMU": "YM", "YMZ": "YM",
-        "RTY": "RTY",
+        # Micro Nasdaq
+        "MNQ": "MNQ",
+        # Dow Jones
+        "YMM": "YM", "YMU": "YM", "YMZ": "YM", "YMH": "YM",
+        # Micro Dow
+        "MYM": "MYM",
+        # Russell 2000
+        "RTY": "RTY", "RTYM": "RTY", "RTYU": "RTY", "RTYZ": "RTY", "RTYH": "RTY",
+        # Micro Russell
+        "M2K": "M2K", "M2KM": "M2K", "M2KU": "M2K", "M2KZ": "M2K", "M2KH": "M2K",
+        # DAX
+        "FDAX": "FDAX", "FDXM": "FDAX",
+        # Gold
+        "GCM": "GC", "GCZ": "GC", "GCQ": "GC", "GCJ": "GC", "GCV": "GC", "GCG": "GC",
+        # Silver
+        "SIK": "SI", "SIN": "SI", "SIU": "SI", "SIZ": "SI", "SIH": "SI",
+        # Treasury bonds (ZB=30yr, ZN=10yr, ZF=5yr, ZT=2yr)
+        "ZBM": "ZB", "ZBU": "ZB", "ZBZ": "ZB", "ZBH": "ZB",
+        "ZNM": "ZN", "ZNU": "ZN", "ZNZ": "ZN", "ZNH": "ZN",
+        "ZFM": "ZF", "ZFU": "ZF", "ZFZ": "ZF", "ZFH": "ZF",
+        "ZTM": "ZT", "ZTU": "ZT", "ZTZ": "ZT", "ZTH": "ZT",
     }
     m = re.search(r"([A-Z]+)", s)
     if not m:
@@ -411,8 +611,18 @@ class _OpenLeg:
 
 
 def _make_round_trip(entry: _OpenLeg, exit_fill: FillRecord) -> RoundTrip:
-    """Compute PnL and build a RoundTrip from an open leg and an exit fill."""
-    base        = _base_symbol(exit_fill.symbol or entry.fill.symbol)
+    """
+    Compute PnL and build a RoundTrip from an open leg and an exit fill.
+
+    FIX v3 (August 2026): Since pair_fills_to_trades() is now called once
+    per base_symbol group, entry and exit are GUARANTEED to be from the
+    same instrument.  The previous fallback 'exit_fill.symbol or
+    entry.fill.symbol' masked cross-symbol contamination by labelling the
+    trade with whichever symbol happened to be the exit leg.  That fallback
+    is removed; both legs must agree on base_symbol by construction.
+    """
+    # Both legs are the same symbol — use exit fill's symbol (most recent contract code).
+    base        = entry.fill.base_symbol   # group's known base symbol
     mult        = _multiplier(base)
     ep, xp      = entry.price, exit_fill.price
     direction   = "LONG" if entry.side == "BUY" else "SHORT"
@@ -650,15 +860,24 @@ class GhostFillEngine:
 
     @staticmethod
     def from_dicts(raw_dicts: List[Dict]) -> List[FillRecord]:
-        """Convert raw parser dicts to validated FillRecord objects."""
+        """
+        Convert raw parser dicts to validated FillRecord objects.
+
+        Fills that fail is_valid() are silently excluded from the returned
+        list — but is_valid() itself calls _record_rejected() for every
+        bounds violation, so every exclusion is captured in the module-level
+        rejected_fills audit list.  Callers can retrieve them via
+        get_rejected_fills().
+        """
         records: List[FillRecord] = []
         for d in raw_dicts:
             try:
                 r = FillRecord.from_dict(d)
                 if r.is_valid():
                     records.append(r)
+                # is_valid() already called _record_rejected() if bounds failed
             except Exception as exc:
-                logger.debug(f"Skipping malformed fill dict: {exc}")
+                logger.debug("Skipping malformed fill dict: %s", exc)
         return records
 
     def process(
@@ -669,6 +888,34 @@ class GhostFillEngine:
         """
         Execute all 5 GFRE stages on the provided fill stream.
 
+        FIX v3 (August 2026) — Per-Symbol FIFO Isolation
+        --------------------------------------------------
+        Fills are now grouped by `base_symbol` before Stage 4 runs.
+        Each symbol receives its own independent `position` counter and
+        FIFO `queue` inside `pair_fills_to_trades()`.  This makes it
+        structurally impossible for a fill from one instrument to be
+        paired against an entry leg from a different instrument:
+
+        OLD (buggy):
+          all_fills → Stage1 → Stage3 → Stage4(one shared queue) → Stage5
+
+        NEW (fixed):
+          all_fills
+            for each base_symbol:
+              sym_fills → Stage2(per-sym) → Stage1(per-sym) → Stage3(per-sym)
+                        → Stage4(per-sym, independent queue) → Stage5(per-sym)
+            aggregate into GFREResult + GFREResult.per_symbol dict
+
+        Stages 2 (bypass detection) and 3 (dedup) are also run per-symbol:
+        - Stage 2 per-symbol: an account may tag one instrument's strategy
+          fills reliably while trading another instrument without tags;
+          computing note_rate globally would incorrectly suppress the ghost
+          filter for the well-tagged symbol.
+        - Stage 3 per-symbol: dedup keys include (ts_bucket, price, side,
+          qty, account, order_id) — a fill from one symbol cannot collide
+          with a fill from another; per-symbol dedup is equivalent but
+          makes the isolation explicit.
+
         Parameters
         ----------
         fills           : FillRecord list (unsorted OK).
@@ -676,7 +923,7 @@ class GhostFillEngine:
 
         Returns
         -------
-        GFREResult
+        GFREResult  (aggregate) with .per_symbol dict (per-symbol breakdown)
         """
         result = GFREResult()
         if not fills:
@@ -684,70 +931,113 @@ class GhostFillEngine:
             return result
 
         result.total_raw_fills = len(fills)
-        fills = sorted(fills, key=lambda f: (f.ts_val, f.position_order))
+        fills_sorted = sorted(fills, key=lambda f: (f.ts_val, f.position_order))
 
-        # Stage 2: Adaptive Bypass
-        note_rate, bypass = _compute_note_rate(fills)
-        result.bypass_mode = bypass
-        if bypass:
-            result.notes.append(
-                f"Adaptive Bypass ACTIVE: note_rate={note_rate:.1%} "
-                f"< {ADAPTIVE_NOTE_RATE_THRESHOLD:.0%}. Ghost filter disabled."
-            )
-        else:
-            result.notes.append(f"Note coverage: {note_rate:.1%} -- ghost filter ACTIVE.")
+        # ── Group by base_symbol (preserving sort order within each group) ──
+        from collections import defaultdict as _dd
+        symbol_groups: Dict[str, List[FillRecord]] = _dd(list)
+        for f in fills_sorted:
+            symbol_groups[f.base_symbol].append(f)
 
-        # Stage 1: Tag-Validation Filter
-        ghost_fills       : List[FillRecord] = []
-        clean_candidates  : List[FillRecord] = []
-        for f in fills:
-            if bypass:
-                f.suggests_ghost = False
-                clean_candidates.append(f)
-            else:
-                is_ghost = f.suggests_ghost or classify_fill(f)
-                f.suggests_ghost = is_ghost
-                if is_ghost:
-                    ghost_fills.append(f)
-                    if self.debug:
-                        logger.debug(
-                            f"GHOST: {f.timestamp} {f.side} {f.quantity}x{f.symbol} "
-                            f"@ {f.price} note='{f.note}' msg='{f.msgtxt[:60]}'"
-                        )
-                else:
+        all_trades   : List[RoundTrip]  = []
+        all_unpaired : List[FillRecord] = []
+
+        for base_sym, sym_fills in symbol_groups.items():
+            sr = SymbolGFREResult(base_symbol=base_sym, total_fills=len(sym_fills))
+
+            # Stage 2: Adaptive Bypass — per-symbol note rate
+            note_rate, bypass = _compute_note_rate(sym_fills)
+            sr.note_rate  = note_rate
+            sr.bypass_mode = bypass
+
+            # Stage 1: Tag-Validation Filter — per-symbol, using per-symbol bypass
+            ghost_fills      : List[FillRecord] = []
+            clean_candidates : List[FillRecord] = []
+            for f in sym_fills:
+                if bypass:
+                    f.suggests_ghost = False
                     clean_candidates.append(f)
+                else:
+                    is_ghost = f.suggests_ghost or classify_fill(f)
+                    f.suggests_ghost = is_ghost
+                    if is_ghost:
+                        ghost_fills.append(f)
+                        if self.debug:
+                            logger.debug(
+                                "GHOST [%s]: %s %s %dx%s @ %s note='%s'",
+                                base_sym, f.timestamp, f.side, f.quantity,
+                                f.symbol, f.price, f.note,
+                            )
+                    else:
+                        clean_candidates.append(f)
 
-        result.ghost_fills_dropped = len(ghost_fills)
-        result.notes.append(
-            f"Stage 1: {len(ghost_fills)} ghost(s) removed, "
-            f"{len(clean_candidates)} clean fill(s) remain."
-        )
+            sr.ghost_fills_dropped = len(ghost_fills)
 
-        # Stage 3: Deduplication
-        deduped = _dedup_fills(clean_candidates, bucket_ms=dedup_bucket_ms)
-        if len(deduped) < len(clean_candidates):
-            result.notes.append(
-                f"Stage 3 dedup: collapsed "
-                f"{len(clean_candidates) - len(deduped)} duplicate(s)."
+            # Stage 3: Deduplication — per-symbol
+            deduped = _dedup_fills(clean_candidates, bucket_ms=dedup_bucket_ms)
+            sr.clean_fills = len(deduped)
+
+            # Stage 4: FIFO Pairing — INDEPENDENT queue for this symbol only.
+            # pair_fills_to_trades() starts with position=0 and queue=[] on
+            # every call; different base_symbols NEVER share state.
+            trades, unpaired = pair_fills_to_trades(deduped)
+            sr.trades        = trades
+            sr.unpaired_fills = unpaired
+            all_trades.extend(trades)
+            all_unpaired.extend(unpaired)
+
+            # Stage 5: Integrity Verification — per-symbol
+            ok, msgs, flip_count = verify_sequence(
+                sym_fills, deduped, trades, unpaired
             )
-        result.clean_fills = len(deduped)
+            sr.integrity_ok     = ok
+            sr.integrity_notes  = msgs
+            sr.direction_flips  = flip_count
 
-        # Stage 4: FIFO Pairing
-        trades, unpaired = pair_fills_to_trades(deduped)
-        result.trades         = trades
-        result.unpaired_fills = unpaired
-        result.notes.append(
-            f"Stage 4 FIFO: {len(trades)} trade(s) paired, "
-            f"{len(unpaired)} unpaired fill(s)."
+            result.per_symbol[base_sym] = sr
+
+        # ── Aggregate across all symbols ───────────────────────────────────
+        result.ghost_fills_dropped = sum(
+            sr.ghost_fills_dropped for sr in result.per_symbol.values()
+        )
+        result.clean_fills     = sum(
+            sr.clean_fills for sr in result.per_symbol.values()
+        )
+        result.trades          = all_trades
+        result.unpaired_fills  = all_unpaired
+        result.direction_flips = sum(
+            sr.direction_flips for sr in result.per_symbol.values()
+        )
+        result.integrity_ok    = all(
+            sr.integrity_ok for sr in result.per_symbol.values()
+        )
+        result.bypass_mode     = any(
+            sr.bypass_mode for sr in result.per_symbol.values()
         )
 
-        # Stage 5: Integrity Verification
-        ok, msgs, flip_count = verify_sequence(fills, deduped, trades, unpaired)
-        result.integrity_ok    = ok
-        result.direction_flips = flip_count
-        result.notes.extend(msgs)
+        # Summary notes
+        syms_str = ", ".join(sorted(result.per_symbol.keys()))
         result.notes.append(
-            "Stage 5: INTEGRITY PASS" if ok else "Stage 5: INTEGRITY FAIL"
+            "Symbols processed: [{}]".format(syms_str)
+        )
+        for base_sym, sr in sorted(result.per_symbol.items()):
+            status     = "PASS" if sr.integrity_ok else "FAIL"
+            bypass_tag = " [BYPASS]" if sr.bypass_mode else ""
+            result.notes.append(
+                "  {}: {} fills | {} ghosts | {} clean | {} trades | "
+                "integrity={}{} | note_rate={:.0%}".format(
+                    base_sym, sr.total_fills, sr.ghost_fills_dropped,
+                    sr.clean_fills, len(sr.trades),
+                    status, bypass_tag, sr.note_rate,
+                )
+            )
+        result.notes.append(
+            "Totals: {} raw | {} ghosts | {} clean | {} trades | "
+            "integrity={}".format(
+                result.total_raw_fills, result.ghost_fills_dropped,
+                result.clean_fills, len(result.trades),
+                "PASS" if result.integrity_ok else "FAIL",
+            )
         )
 
         return result
