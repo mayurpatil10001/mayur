@@ -736,6 +736,22 @@ def pair_fills_to_trades(
 
         # ---- ENTRY / SCALE-IN: moving away from zero -------------------
         if new_pos != 0 and (position == 0 or abs(new_pos) > abs(position)):
+            # GUARD (FIX v3.1 — August 2026): A fill marked OC=CLOSE arriving
+            # with position=0 means its corresponding OPEN leg was a ghost fill
+            # that was correctly removed in Stage 1.  Treating it as a new
+            # OPEN entry would corrupt the FIFO queue and misattribute all
+            # downstream fills.  Log it and skip it instead.
+            # Invariant: if position==0, queue is always empty, so this check
+            # is equivalent to "no position to close against".
+            if position == 0 and getattr(f, "open_close", "").upper() == "CLOSE":
+                _record_rejected(
+                    f,
+                    field="open_close",
+                    actual=0.0,
+                    bound=0.0,
+                    reason="ORPHANED_CLOSE_POST_GHOST_OPEN",
+                )
+                continue
             new_contracts = abs(new_pos) - abs(position)
             queue.append(_OpenLeg(fill=f, side=side, qty=new_contracts,
                                   price=f.price, time_str=f.timestamp))
