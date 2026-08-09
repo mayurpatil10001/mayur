@@ -665,7 +665,8 @@ def _duration_min(entry_ts: str, exit_ts: str) -> float:
 
 
 def pair_fills_to_trades(
-    fills: List[FillRecord],
+    fills              : List[FillRecord],
+    ghost_fills_dropped: int = 0,
 ) -> Tuple[List[RoundTrip], List[FillRecord]]:
     """
     Stage 4 -- FIFO Position Resynchronizer.
@@ -679,6 +680,20 @@ def pair_fills_to_trades(
     EXIT     : position non-zero -> 0 (or scale-out, abs decreasing same sign)
     SCALE-OUT: partial exit -- abs(position) decreasing, same sign
     FLIP     : position crosses zero (sign reversal)
+
+    Parameters
+    ----------
+    fills               : FillRecord list (unsorted OK).
+    ghost_fills_dropped : number of ghost OPEN fills removed by Stage 1 for
+                          this symbol in today's file.  Used by the
+                          ORPHANED_CLOSE guard (FIX v3.2) to distinguish:
+                          - ghost_fills_dropped > 0: a ghost OPEN was actually
+                            removed today, so a CLOSE arriving at position=0 is
+                            a genuine orphan -> reject (ORPHANED_CLOSE_POST_GHOST_OPEN).
+                          - ghost_fills_dropped == 0: no ghost was removed today;
+                            a CLOSE at position=0 is likely a cross-day carry-over
+                            or unknown origin -> log but do NOT reject
+                            (ORPHANED_CLOSE_UNKNOWN_ORIGIN).
 
     Returns
     -------
@@ -736,22 +751,47 @@ def pair_fills_to_trades(
 
         # ---- ENTRY / SCALE-IN: moving away from zero -------------------
         if new_pos != 0 and (position == 0 or abs(new_pos) > abs(position)):
-            # GUARD (FIX v3.1 — August 2026): A fill marked OC=CLOSE arriving
-            # with position=0 means its corresponding OPEN leg was a ghost fill
-            # that was correctly removed in Stage 1.  Treating it as a new
-            # OPEN entry would corrupt the FIFO queue and misattribute all
-            # downstream fills.  Log it and skip it instead.
-            # Invariant: if position==0, queue is always empty, so this check
-            # is equivalent to "no position to close against".
+            # GUARD (FIX v3.2 — August 2026): Only reject a CLOSE arriving at
+            # position=0 if at least one ghost OPEN was actually removed from
+            # THIS symbol's fills today (ghost_fills_dropped > 0).
+            #
+            # FIX v3.1 bug: the guard fired unconditionally whenever position==0
+            # and open_close==CLOSE.  Since every file starts at position=0, this
+            # wrongly rejected CLOSE fills from legitimate cross-day carry-over
+            # positions (account held a position overnight; only the closing fill
+            # appears in today's file, with no OPEN in today's file).
+            #
+            # Corrected logic:
+            #   ghost_fills_dropped > 0  -> a ghost was removed today for this
+            #     symbol; an orphaned CLOSE is genuinely the ghost's paired exit.
+            #     Reject it: ORPHANED_CLOSE_POST_GHOST_OPEN.
+            #   ghost_fills_dropped == 0 -> no ghost was removed; this CLOSE must
+            #     be a cross-day carry or unknown-origin fill.  Log it for audit
+            #     visibility (ORPHANED_CLOSE_UNKNOWN_ORIGIN) but let it fall
+            #     through to the ENTRY branch (pre-v3.1 behaviour).  The fill
+            #     will become an unpaired open leg and integrity check will flag
+            #     the file correctly.
             if position == 0 and getattr(f, "open_close", "").upper() == "CLOSE":
-                _record_rejected(
-                    f,
-                    field="open_close",
-                    actual=0.0,
-                    bound=0.0,
-                    reason="ORPHANED_CLOSE_POST_GHOST_OPEN",
-                )
-                continue
+                if ghost_fills_dropped > 0:
+                    # Confirmed same-day ghost orphan: reject.
+                    _record_rejected(
+                        f,
+                        field="open_close",
+                        actual=0.0,
+                        bound=0.0,
+                        reason="ORPHANED_CLOSE_POST_GHOST_OPEN",
+                    )
+                    continue
+                else:
+                    # Cross-day carry or unknown origin: log but do NOT reject.
+                    _record_rejected(
+                        f,
+                        field="open_close",
+                        actual=0.0,
+                        bound=0.0,
+                        reason="ORPHANED_CLOSE_UNKNOWN_ORIGIN",
+                    )
+                    # Fall through to ENTRY branch below.
             new_contracts = abs(new_pos) - abs(position)
             queue.append(_OpenLeg(fill=f, side=side, qty=new_contracts,
                                   price=f.price, time_str=f.timestamp))
@@ -996,7 +1036,13 @@ class GhostFillEngine:
             # Stage 4: FIFO Pairing — INDEPENDENT queue for this symbol only.
             # pair_fills_to_trades() starts with position=0 and queue=[] on
             # every call; different base_symbols NEVER share state.
-            trades, unpaired = pair_fills_to_trades(deduped)
+            # FIX v3.2: pass ghost_fills_dropped so the ORPHANED_CLOSE guard
+            # can distinguish same-day ghost orphans (reject) from cross-day
+            # carry-overs (log as ORPHANED_CLOSE_UNKNOWN_ORIGIN, fall through).
+            trades, unpaired = pair_fills_to_trades(
+                deduped,
+                ghost_fills_dropped=len(ghost_fills),
+            )
             sr.trades        = trades
             sr.unpaired_fills = unpaired
             all_trades.extend(trades)
