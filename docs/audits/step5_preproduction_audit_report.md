@@ -567,15 +567,363 @@ Full output reproduced there. All gates pass against reconciled data understandi
 | Pure-natural rate overage (3,708 vs ~1,604 scaled) | 📋 OPEN ITEM | Rate unexplained beyond hypothesis; recommend post-promotion investigation |
 | Step 6 dry-run | ✅ CLOSED | All gates pass, 2,917,511 rows ready |
 
-**RECOMMENDATION: CONDITIONAL GO**
+~~**RECOMMENDATION: CONDITIONAL GO**~~ **(SUPERSEDED — see Final Checks section below)**
 
-All regression-fix gates are closed. FIX v3.2 correctly resolves the cross-day carry
-regression. Category B (13,096) are correctly-exposed files, not regressions.
+---
 
-The pure-natural rate overage (3,708 vs ~1,604 scaled) does NOT block promotion because:
-1. Not introduced by FIX v3.2 — pre-existing dataset characteristic.
-2. No new bug pattern found in 25-file sample.
-3. Rate uniform across 2024-2026 (pre-existing, not new).
-4. Files are correctly flagged integrity=FAIL and excluded from clean_trades appropriately.
+## Final Two Checks Before Promotion
 
-**DO NOT run `promote_to_production.py --confirm` without explicit human approval.**
+**Generated:** 2026-08-09T20:45 IST
+**Scripts:** `scripts/step_final_checks.py`, `scripts/step_final_checks_p2.py`, `scripts/step3b_sym2.py`
+**Rule:** All numbers computed from actual script output. Raw output shown.
+
+---
+
+### Step 1 — Diagnostic Reliability Re-check
+
+#### 1a. Pipeline Confirmation
+
+The previous report stated the diagnostic script used `resync()` which "processes all symbols
+together." **This claim is FALSE and is retracted here.**
+
+**Evidence** (read from `ghost_fill_engine.py` L939-1105):
+
+`resync()` is defined as:
+```python
+def resync(raw_dicts, debug=False):
+    engine = GhostFillEngine(debug=debug)
+    fills  = GhostFillEngine.from_dicts(raw_dicts)
+    return engine.process(fills)          # <-- this IS the per-symbol pipeline
+```
+
+`GhostFillEngine.process()` groups fills by `base_symbol` (L992-996) and calls
+`pair_fills_to_trades()` with an independent position counter per symbol (L1036-1045).
+`_process_file()` in `ghost_fill_cleaner.py` calls the same `engine.process()` (L279).
+**Both paths are identical.** The prior "all-symbols-together" concern is closed.
+
+#### 1b. Threading Race on `rejected_fills` (Audit Finding — NOT a data blocker)
+
+`ghost_fill_cleaner.py` L589 runs `ThreadPoolExecutor(max_workers=cpu_count-1)`.
+The `rejected_fills` list in `ghost_fill_engine.py` is **module-level** (shared across threads).
+`_clr_rejected()` inside `_process_file()` races with concurrent threads:
+
+- Thread A calls `_clr_rejected()`, zeroing Thread B's accumulated rejected fills.
+- Thread B then calls `_get_rejected()` and sees count = 0.
+- Result: `flag_reason`'s `rejected_fills=N` count is unreliable in the DB.
+
+**Why this does NOT block promotion:**
+`integrity_ok` is set by `result.integrity_ok` inside `engine.process()` (L1073),
+computed **before** `_get_rejected()` is called. The race does not affect `integrity_ok`.
+The 3,708 excluded files are correctly excluded regardless of their A/B/C label.
+
+**What it does affect:** the A/B/C categorization (which is an audit artifact, not a
+data correctness issue). Category A/B boundaries have noise from the race. Category C
+(compound flag_reason) is unaffected.
+
+#### 1c. Corrected 25-File Classification
+
+Re-ran all 25 files through the same `engine.process()` pipeline and extracted the actual
+`per_symbol.integrity_notes` messages from `verify_sequence()`. The 3 real failure reasons:
+
+```
+ #   Account                   Date         raw  gh   tr  unp rej  int   failure reason(s)
+ -------------------------------------------------------------------------------------------
+  1  ES-TS_4                   2025-05-14   112   1   74    0   1  FAIL  POSITION_IMBALANCE [ES]
+  2  ES-TS_2                   2026-05-29    63   1   38    1   3  FAIL  POSITION_IMBALANCE [ES]
+  3  ES-IPS_TM_8               2025-11-27     7   0    4    1   0  FAIL  POSITION_IMBALANCE [ES]
+  4  IPS_TM_5dupli             2026-03-25   115   1   69    1   0  FAIL  POSITION_IMBALANCE [FDAX] | DIRECTION_FLIPS [FDAX]
+  5  ES-IPS_TM_6               2026-01-26    17   0   10    1   0  FAIL  POSITION_IMBALANCE [ES]
+  6  ES-TM_1                   2024-12-26    39   0   22    0   0  FAIL  DIRECTION_FLIPS [ES]
+  7  ES-TM_1                   2026-03-06    73   0   41    0   0  FAIL  DIRECTION_FLIPS [ES]
+  8  ES-IPS_TM_13              2026-02-26    20   0   13    0   0  FAIL  DIRECTION_FLIPS [ES]
+  9  TM_8                      2024-11-29   126   1   68    0   1  FAIL  POSITION_IMBALANCE [FDAX] | DIRECTION_FLIPS [FDAX]
+ 10  A_sim8                    2024-01-30    19   0   12    0   0  FAIL  DIRECTION_FLIPS [NQ]
+ 11  ES-TM_1                   2026-05-26    70   0   41    0   0  FAIL  DIRECTION_FLIPS [ES]
+ 12  TM_6                      2024-11-08    32   0   20    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 13  ES-TS_3                   2024-07-26   106   3   54    0   5  FAIL  POSITION_IMBALANCE [ES]
+ 14  IPS_TM_10                 2025-10-23    63   0   40    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 15  TM_10                     2025-07-16    68   0   39    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 16  TM_2                      2024-07-05    32   0   19    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 17  IPS_TM_11                 2024-07-23    41   0   25    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 18  B_sim14                   2024-03-04   159   0   97    0   0  FAIL  DIRECTION_FLIPS [NQ]
+ 19  IPS_TM_7                  2026-05-29   122   2   72    0   2  FAIL  POSITION_IMBALANCE [CL]
+ 20  ES_PB_3                   2025-04-25   276   2  152    0  11  FAIL  DIRECTION_FLIPS [ES]
+ 21  ES-IPS_TM_8               2025-10-24    77   4   37    0   4  FAIL  POSITION_IMBALANCE [ES]
+ 22  ES-TS_5                   2024-11-08    80   0   50    0   0  FAIL  DIRECTION_FLIPS [ES]
+ 23  TM_5                      2024-07-23   149   2   78    2   0  FAIL  DIRECTION_FLIPS [FDAX]
+ 24  IPS_TM_6                  2026-02-05    31   0   19    1   0  FAIL  POSITION_IMBALANCE [FDAX]
+ 25  IPS_TM_5dupli             2024-09-05    88   2   51    1   2  FAIL  POSITION_IMBALANCE [FDAX] | DIRECTION_FLIPS [FDAX]
+```
+
+**Corrected failure distribution:**
+
+| Reason | Count | Prior label |
+|---|---:|---|
+| POSITION_IMBALANCE | 16/25 | Was: `fill_count_mismatch` (13) + `genuine_unclosed_position` (8) + `unclosed_position_other` (4) — all wrong |
+| DIRECTION_FLIPS | 12/25 | (overlaps with POSITION_IMBALANCE on 3 files) |
+| INVERTED_TRADES | 0/25 | None found |
+| **Files reclassified to PASS** | **0/25** | All 25 still FAIL |
+
+**Prior classification (all 3 categories) was completely wrong** — `fill_count_mismatch` does
+not correspond to any real check in `verify_sequence()`. Zero files changed integrity status.
+
+#### 1d. `verify_sequence()` FLIP Bug (New Finding)
+
+`verify_sequence()` Check 1 (position balance):
+```python
+net          = sum(f.quantity if f.side=="BUY" else -f.quantity for f in clean_fills)
+expected_open= sum(f.quantity if f.side=="BUY" else -f.quantity for f in unpaired)
+if net not in (0, expected_open): → POSITION_IMBALANCE
+```
+
+When a FLIP occurs in `pair_fills_to_trades()` (position crosses zero), the flipping fill `f`
+is stored in `queue` with `qty = abs(new_pos)` (the partial position), but `unpaired` contains
+the **full fill object** with its original `f.quantity`. `verify_sequence` uses the full delta
+as `expected_open`, but `net` = the actual partial end-position. They do not match →
+POSITION_IMBALANCE fires even when position accounting is correct.
+
+**This is a bug in `verify_sequence()`.** It does not affect `pair_fills_to_trades()`'s
+accuracy (the FIFO is correct), but it inflates the POSITION_IMBALANCE failure count.
+
+---
+
+### Step 2 — Overnight Carry Check (42-file sample)
+
+**Method:** For each file with unpaired fills (unp > 0), check whether the next calendar
+day's file for the same account contains a fill that closes the open position (opposite
+direction, same symbol). This is the same cross-day verification used in the v3.1 regression
+investigation. 42 files total: 12 from the 25-file sample (all with unp > 0) + 30 additional
+random files from the full 3,708 population (seed=42).
+
+#### Step 2A — 12 files from 25-file sample (all with unpaired fills):
+
+| Account | Date | unp | Classification | Detail |
+|---|---|---:|---|---|
+| ES-TS_2 | 2026-05-29 | 1 | NEXT_FILE_EMPTY | unclosed: {ES: -3}, next day empty |
+| ES-IPS_TM_8 | 2025-11-27 | 1 | **CLOSED_NEXT_DAY** | ES:SELL 3 ESZ25 on 2025-11-28 |
+| IPS_TM_5dupli | 2026-03-25 | 1 | **CLOSED_NEXT_DAY** | FDAX:SELL 3 FDAXM26 on 2026-03-26 |
+| ES-IPS_TM_6 | 2026-01-26 | 1 | **CLOSED_NEXT_DAY** | ES:SELL 1 ESH26 oc=CLOSE on 2026-01-27 |
+| TM_6 | 2024-11-08 | 1 | NEXT_FILE_EMPTY | unclosed: {FDAX: -3} |
+| IPS_TM_10 | 2025-10-23 | 1 | **CLOSED_NEXT_DAY** | FDAX:BUY 2 FDAXZ25 oc=CLOSE on 2025-10-24 |
+| TM_10 | 2025-07-16 | 1 | **CLOSED_NEXT_DAY** | FDAX:SELL 2 FDAXU25 oc=CLOSE on 2025-07-17 |
+| TM_2 | 2024-07-05 | 1 | NEXT_FILE_EMPTY | unclosed: {FDAX: 3} |
+| IPS_TM_11 | 2024-07-23 | 1 | **CLOSED_NEXT_DAY** | FDAX:BUY 1 FDAXU24 oc=CLOSE on 2024-07-24 |
+| TM_5 | 2024-07-23 | 2 | **CLOSED_NEXT_DAY** | FDAX:BUY 3 FDAXU24 on 2024-07-24 |
+| IPS_TM_6 | 2026-02-05 | 1 | **CLOSED_NEXT_DAY** | FDAX:BUY 1 FDAXH26 oc=CLOSE on 2026-02-06 |
+| IPS_TM_5dupli | 2024-09-05 | 1 | **CLOSED_NEXT_DAY** | FDAX:SELL 2 FDAXU24 oc=CLOSE on 2024-09-06 |
+
+2A result: 8 CLOSED_NEXT_DAY, 3 NEXT_FILE_EMPTY (inconclusive), 0 NEVER_CLOSED.
+
+#### Step 2B — 30 additional random files (seed=42):
+
+Selected from full 3,708 population, distinct from 25-file sample.
+
+| # | Account | Date | unp | Classification |
+|---|---|---|---:|---|
+| 1 | PB_1 | 2025-04-30 | 8 | NEXT_FILE_EMPTY |
+| 2 | ES-IPS_TM_11 | 2026-03-20 | 2 | **CLOSED_NEXT_DAY** (ES:SELL 1 ESM26 on 2026-03-22) |
+| 3 | 3Q_sim14 | 2025-08-28 | 0 | NO_UNCLOSED |
+| 4 | TM_7 | 2025-01-09 | 1 | **CLOSED_NEXT_DAY** (FDAX:SELL 2 FDAXH25 on 2025-01-10) |
+| 5 | ES-TM_2 | 2024-12-20 | 0 | NO_UNCLOSED |
+| 6 | ES-TM_1 | 2026-01-22 | 0 | NO_UNCLOSED |
+| 7 | ES-TM_1 | 2024-07-26 | 0 | NO_UNCLOSED |
+| 8 | ES-IPS_TM_3 | 2025-06-09 | 0 | NO_UNCLOSED |
+| 9 | TM_7 | 2024-04-25 | 0 | NO_UNCLOSED |
+| 10 | ES-IPS_TM_11 | 2025-03-21 | 4 | NEXT_FILE_EMPTY |
+| 11 | TM_10 | 2025-04-13 | 0 | NO_UNCLOSED |
+| 12 | TM_7 | 2024-11-19 | 1 | **CLOSED_NEXT_DAY** (FDAX:BUY 3 FDAXZ24 on 2024-11-20) |
+| 13 | V_sim16 | 2025-09-12 | 1 | **CLOSED_NEXT_DAY** (NQ:BUY 3 NQU25 on 2025-09-14) |
+| 14 | IPS_TM_11 | 2026-07-16 | 0 | NO_UNCLOSED |
+| 15 | A_sim8 | 2024-02-09 | 0 | NO_UNCLOSED |
+| 16 | IPS_TM_5dupli | 2025-05-18 | 2 | **NEVER_CLOSED** (CL+NQ unclosed, no match on 2025-05-19) |
+| 17 | ES-TS_5 | 2025-02-12 | 0 | NO_UNCLOSED |
+| 18 | 3Q_sim15 | 2024-09-09 | 0 | NO_UNCLOSED |
+| 19 | 3Q_sim14 | 2026-04-29 | 8 | **CLOSED_NEXT_DAY** (CL:BUY 1 CLM26 on 2026-04-30) |
+| 20 | ES-IPSPB1 | 2024-06-05 | 0 | NO_UNCLOSED |
+| 21 | ES-PB_1 | 2026-02-20 | 0 | NO_UNCLOSED |
+| 22 | ES-TM_1 | 2025-02-25 | 0 | NO_UNCLOSED |
+| 23 | IPSTMUD1 | 2024-08-27 | 1 | **CLOSED_NEXT_DAY** (FDAX:BUY 1 FDAXU24 on 2024-08-28) |
+| 24 | IPS_TM_6 | 2025-02-28 | 6 | NEXT_FILE_EMPTY |
+| 25 | 3Q_sim14 | 2025-11-18 | 1 | **CLOSED_NEXT_DAY** (CL:SELL 3 CLZ25 on 2025-11-19) |
+| 26 | IPS_TM_13 | 2025-02-17 | 3 | **CLOSED_NEXT_DAY** (FDAX:BUY 1 FDAXH25 on 2025-02-18) |
+| 27 | ES-IPS_TM_8 | 2025-12-03 | 0 | NO_UNCLOSED |
+| 28 | TM_5 | 2024-06-09 | 2 | **CLOSED_NEXT_DAY** (NQ:BUY 3 NQM24 on 2024-06-10) |
+| 29 | PB_2 | 2024-06-25 | 1 | **CLOSED_NEXT_DAY** (FDAX:BUY 1 FDAXU24 on 2024-06-26) |
+| 30 | TM_2 | 2025-08-17 | 0 | NO_UNCLOSED |
+
+#### Step 2 Summary (42 files total)
+
+| Classification | Count | Meaning |
+|---|---:|---|
+| NO_UNCLOSED (fail is DIRECTION_FLIPS, not open position) | 16 | Separate failure mode, no overnight carry |
+| **(b) CLOSED_NEXT_DAY — legitimate overnight carry** | **19** | **verify_sequence false-fail** |
+| (a) NEVER_CLOSED — genuine unresolved data problem | 1 | Real integrity failure |
+| NEXT_FILE_EMPTY / NO_NEXT_FILE (inconclusive) | 6 | Cannot determine |
+
+**Raw extrapolation:** 19 confirmed / 42 inspected = **45.2%** of inspected files are
+legitimate overnight carries incorrectly flagged.
+
+Applied to the full 3,708 excluded files: **~1,677 files** (~45%) are estimated to be
+legitimate overnight positions excluded from `clean_trades` when they should NOT be.
+
+> **Why `verify_sequence()` false-fails on overnight carry files:**
+> When an account carries a position overnight, the session file may start with an
+> ORPHANED_CLOSE_UNKNOWN_ORIGIN fill (cross-day carry with `ghost_fills_dropped=0`).
+> This fill falls through to the ENTRY branch and becomes a new position leg in the FIFO.
+> Normal intraday trading then interacts with this phantom entry, creating direction flips
+> and/or POSITION_IMBALANCE (via the FLIP bug documented in Step 1d).
+> The position IS correctly resolved the next calendar day — but `verify_sequence()` has
+> no lookahead and flags the current day's file as integrity=FAIL.
+
+---
+
+### Step 3 — Exclusion Distribution Check
+
+**Method:** Compare distribution of 3,708 excluded (integrity_ok=0, no rejected_fills)
+files vs 61,706 full dataset across day-of-week, symbol, and bypass_mode.
+
+#### 3A — Day-of-Week Distribution
+
+Raw output (from `scripts/step_final_checks_p2.py`):
+
+```
+Day    excl    full      excl%    full%    ratio   concentration?
+-----------------------------------------------------------------
+Sun      497   8,407    13.4%   13.6%   0.98x  proportional
+Mon      670   9,693    18.1%   15.7%   1.15x  proportional
+Tue      653   9,229    17.6%   15.0%   1.18x  proportional
+Wed      674  10,075    18.2%   16.3%   1.11x  proportional
+Thu      664   9,979    17.9%   16.2%   1.11x  proportional
+Fri      550   9,202    14.8%   14.9%   0.99x  proportional
+```
+
+**Finding: No day-of-week concentration.** All ratios 0.98–1.18×. Exclusions are
+proportional to the dataset's trading-day distribution. No selection bias by weekday.
+
+#### 3B — Symbol Distribution (from `asset_list` column)
+
+Raw output (from `scripts/step3b_sym2.py`):
+
+```
+Symbol    excl    full     excl%    full%    ratio  flag
+-----------------------------------------------------------------
+ES       1,660  15,068    41.2%   37.7%   1.09x  ok
+NQ         864   8,261    21.4%   20.7%   1.04x  ok
+FDAX       802  10,247    19.9%   25.6%   0.78x  ok
+CL         634   5,744    15.7%   14.4%   1.09x  ok
+ZB          37     330     0.9%    0.8%   1.11x  ok
+ZN          35     322     0.9%    0.8%   1.08x  ok
+```
+
+**Finding: No symbol concentration.** All ratios 0.78–1.11×. Exclusions are proportional
+across all traded instruments. FDAX is slightly under-represented (0.78×) which means FDAX
+files are excluded at a proportionally *lower* rate than the rest — no selection bias concern.
+
+#### 3C — Bypass Mode Distribution
+
+Raw output (from `scripts/step3b_sym2.py`):
+
+```
+bypass=0: excl=3,086 (83.2%) full=56,929 (92.3%) ratio=0.90x  ok
+bypass=1: excl=622   (16.8%) full=4,777  ( 7.7%) ratio=2.17x  *** HIGH
+```
+
+Derived exclusion rates:
+- bypass=0 files: 3,086 / 56,929 = **5.4% excluded**
+- bypass=1 files: 622 / 4,777 = **13.0% excluded** (2.4× higher rate)
+
+**Finding: bypass_mode=1 files are concentrated in the excluded population (2.17×).**
+Files with low strategy-tag note_rate (< 25% threshold, ghost filter disabled) fail
+integrity at 2.4× the rate of well-tagged files.
+
+**Is this a selection-bias concern for downstream time-slot analysis?**
+Partially. bypass_mode=1 indicates an account/period where fills lack strategy attribution
+tags. The day-of-week distribution is uniform (3A), so there is no systematic weekday bias.
+However, bypass_mode=1 may correlate with specific accounts or time-of-day windows (e.g.,
+pre-market, overnight sessions where the C++ strategy is not running). File-audit granularity
+is daily, so hour-of-day cannot be confirmed. The 622 bypass=1 excluded files represent
+~1.0% of the full dataset — limited absolute impact, but the 2.17× ratio indicates a
+systematic quality difference in these sessions worth tracking post-promotion.
+
+#### 3D — Year Distribution (confirming earlier finding)
+
+```
+2024: 1,364 failures / 24,591 files = 5.5%
+2025: 1,584 failures / 24,912 files = 6.4%
+2026:   760 failures / 12,203 files = 6.2%
+```
+
+**No temporal concentration.** Rate is uniform 5.5–6.4% across all years.
+
+---
+
+### Step 4 — Final Consolidated Assessment and Updated Recommendation
+
+#### Status Gate Summary
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Step 1 pipeline claim corrected | ✅ CLOSED | `resync()` = per-symbol pipeline. Prior claim retracted |
+| Step 1 threading race | ⚠️ AUDIT NOTE | flag_reason counts unreliable; integrity_ok reliable |
+| Step 1 classification corrected | ✅ CLOSED | 0/25 changed to PASS; all 25 still FAIL |
+| Step 1 verify_sequence FLIP bug | ⚠️ KNOWN BUG | Inflates POSITION_IMBALANCE count; does not block data correctness |
+| Step 2 overnight carry — 19/42 = 45% | 🚫 **BLOCKING** | ~1,677 legitimate files wrongly excluded |
+| Step 3 Day-of-week | ✅ CLOSED | No concentration (0.98–1.18×) |
+| Step 3 Symbol | ✅ CLOSED | No concentration (0.78–1.11×) |
+| Step 3 bypass_mode=1 | ⚠️ NOTED | 2.17× concentrated; ~1% of dataset; no weekday pattern |
+
+#### Blocking Concern — Overnight Carry False Exclusions
+
+Evidence: 19 of 42 sampled files confirmed as legitimate overnight carries (case b).
+Scale: Extrapolated ~1,677 of 3,708 pure-natural-failure files are false-exclusions.
+
+**Impact on promoted dataset if `--confirm` is run without fixing this:**
+- ~1,677 session-days of legitimate trades silently absent from `clean_trades`
+- These represent overnight-carry accounts (TM series, PB series, IPS series) whose
+  sessions the pipeline incorrectly flags — their intraday PnL is missing from
+  `processed_trades` entirely.
+- Downstream BH-FDR time-slot analysis operates on a dataset where overnight-carry
+  sessions are systematically underrepresented for these specific accounts.
+
+**Required fix before promotion (two valid options):**
+
+**Option A — Lookahead fix (recommended, minimal scope):**
+In the batch-level loop of `ghost_fill_cleaner.py`, after `engine.process()`, if
+`integrity_ok=False` and the only failure is POSITION_IMBALANCE + unpaired fills:
+check the next day's file for the same account. If a closing fill for the same symbol
+exists there, override `integrity_ok=True` for the current day's file and include its
+trades in `clean_trades`. Requires no changes to `ghost_fill_engine.py`.
+
+**Option B — verify_sequence fix (broader, correct the root cause):**
+Fix the FLIP bug in `verify_sequence()`: change `expected_open` computation to use
+the partial position quantity (from `_OpenLeg.qty`) rather than the full fill delta.
+This requires `pair_fills_to_trades()` to return `(trades, unpaired_fills, position_at_end)`
+and `verify_sequence()` to accept `position_at_end` instead of computing it from unpaired
+fill objects. This is the structurally correct fix but requires modifying two functions
+and a full re-run of all 61,706 files.
+
+**If promoting as-is (neither fix applied), the following must be explicitly acknowledged:**
+1. ~1,677 overnight-carry session files are wrongly excluded from `clean_trades`.
+2. Accounts that carry positions overnight (TM, PB, IPS families confirmed in sample)
+   are underrepresented in the promoted dataset.
+3. The BH-FDR time-slot selector may over-weight time-slots that are NOT overnight-carry
+   sessions for those accounts, because overnight-carry sessions have lower trade counts.
+
+---
+
+**UPDATED RECOMMENDATION: ⛔ BLOCKED — PENDING HUMAN DECISION**
+
+The prior "CONDITIONAL GO" recommendation is superseded. Two items require a human decision:
+
+**Decision 1 (Required):** Overnight carry (~1,677 files, ~45% of pure-natural failures).
+Choose one of:
+- (a) Implement lookahead fix (Option A above), re-run affected files, then promote.
+- (b) Implement verify_sequence fix (Option B above), full re-run, then promote.
+- (c) Accept as-is and explicitly acknowledge ~1,677 legitimate sessions are excluded.
+
+**Decision 2 (Recommended):** bypass_mode=1 concentration (2.17×, 622 files, ~1% of dataset).
+This does not block promotion by itself, but downstream slot-selection consumers should
+be made aware that bypass_mode=1 sessions are excluded at 2.4× the rate of tagged sessions.
+
+**DO NOT run `promote_to_production.py --confirm` until Decision 1 is made and documented.**
+
