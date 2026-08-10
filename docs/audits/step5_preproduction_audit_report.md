@@ -1,4 +1,4 @@
-# Pre-Production Promotion Audit Report
+﻿# Pre-Production Promotion Audit Report
 **Generated:** 2026-08-08T15:06 IST (Updated from 2026-08-08T00:14)
 **Method:** All numbers computed from real data in this session. Commands and raw output shown.
 
