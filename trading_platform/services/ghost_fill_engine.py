@@ -46,7 +46,7 @@ from __future__ import annotations
 import re
 import datetime
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as _dc_replace
 from typing import List, Optional, Dict, Tuple, Any
 from zoneinfo import ZoneInfo
 
@@ -699,7 +699,16 @@ def pair_fills_to_trades(
     -------
     (trades, unpaired_fills)
     trades         : List[RoundTrip] -- completed round trips
-    unpaired_fills : List[FillRecord] -- entries left open at session end
+    unpaired_fills : List[FillRecord] -- entries left open at session end.
+                     FIX v3.3 (August 2026): each FillRecord in unpaired_fills
+                     has its .quantity set to _OpenLeg.qty (the REMAINING open
+                     contracts), not necessarily the original fill quantity.
+                     When a FLIP occurs, _OpenLeg.qty == abs(new_pos) which
+                     may be less than the flipping fill's original .quantity.
+                     Returning the original quantity caused verify_sequence()
+                     to compute an incorrect expected_open, producing a false
+                     POSITION IMBALANCE for any session that ended with an
+                     overnight carry after a direction flip.
     """
     trades   : List[RoundTrip] = []
     queue    : List[_OpenLeg]  = []
@@ -801,7 +810,18 @@ def pair_fills_to_trades(
         # ---- NO-OP (flat -> flat, or unchanged) ------------------------
         position = new_pos
 
-    unpaired = [op.fill for op in queue]
+    # FIX v3.3 (August 2026): use op.qty (remaining open contracts) instead of
+    # op.fill.quantity (original fill size) for each unpaired open leg.
+    # When a FLIP occurs, only abs(new_pos) contracts remain open in the new
+    # direction — the rest of the fill was used to close the prior position.
+    # _OpenLeg.qty captures this partial size; op.fill.quantity does not.
+    # Using the full quantity caused verify_sequence's expected_open to diverge
+    # from the actual net position, triggering a false POSITION IMBALANCE.
+    unpaired = [
+        op.fill if op.qty == op.fill.quantity
+        else _dc_replace(op.fill, quantity=op.qty)
+        for op in queue
+    ]
     return trades, unpaired
 
 
@@ -821,6 +841,10 @@ def verify_sequence(
     Four checks on the cleaned trade sequence:
 
     1. Position Balance  : Net delta of clean fills == 0 (or unpaired qty).
+                           As of FIX v3.3, pair_fills_to_trades() returns
+                           unpaired fills with quantity=_OpenLeg.qty (partial
+                           remaining position), so expected_open is correctly
+                           computed even after direction FLIPs.
     2. Direction Flips   : Count sign reversals in clean fill stream (target=0).
     3. Inverted Trades   : Any RoundTrip with exit_time < entry_time (FIX v2).
     4. Pairing Report    : Log counts for trade/unpaired/ghost summary.
