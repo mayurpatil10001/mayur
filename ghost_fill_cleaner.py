@@ -176,11 +176,21 @@ def load_checkpoint() -> dict:
     }
 
 def save_checkpoint(cp: dict):
+    import time as _time
     cp["last_updated"] = datetime.datetime.utcnow().isoformat()
     tmp = CHECKPOINT_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(cp, f, indent=2)
-    os.replace(tmp, CHECKPOINT_PATH)
+    # Retry loop: Windows can briefly lock files (antivirus/indexer), causing
+    # PermissionError on os.replace().  Retry up to 5 times with 1-second backoff.
+    for attempt in range(5):
+        try:
+            os.replace(tmp, CHECKPOINT_PATH)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise          # give up after 5 attempts
+            _time.sleep(1.0)
 
 # ── File enumeration ─────────────────────────────────────────────────────────
 def enumerate_files() -> list:
