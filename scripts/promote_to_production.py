@@ -337,8 +337,10 @@ def run_promotion(conn: sqlite3.Connection, dry_run: bool) -> bool:
     pt_col_info = c.fetchall()
     pt_cols = {r[1] for r in pt_col_info}
 
-    # Map clean_trades columns to processed_trades columns
-    # clean_trades may have different column names (e.g. pnl_dollars vs profit_loss)
+    # Map clean_trades columns → processed_trades columns.
+    # FIX v3.3: corrected account→account_name; use base_symbol for the
+    # 'symbol' column (not the raw contract-code 'symbol' field), so that
+    # ZB/ZN post-check WHERE symbol IN ('ZB','ZN') works correctly.
     COLUMN_MAP = {
         "pnl_dollars":   "profit_loss",
         "entry_time":    "entry_time",
@@ -347,29 +349,41 @@ def run_promotion(conn: sqlite3.Connection, dry_run: bool) -> bool:
         "exit_price":    "exit_price",
         "quantity":      "quantity",
         "direction":     "side",
-        "account":       "account",
-        "base_symbol":   "symbol",
+        "account":       "account_name",   # FIX: was "account", target col is account_name
+        "base_symbol":   "symbol",         # FIX: use base_symbol (ZB) not raw symbol (ZBM24)
         "trade_date":    "trade_date",
     }
+    # Columns to explicitly skip (raw symbol = full contract code, superseded by base_symbol→symbol)
+    SKIP_SRC_COLS = {"symbol", "id"}
 
     if dry_run:
         print("  [DRY-RUN] Steps that WOULD execute:")
         print(f"    1. Backup: CREATE TABLE processed_trades_backup_TIMESTAMP AS SELECT * FROM processed_trades")
-        print(f"    2. Replace: DELETE FROM processed_trades (126,991 legacy rows)")
-        print(f"    3. Insert: {source_count:,} rows from clean_trades (GFRE v3)")
+        print(f"    2. Replace: DELETE FROM processed_trades (current legacy rows)")
+        print(f"    3. Insert: {source_count:,} rows from clean_trades (GFRE v3.3)")
         print(f"    4. Verify row count matches {source_count:,}")
-        print(f"    5. Spot-check ZB/ZN avg|pnl| > $1 in promoted data")
+        print(f"    5. Spot-check ZB/ZN avg|profit_loss| > $1 in promoted data")
+
+        # Show mapping preview
+        print(f"  Column mapping preview:")
+        for sc_name in src_cols:
+            if sc_name in SKIP_SRC_COLS:
+                continue
+            target_name = COLUMN_MAP.get(sc_name, sc_name)
+            if target_name in pt_cols:
+                print(f"    {sc_name:25s} -> {target_name}")
         sconn.close()
         return True
 
-    # Step 1: Backup
-    create_backup(conn, dry_run=False)
+    # --- Step 1: Backup ---
+    backup_table = create_backup(conn, dry_run=False)
 
-    # Step 2: Build INSERT using common/mapped columns
-    # Determine usable columns: those in both src and target (or mapped)
+    # --- Step 2: Build INSERT using mapped columns ---
     insert_target_cols = []
     select_src_exprs   = []
     for sc_name in src_cols:
+        if sc_name in SKIP_SRC_COLS:
+            continue
         target_name = COLUMN_MAP.get(sc_name, sc_name)
         if target_name in pt_cols:
             select_src_exprs.append(sc_name)
@@ -380,41 +394,50 @@ def run_promotion(conn: sqlite3.Connection, dry_run: bool) -> bool:
         sconn.close()
         return False
 
-    print(f"  Columns to transfer ({len(insert_target_cols)}): {', '.join(insert_target_cols[:8])}...")
+    print(f"  Columns to transfer ({len(insert_target_cols)}): {', '.join(insert_target_cols)}")
 
-    # Attach staging DB and do the transfer
+    # --- Step 3: Transfer (in a transaction — rollback if verify fails) ---
     print(f"  Replacing processed_trades from clean_trades...")
     c.execute(f"ATTACH DATABASE '{staging_db_path}' AS staging")
+    c.execute("BEGIN")
     c.execute("DELETE FROM processed_trades")
     target_col_str = ", ".join(insert_target_cols)
-    source_col_str = ", ".join(f"staging.clean_trades.{col}" for col in select_src_exprs)
     c.execute(
         f"INSERT INTO processed_trades ({target_col_str}) "
         f"SELECT {', '.join(select_src_exprs)} FROM staging.clean_trades"
     )
-    conn.commit()
-    c.execute("DETACH DATABASE staging")
-    sconn.close()
 
-    # Step 3: Verify
+    # --- Step 4: Verify BEFORE committing ---
     c.execute("SELECT COUNT(*) FROM processed_trades")
     promoted_count = c.fetchone()[0]
     c.execute("SELECT SUM(profit_loss) FROM processed_trades")
     total_pnl = c.fetchone()[0] or 0
+    # FIX: symbol column now holds base symbol (ZB/ZN), so this filter works correctly
     c.execute("SELECT AVG(ABS(profit_loss)) FROM processed_trades WHERE symbol IN ('ZB','ZN')")
     zb_zn_check = c.fetchone()[0] or 0
 
     print(f"  Promoted: {promoted_count:,} rows now in processed_trades.")
     print(f"  Total PnL: ${total_pnl:,.2f}")
-    print(f"  ZB/ZN avg |PnL|: ${zb_zn_check:.2f} (must be > $1)")
+    print(f"  ZB/ZN avg |profit_loss|: ${zb_zn_check:.2f} (must be > $1)")
 
     if promoted_count != source_count:
-        print(f"  WARNING: Row count mismatch! Expected {source_count:,}, got {promoted_count:,}")
-        return False
-    if zb_zn_check < 1.0:
-        print(f"  CRITICAL: ZB/ZN PnL still wrong after promotion ({zb_zn_check:.4f}). Rollback!")
+        print(f"  CRITICAL: Row count mismatch ({promoted_count:,} != {source_count:,}). Rolling back.")
+        conn.rollback()
+        c.execute("DETACH DATABASE staging")
+        sconn.close()
         return False
 
+    if zb_zn_check < 1.0:
+        print(f"  CRITICAL: ZB/ZN avg |profit_loss| = {zb_zn_check:.4f} (expected ~$100-500). Rolling back.")
+        conn.rollback()
+        c.execute("DETACH DATABASE staging")
+        sconn.close()
+        return False
+
+    # All checks passed — commit
+    conn.commit()
+    c.execute("DETACH DATABASE staging")
+    sconn.close()
     return True
 
 
