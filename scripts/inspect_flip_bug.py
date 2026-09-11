@@ -1,32 +1,52 @@
-import sqlite3
-import os
+import sqlite3, os
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB = os.path.join(PROJECT_ROOT, "trading_platform_clean_v2.db")
-
-con = sqlite3.connect(DB)
+con = sqlite3.connect('trading_platform.db')
 con.row_factory = sqlite3.Row
 
-rows = con.execute("""
-    SELECT 
-        base_symbol,
-        COUNT(DISTINCT account) as accounts,
-        COUNT(*) as total_trades,
-        SUM(CASE WHEN pnl_dollars > 0 THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN pnl_dollars <= 0 THEN 1 ELSE 0 END) as losses,
-        SUM(pnl_dollars) as net_pnl,
-        MIN(pnl_dollars) as min_pnl,
-        MAX(pnl_dollars) as max_pnl
-    FROM clean_trades
-    GROUP BY base_symbol
-    ORDER BY total_trades DESC
-""").fetchall()
+print("=== processed_trades schema ===")
+cols = con.execute("PRAGMA table_info(processed_trades)").fetchall()
+for c in cols:
+    print(f"  {c[1]:25s} {c[2]}")
 
-print("Symbol | Accounts | Clean Trades | Wins | Losses | Net PnL | Worst Trade | Best Trade")
-print("-" * 90)
+print()
+print("=== row count and date range ===")
+r = con.execute("SELECT COUNT(*), MIN(entry_time), MAX(entry_time) FROM processed_trades").fetchone()
+print(f"  rows={r[0]:,}  min={r[1]}  max={r[2]}")
+
+print()
+print("=== symbol breakdown ===")
+rows = con.execute("""
+    SELECT symbol, COUNT(*) as n, MIN(entry_time) as first, MAX(entry_time) as last
+    FROM processed_trades GROUP BY symbol ORDER BY n DESC
+""").fetchall()
 for r in rows:
-    print(f"{r['base_symbol']} | {r['accounts']} | {r['total_trades']:,} | {r['wins']:,} | {r['losses']:,} | ${r['net_pnl']:,.2f} | ${r['min_pnl']:,.2f} | +${r['max_pnl']:,.2f}")
+    print(f"  {r['symbol']:8s}  n={r['n']:>9,}  {str(r['first'])[:10]}..{str(r['last'])[:10]}")
+
+print()
+print("=== null/missing check ===")
+for col in ["account_name","symbol","profit_loss","entry_time","exit_time"]:
+    n = con.execute(f"SELECT COUNT(*) FROM processed_trades WHERE {col} IS NULL").fetchone()[0]
+    print(f"  {col}: {n} NULLs")
+
+print()
+print("=== sample row ===")
+r = con.execute("SELECT * FROM processed_trades LIMIT 1").fetchone()
+for k in r.keys():
+    print(f"  {k}: {r[k]}")
+
+print()
+print("=== yearly trade distribution ===")
+rows = con.execute("""
+    SELECT substr(entry_time,1,4) as yr, COUNT(*) as n
+    FROM processed_trades GROUP BY yr ORDER BY yr
+""").fetchall()
+for r in rows:
+    print(f"  {r['yr']}: {r['n']:>9,}")
+
+print()
+print("=== entry_time sample (5 rows) to understand format ===")
+rows = con.execute("SELECT entry_time, exit_time, symbol FROM processed_trades LIMIT 5").fetchall()
+for r in rows:
+    print(f"  entry={r['entry_time']}  exit={r['exit_time']}  sym={r['symbol']}")
 
 con.close()
-
-
